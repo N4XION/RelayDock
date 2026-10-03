@@ -240,7 +240,7 @@ std::vector<EffectiveDestination> resolveEffectiveSettings(const std::vector<Res
 					size = saved;
 				} else {
 					size = nearestCanvasSize(canvas, saved);
-					w.out.notes.push_back(trf(
+					w.out.notes.push_back(locf(
 						"Effective.Resolution.Corrected",
 						"{0}x{1} does not match the {2} canvas, so this destination uses {3}x{4}. That keeps the picture from being stretched.",
 						saved.width, saved.height, aspectRatioText(canvas.baseWidth, canvas.baseHeight),
@@ -273,7 +273,7 @@ std::vector<EffectiveDestination> resolveEffectiveSettings(const std::vector<Res
 			const int wanted = config.video.fps;
 			const int actual = static_cast<int>(std::lround(fpsForDivisor(canvas, video.fpsDivisor)));
 			if (wanted > 0 && std::abs(actual - wanted) > 1) {
-				w.out.notes.push_back(trf(
+				w.out.notes.push_back(locf(
 					"Effective.Fps.Unavailable",
 					"OBS runs at {0} FPS, so {1} FPS is not available. This destination streams at {2} FPS.",
 					static_cast<int>(std::lround(canvas.fps())), wanted, actual));
@@ -296,10 +296,10 @@ std::vector<EffectiveDestination> resolveEffectiveSettings(const std::vector<Res
 				encoderId = caps->id;
 			} else {
 				w.out.notes.push_back(
-					caps ? trf("Effective.Encoder.CodecRejected",
+					caps ? locf("Effective.Encoder.CodecRejected",
 						   "The platform does not accept {0} video over RTMP, so RelayDock picks another encoder.",
 						   toLower(caps->codec))
-					     : trf("Effective.Encoder.Missing",
+					     : locf("Effective.Encoder.Missing",
 						   "The encoder \"{0}\" is not available on this PC, so RelayDock picks another one.",
 						   config.video.encoder));
 			}
@@ -440,7 +440,7 @@ std::vector<EffectiveDestination> resolveEffectiveSettings(const std::vector<Res
 		audio.bitrateKbps = config.audio.bitrateKbps;
 		if (w.limits.maxAudioBitrateKbps > 0 && audio.bitrateKbps > w.limits.maxAudioBitrateKbps && !w.manual) {
 			audio.bitrateKbps = w.limits.maxAudioBitrateKbps;
-			w.out.notes.push_back(trf("Effective.Audio.Capped",
+			w.out.notes.push_back(locf("Effective.Audio.Capped",
 						  "The platform accepts up to {0} Kbps of audio, so this destination uses {0} Kbps.",
 						  w.limits.maxAudioBitrateKbps));
 		}

@@ -36,18 +36,18 @@ TikTokProvider::TikTokProvider()
 
 std::string TikTokProvider::rejectedAdvice() const
 {
-	return tr("Stop.Rejected.Action.TikTok",
+	return loc("Stop.Rejected.Action.TikTok",
 		  "TikTok stream keys expire. Set up the LIVE on TikTok again, copy the new server URL and stream key, and try again within an hour.");
 }
 
 std::vector<std::string> TikTokProvider::setupNotes() const
 {
 	return {
-		tr("Notes.TikTok.Access",
+		loc("Notes.TikTok.Access",
 		   "TikTok gives a server URL and stream key only to accounts with LIVE access for streaming software. TikTok decides who gets it, and the rules differ by region."),
-		tr("Notes.TikTok.Key",
+		loc("Notes.TikTok.Key",
 		   "Set up the LIVE on TikTok first, then copy the server URL and the stream key from that page. The key expires after a period without use, so copy it less than an hour before you stream."),
-		tr("Notes.TikTok.End",
+		loc("Notes.TikTok.End",
 		   "Stopping the stream in RelayDock does not end the LIVE on TikTok. End it on TikTok as well."),
 	};
 }

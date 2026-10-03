@@ -84,7 +84,7 @@ SecretString TwitchProvider::publishKey(const SecretString &key, bool privateTes
 
 std::string TwitchProvider::rejectedAdvice() const
 {
-	return tr("Stop.Rejected.Action.Twitch",
+	return loc("Stop.Rejected.Action.Twitch",
 		  "Check your stream key under Creator Dashboard, Settings, Stream. Twitch issues a new key when you reset it or change your password.");
 }
 
@@ -96,11 +96,11 @@ void TwitchProvider::validateExtra(const DestinationConfig &config, const Valida
 		issue.severity = Severity::Warning;
 		issue.field = field::kOrientation;
 		issue.message.what =
-			tr("Validate.Twitch.Vertical", "Twitch plays 16:9 video on the most devices.");
-		issue.message.detail = tr("Validate.Twitch.Vertical.Detail",
+			loc("Validate.Twitch.Vertical", "Twitch plays 16:9 video on the most devices.");
+		issue.message.detail = loc("Validate.Twitch.Vertical.Detail",
 					  "A vertical stream shows with bars beside it on many screens.");
 		issue.message.action =
-			tr("Validate.Twitch.Vertical.Action", "Switch this destination to horizontal unless you want that.");
+			loc("Validate.Twitch.Vertical.Action", "Switch this destination to horizontal unless you want that.");
 		issues.push_back(std::move(issue));
 	}
 }
@@ -108,11 +108,11 @@ void TwitchProvider::validateExtra(const DestinationConfig &config, const Valida
 std::vector<std::string> TwitchProvider::setupNotes() const
 {
 	return {
-		tr("Notes.Twitch.Key",
+		loc("Notes.Twitch.Key",
 		   "Find your stream key in the Twitch Creator Dashboard under Settings, Stream. The key stays the same until you reset it."),
-		tr("Notes.Twitch.Test",
+		loc("Notes.Twitch.Test",
 		   "Test stream connects with your real key but your channel does not go live and Twitch sends no notifications."),
-		tr("Notes.Twitch.Simulcast",
+		loc("Notes.Twitch.Simulcast",
 		   "Twitch allows streaming to other platforms at the same time when your Twitch stream is at least as good as the others, you do not send viewers away from Twitch, and you do not merge other platforms' chat into the Twitch stream."),
 	};
 }

@@ -45,18 +45,18 @@ YouTubeProvider::YouTubeProvider()
 
 std::string YouTubeProvider::rejectedAdvice() const
 {
-	return tr("Stop.Rejected.Action.YouTube",
+	return loc("Stop.Rejected.Action.YouTube",
 		  "Check your stream key in YouTube Studio under Go live, Stream. Live streaming must be enabled for your channel, which takes up to 24 hours the first time.");
 }
 
 std::vector<std::string> YouTubeProvider::setupNotes() const
 {
 	return {
-		tr("Notes.YouTube.Key",
+		loc("Notes.YouTube.Key",
 		   "Find your stream key in YouTube Studio: Create, Go live, Stream tab. The default key stays the same between streams."),
-		tr("Notes.YouTube.GoesLive",
+		loc("Notes.YouTube.GoesLive",
 		   "With the default settings YouTube goes live and notifies your subscribers as soon as RelayDock connects. To try a stream first, set its visibility to Private or Unlisted in YouTube Studio."),
-		tr("Notes.YouTube.Vertical",
+		loc("Notes.YouTube.Vertical",
 		   "For a vertical stream next to a horizontal one, YouTube needs a second stream key. Add a second YouTube destination for it."),
 	};
 }

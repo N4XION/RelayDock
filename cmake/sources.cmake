@@ -8,20 +8,30 @@ set(
   RELAYDOCK_CORE_SOURCES
   src/build_info.cpp
   src/build_info.h
+  src/core/destination_state.cpp
+  src/core/destination_state.h
   src/core/output_stop.h
   src/core/types.cpp
   src/core/types.h
   src/core/user_message.h
+  src/core/vertical_layout.cpp
+  src/core/vertical_layout.h
   src/encoders/encode_plan.cpp
   src/encoders/encode_plan.h
   src/encoders/encoder_caps.cpp
   src/encoders/encoder_caps.h
+  src/encoders/encoder_settings.cpp
+  src/encoders/encoder_settings.h
   src/encoders/video_math.cpp
   src/encoders/video_math.h
   src/network/stream_url.cpp
   src/network/stream_url.h
   src/performance/effective_settings.cpp
   src/performance/effective_settings.h
+  src/performance/metrics_window.cpp
+  src/performance/metrics_window.h
+  src/performance/optimizer.cpp
+  src/performance/optimizer.h
   src/providers/custom_rtmp/custom_rtmp_provider.cpp
   src/providers/custom_rtmp/custom_rtmp_provider.h
   src/providers/facebook/facebook_provider.cpp
@@ -73,6 +83,17 @@ set(
   src/utils/uuid.h
 )
 
-set(RELAYDOCK_PLUGIN_SOURCES src/plugin-main.cpp)
+set(
+  RELAYDOCK_PLUGIN_SOURCES
+  src/app/app_context.cpp
+  src/app/app_context.h
+  src/encoders/encoder_catalog.cpp
+  src/encoders/encoder_catalog.h
+  src/encoders/encoder_pool.cpp
+  src/encoders/encoder_pool.h
+  src/outputs/output_manager.cpp
+  src/outputs/output_manager.h
+  src/plugin-main.cpp
+)
 
-set(RELAYDOCK_TEST_HOOK_SOURCES "")
+set(RELAYDOCK_TEST_HOOK_SOURCES src/testing/scenario_runner.cpp src/testing/scenario_runner.h)

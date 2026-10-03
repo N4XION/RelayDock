@@ -41,18 +41,18 @@ FacebookProvider::FacebookProvider()
 
 std::string FacebookProvider::rejectedAdvice() const
 {
-	return tr("Stop.Rejected.Action.Facebook",
+	return loc("Stop.Rejected.Action.Facebook",
 		  "Copy the current stream key from Facebook Live Producer. A standard key works for one stream. Turn on Persistent stream key there to reuse a key.");
 }
 
 std::vector<std::string> FacebookProvider::setupNotes() const
 {
 	return {
-		tr("Notes.Facebook.Key",
+		loc("Notes.Facebook.Key",
 		   "Find the stream key at facebook.com/live/create: Go live, Streaming software. A standard key works for one stream only. Turn on Persistent stream key under Advanced settings to reuse one."),
-		tr("Notes.Facebook.Preview",
+		loc("Notes.Facebook.Preview",
 		   "Facebook shows a preview when RelayDock connects. Viewers see the stream after you click Go live on Facebook."),
-		tr("Notes.Facebook.Limits",
+		loc("Notes.Facebook.Limits",
 		   "Facebook ends a stream after 8 hours. After a lost connection you have 2 to 3 minutes to reconnect before you need a new key."),
 	};
 }

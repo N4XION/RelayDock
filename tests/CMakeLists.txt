@@ -8,11 +8,14 @@ set(
   unit/test_main.cpp
   unit/test_helpers.h
   unit/test_build_info.cpp
+  unit/test_destination_state.cpp
   unit/test_encoding.cpp
+  unit/test_optimizer.cpp
   unit/test_providers.cpp
   unit/test_settings.cpp
   unit/test_stream_url.cpp
   unit/test_utils.cpp
+  unit/test_vertical_layout.cpp
   security/test_credentials.cpp
   security/test_redactor.cpp
   security/test_log_redaction.cpp
@@ -28,3 +31,8 @@ set_target_properties(relaydock-tests PROPERTIES FOLDER "RelayDock")
 
 add_test(NAME unit COMMAND relaydock-tests --test-suite-exclude=security*)
 add_test(NAME security COMMAND relaydock-tests --test-suite=security*)
+
+# Local RTMP ingest used by the integration tests. See tests/integration/README.md.
+add_executable(rd-rtmp-sink tools/rtmp-sink/rtmp_sink.cpp)
+target_link_libraries(rd-rtmp-sink PRIVATE relaydock-options ws2_32)
+set_target_properties(rd-rtmp-sink PROPERTIES FOLDER "RelayDock")

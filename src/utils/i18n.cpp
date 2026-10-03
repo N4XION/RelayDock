@@ -15,7 +15,7 @@ void setTranslator(TranslateFn translator)
 	g_translator.store(translator);
 }
 
-std::string tr(const char *key, const char *english)
+std::string loc(const char *key, const char *english)
 {
 	const TranslateFn translator = g_translator.load();
 	const char *translation = nullptr;
@@ -28,7 +28,7 @@ namespace detail {
 
 std::string formatTranslated(const char *key, const char *english, std::format_args args)
 {
-	const std::string pattern = tr(key, english);
+	const std::string pattern = loc(key, english);
 	try {
 		return std::vformat(pattern, args);
 	} catch (const std::format_error &) {
