@@ -7,6 +7,7 @@
 #include "utils/log.h"
 
 #include <format>
+#include <vector>
 
 namespace rd {
 
@@ -134,6 +135,47 @@ OBSEncoderAutoRelease EncoderPool::acquireAudio(const EffectiveVideo &video, con
 
 	audio_[key] = obs_encoder_get_weak_encoder(encoder);
 	return OBSEncoderAutoRelease(encoder);
+}
+
+bool EncoderPool::retune(const EffectiveVideo &from, const EffectiveVideo &to, const VideoEncoderCaps &caps)
+{
+	prune();
+
+	const std::string oldKey = videoSignature(from);
+	const std::string newKey = videoSignature(to);
+	const auto existing = video_.find(oldKey);
+	if (existing == video_.end())
+		return false;
+	OBSEncoderAutoRelease encoder = obs_weak_encoder_get_encoder(existing->second);
+	if (!encoder)
+		return false;
+	if (oldKey == newKey)
+		return true;
+	if (video_.find(newKey) != video_.end())
+		return false;
+
+	OBSDataAutoRelease settings = toObsData(buildVideoEncoderSettings(to, caps));
+	obs_encoder_update(encoder, settings);
+
+	auto node = video_.extract(oldKey);
+	node.key() = newKey;
+	video_.insert(std::move(node));
+
+	// Audio encoders are filed under their video encoder's signature. Move them along.
+	const std::string oldPrefix = oldKey + "\x1e";
+	std::vector<std::string> audioKeys;
+	for (const auto &entry : audio_) {
+		if (entry.first.rfind(oldPrefix, 0) == 0)
+			audioKeys.push_back(entry.first);
+	}
+	for (const std::string &key : audioKeys) {
+		auto audioNode = audio_.extract(key);
+		audioNode.key() = newKey + key.substr(oldKey.size());
+		audio_.insert(std::move(audioNode));
+	}
+
+	logInfo("{} now encodes at {} Kbps (was {} Kbps).", obs_encoder_get_name(encoder), to.bitrateKbps, from.bitrateKbps);
+	return true;
 }
 
 size_t EncoderPool::liveVideoEncoders()

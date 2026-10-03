@@ -74,6 +74,20 @@ public:
 	int startAllEnabled();
 	void stopAll();
 
+	// What applyEffectiveChanges did with each destination it was given.
+	struct ApplyResult {
+		std::vector<std::string> retuned;      // Bitrate changed on the running encoder
+		std::vector<std::string> reconnecting; // Restarting to pick up the new settings
+		std::vector<std::string> pending;      // Keeps its old settings until its next start
+	};
+
+	// Brings live destinations in line with their current effective settings, after the
+	// optimiser or the user changed something. A change of bitrate alone is applied to the
+	// running encoder when the encoder supports it. Anything else needs a new encoder: with
+	// `allowReconnect` the destination reconnects, otherwise it keeps its old settings until
+	// its next start.
+	ApplyResult applyEffectiveChanges(const std::vector<std::string> &ids, bool allowReconnect);
+
 	// Forgets a destination that is being deleted. Stops it first when it is active.
 	void forget(const std::string &id);
 

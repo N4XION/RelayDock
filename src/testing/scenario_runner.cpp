@@ -3,6 +3,8 @@
 #include "testing/scenario_runner.h"
 
 #include "app/app_context.h"
+#include "app/diagnostics_service.h"
+#include "app/performance_monitor.h"
 #include "outputs/output_manager.h"
 #include "outputs/vertical_canvas.h"
 #include "settings/config_json.h"
@@ -51,6 +53,13 @@ bool flag(const json &object, const char *key, bool fallback)
 {
 	const auto it = object.find(key);
 	return it != object.end() && it->is_boolean() ? it->get<bool>() : fallback;
+}
+
+json lockState(const DestinationConfig *config)
+{
+	if (!config)
+		return json::object();
+	return {{"resolution", config->locks.resolution}, {"fps", config->locks.fps}, {"bitrate", config->locks.bitrate}};
 }
 
 // Renders a source to an image, on the OBS graphics thread, the way OBS takes a screenshot.
@@ -323,7 +332,76 @@ ScenarioRunner::StepResult ScenarioRunner::beginStep(const json &step, std::stri
 				destination->enabled = entry.value().get<bool>();
 			}
 		}
+		if (step.contains("optimizer") && step["optimizer"].is_object()) {
+			const json &optimizer = step["optimizer"];
+			OptimizerConfig &config = app_.config().optimizer;
+			const std::string optimizerMode = text(optimizer, "mode");
+			if (!optimizerMode.empty() && !optimizationModeFromName(optimizerMode, config.mode)) {
+				detail = "Unknown optimisation mode '" + optimizerMode + "'.";
+				return StepResult::Failed;
+			}
+			config.preventGameLag = flag(optimizer, "prevent_game_lag", config.preventGameLag);
+			config.allowReconnectingChanges = flag(optimizer, "allow_reconnecting_changes", config.allowReconnectingChanges);
+		}
+		if (step.contains("upload_kbps"))
+			app_.config().network.uploadKbps = static_cast<int>(number(step, "upload_kbps", 0));
 		app_.notifyConfigChanged();
+		return StepResult::Done;
+	}
+
+	if (op == "optimizer_tuning") {
+		// Shorter timers, so a test does not have to stream for ten minutes to see a recovery.
+		OptimizerTuning tuning;
+		tuning.sustainMs = static_cast<int64_t>(number(step, "sustain_ms", static_cast<double>(tuning.sustainMs)));
+		tuning.sustainMsStrict = tuning.sustainMs;
+		tuning.cooldownMs = static_cast<int64_t>(number(step, "cooldown_ms", static_cast<double>(tuning.cooldownMs)));
+		tuning.recoverAfterMs =
+			static_cast<int64_t>(number(step, "recover_after_ms", static_cast<double>(tuning.recoverAfterMs)));
+		tuning.recoverAfterMsStrict = tuning.recoverAfterMs;
+		tuning.probationMs = static_cast<int64_t>(number(step, "probation_ms", static_cast<double>(tuning.probationMs)));
+		tuning.dropTrigger = number(step, "drop_trigger", tuning.dropTrigger);
+		app_.performance().setTuningForTest(tuning);
+		return StepResult::Done;
+	}
+
+	if (op == "suggestion") {
+		const auto &suggestions = app_.performance().suggestions();
+		if (suggestions.empty()) {
+			detail = "There is no suggestion.";
+			return StepResult::Failed;
+		}
+		const std::string id = suggestions.front().change.id;
+		const std::string action = text(step, "action", "apply");
+		detail = suggestions.front().text.title;
+		if (action == "apply")
+			return app_.performance().applySuggestion(id) ? StepResult::Done : StepResult::Failed;
+		if (action == "lock")
+			return app_.performance().lockSuggestion(id) ? StepResult::Done : StepResult::Failed;
+		if (action == "ignore") {
+			app_.performance().ignoreSuggestion(id);
+			return StepResult::Done;
+		}
+		detail = "Unknown action '" + action + "'.";
+		return StepResult::Failed;
+	}
+
+	if (op == "preflight") {
+		const PreflightReport report = runPreflightNow(app_);
+		json items = json::array();
+		for (const PreflightItem &item : report.items) {
+			items.push_back({{"id", item.id},
+					 {"status", preflightStatusName(item.status)},
+					 {"title", item.title},
+					 {"text", item.message.text()}});
+		}
+		results_["preflight"][text(step, "label", "preflight-" + std::to_string(index_))] = {
+			{"status", preflightStatusName(report.status)}, {"items", items}};
+		detail = preflightStatusName(report.status);
+		return StepResult::Done;
+	}
+
+	if (op == "diagnostics") {
+		results_["diagnostics"][text(step, "label", "diagnostics-" + std::to_string(index_))] = buildDiagnosticsNow(app_);
 		return StepResult::Done;
 	}
 
@@ -524,7 +602,8 @@ ScenarioRunner::StepResult ScenarioRunner::beginStep(const json &step, std::stri
 		return StepResult::Done;
 	}
 
-	if (op == "wait" || op == "wait_phase" || op == "wait_reconnects" || op == "wait_idle")
+	if (op == "wait" || op == "wait_phase" || op == "wait_reconnects" || op == "wait_idle" || op == "wait_suggestion" ||
+	    op == "wait_adjustment")
 		return pollStep(step, detail);
 
 	detail = "Unknown op '" + op + "'.";
@@ -552,10 +631,40 @@ ScenarioRunner::StepResult ScenarioRunner::pollStep(const json &step, std::strin
 		return StepResult::Waiting;
 	}
 
+	if (op == "wait_suggestion") {
+		if (!app_.performance().suggestions().empty()) {
+			detail = app_.performance().suggestions().front().text.title + " (after " +
+				 std::to_string(static_cast<int>(elapsedSec)) + " s)";
+			return StepResult::Done;
+		}
+		if (elapsedSec >= timeoutSec) {
+			detail = "No suggestion appeared before the timeout.";
+			return StepResult::Failed;
+		}
+		return StepResult::Waiting;
+	}
+
 	const std::string id = idFor(step, detail);
 	if (id.empty())
 		return StepResult::Failed;
 	const DestinationRuntime runtime = app_.outputs().runtime(id);
+
+	if (op == "wait_adjustment") {
+		// "reduced": the optimiser lowered something. "none": everything is back to normal.
+		const bool wantReduced = text(step, "state", "reduced") == "reduced";
+		const Adjustment adjustment = app_.adjustmentFor(id);
+		if (adjustment.none() != wantReduced) {
+			detail = "bitrate " + std::to_string(adjustment.bitratePercent) + " percent after " +
+				 std::to_string(static_cast<int>(elapsedSec)) + " s";
+			return StepResult::Done;
+		}
+		if (elapsedSec >= timeoutSec) {
+			detail = wantReduced ? "The optimiser made no reduction before the timeout."
+					     : "The reduction was still in force at the timeout.";
+			return StepResult::Failed;
+		}
+		return StepResult::Waiting;
+	}
 
 	if (op == "wait_phase") {
 		const std::string wanted = text(step, "phase");
@@ -622,8 +731,13 @@ json ScenarioRunner::snapshot()
 		}
 
 		const EffectiveVideo &video = info.effective.video;
+		const Adjustment adjustment = app_.adjustmentFor(id);
 		destinations[entry.first] = {
 			{"id", id},
+			{"adjustment",
+			 {{"bitrate_percent", adjustment.bitratePercent}, {"max_fps", adjustment.maxFps}, {"max_lines", adjustment.maxLines}}},
+			{"window_drop_percent", app_.performance().dropPercent(id)},
+			{"locks", lockState(app_.config().findDestination(id))},
 			{"phase", destinationPhaseName(runtime.phase)},
 			{"error", runtime.error.text()},
 			{"last_stop", stopReasonName(runtime.lastStop)},
@@ -659,6 +773,28 @@ json ScenarioRunner::snapshot()
 		};
 	}
 	out["destinations"] = std::move(destinations);
+
+	const PerformanceSnapshot &performance = app_.performance().snapshot();
+	out["performance"] = {
+		{"obs_cpu_percent", performance.obsCpuPercent},   {"system_cpu_percent", performance.systemCpuPercent},
+		{"gpu_percent", performance.gpuPercent},           {"memory_mb", performance.memoryMb},
+		{"render_lag_percent", performance.renderLagPercent}, {"encode_lag_percent", performance.encodeLagPercent},
+		{"worst_drop_percent", performance.worstDropPercent}, {"tick_interval_ms", app_.performance().tickIntervalMs()},
+	};
+	json suggestions = json::array();
+	for (const Suggestion &suggestion : app_.performance().suggestions()) {
+		suggestions.push_back({{"title", suggestion.text.title},
+				       {"reason", suggestion.text.reason},
+				       {"effect", suggestion.text.effect},
+				       {"kind", optimizerChangeKindName(suggestion.change.kind)},
+				       {"cause", optimizerCauseName(suggestion.change.cause)},
+				       {"needs_reconnect", suggestion.change.needsReconnect}});
+	}
+	out["suggestions"] = std::move(suggestions);
+	json history = json::array();
+	for (const AppliedChange &applied : app_.performance().history())
+		history.push_back({{"text", applied.text}, {"automatic", applied.automatic}});
+	out["optimizer_history"] = std::move(history);
 
 	out["encoders"] = {{"video_live", app_.outputs().encoderPool().liveVideoEncoders()},
 			   {"audio_live", app_.outputs().encoderPool().liveAudioEncoders()}};

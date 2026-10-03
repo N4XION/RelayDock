@@ -42,7 +42,7 @@ target_include_directories(
 )
 target_include_directories(relaydock-core SYSTEM PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 target_link_libraries(relaydock-core PUBLIC relaydock-options)
-target_link_libraries(relaydock-core PUBLIC advapi32 crypt32 ws2_32 pdh iphlpapi)
+target_link_libraries(relaydock-core PUBLIC advapi32 crypt32 ws2_32 pdh iphlpapi winhttp)
 set_target_properties(relaydock-core PROPERTIES FOLDER "RelayDock")
 
 if(PLUGIN_DIRTY)

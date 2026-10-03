@@ -13,6 +13,7 @@ set(
   unit/test_encoding.cpp
   unit/test_optimizer.cpp
   unit/test_providers.cpp
+  unit/test_services.cpp
   unit/test_settings.cpp
   unit/test_stream_url.cpp
   unit/test_utils.cpp

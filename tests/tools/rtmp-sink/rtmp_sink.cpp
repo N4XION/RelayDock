@@ -14,6 +14,8 @@
 //   drop<N>-<anything>     Cut the connection N seconds after publishing starts, every time.
 //   droponce<N>-<anything> Cut the connection once. The next connection with the key is accepted.
 //   stall<N>-<anything>    Stop reading after N seconds, like a congested network.
+//   slow<K>-<anything>     Read at most K Kbps, like an upload link that is too narrow.
+//   slow<K>for<S>-<anything>  The same, but only for the first S seconds of the stream.
 //
 // Usage:
 //   rd-rtmp-sink --port 19350 --report sink-report.json [--bind 127.0.0.1] [--blackhole-port 19351]
@@ -310,11 +312,12 @@ private:
 
 // ---- One RTMP connection ----------------------------------------------------------------------
 
-enum class Behaviour { Ok, Reject, Drop, DropOnce, Stall };
+enum class Behaviour { Ok, Reject, Drop, DropOnce, Stall, Slow };
 
 struct KeyPlan {
 	Behaviour behaviour = Behaviour::Ok;
 	int seconds = 0;
+	int kbps = 0; // For Slow: the most the sink reads
 };
 
 KeyPlan planForKey(const std::string &key)
@@ -341,6 +344,23 @@ KeyPlan planForKey(const std::string &key)
 		plan.behaviour = Behaviour::Drop;
 	} else if (key.rfind("stall", 0) == 0 && numberAfter(5, plan.seconds)) {
 		plan.behaviour = Behaviour::Stall;
+	} else if (key.rfind("slow", 0) == 0) {
+		// slow<K>- or slow<K>for<S>-
+		size_t i = 4;
+		int kbps = 0;
+		while (i < key.size() && key[i] >= '0' && key[i] <= '9')
+			kbps = kbps * 10 + (key[i++] - '0');
+		int seconds = 0;
+		if (key.compare(i, 3, "for") == 0) {
+			i += 3;
+			while (i < key.size() && key[i] >= '0' && key[i] <= '9')
+				seconds = seconds * 10 + (key[i++] - '0');
+		}
+		if (kbps > 0 && i < key.size() && key[i] == '-') {
+			plan.behaviour = Behaviour::Slow;
+			plan.kbps = kbps;
+			plan.seconds = seconds;
+		}
 	}
 	return plan;
 }
@@ -374,7 +394,24 @@ private:
 			if (g_state.stopping)
 				return "client";
 
-			if (publishing_ && plan_.behaviour != Behaviour::Ok && plan_.behaviour != Behaviour::Reject) {
+			if (publishing_ && plan_.behaviour == Behaviour::Slow) {
+				const int64_t elapsed = nowMs() - publishStartMs_;
+				const bool limited = plan_.seconds == 0 || elapsed < static_cast<int64_t>(plan_.seconds) * 1000;
+				if (limited) {
+					if (!slowBufferSet_) {
+						// A small receive buffer, so the sender feels the limit within a second.
+						int bytes = 16 * 1024;
+						setsockopt(socket_, SOL_SOCKET, SO_RCVBUF, reinterpret_cast<const char *>(&bytes), sizeof(bytes));
+						slowBufferSet_ = true;
+						slowStartBytes_ = sessionBytes_;
+					}
+					const int64_t allowed = elapsed * plan_.kbps / 8; // Kbps * ms / 8 = bytes
+					if (static_cast<int64_t>(sessionBytes_ - slowStartBytes_) > allowed) {
+						std::this_thread::sleep_for(std::chrono::milliseconds(10));
+						continue;
+					}
+				}
+			} else if (publishing_ && plan_.behaviour != Behaviour::Ok && plan_.behaviour != Behaviour::Reject) {
 				const int64_t elapsed = nowMs() - publishStartMs_;
 				if (elapsed >= static_cast<int64_t>(plan_.seconds) * 1000) {
 					if (plan_.behaviour == Behaviour::Stall) {
@@ -794,6 +831,8 @@ private:
 	bool publishing_ = false;
 	bool rejected_ = false;
 	int64_t publishStartMs_ = 0;
+	bool slowBufferSet_ = false;
+	uint64_t slowStartBytes_ = 0;
 };
 
 // ---- Report ---------------------------------------------------------------------------------

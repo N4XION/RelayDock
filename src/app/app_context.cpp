@@ -2,6 +2,7 @@
 // Copyright (C) 2026 RelayDock contributors
 #include "app/app_context.h"
 
+#include "app/performance_monitor.h"
 #include "outputs/output_manager.h"
 #include "outputs/vertical_canvas.h"
 #include "security/redactor.h"
@@ -90,14 +91,43 @@ void AppContext::initialize()
 
 	vertical_ = std::make_unique<VerticalCanvasManager>(config_.verticalCanvas.width, config_.verticalCanvas.height);
 	outputs_ = std::make_unique<OutputManager>(*this);
+	performance_ = std::make_unique<PerformanceMonitor>(*this);
 
 	obs_frontend_add_save_callback(onSceneCollectionSaveLoad, this);
+
+	signal_handler_t *handler = obs_get_signal_handler();
+	sourceCreateSignal_.Connect(handler, "source_create", onSourceListChanged, this);
+	sourceRemoveSignal_.Connect(handler, "source_remove", onSourceListChanged, this);
+	sourceRenameSignal_.Connect(handler, "source_rename", onSourceListChanged, this);
 }
 
 void AppContext::onObsFinishedLoading()
 {
 	encoders_.refresh();
+	collectionChanging_ = false;
 	vertical_->rebind();
+	performance_->start();
+}
+
+void AppContext::onSourceListChanged(void *data, calldata_t *)
+{
+	// OBS raises this on whatever thread changed the source list. Hand over to the UI thread.
+	static_cast<AppContext *>(data)->queueVerticalRebind();
+}
+
+void AppContext::queueVerticalRebind()
+{
+	if (rebindQueued_.exchange(true))
+		return; // One is already on its way
+	QMetaObject::invokeMethod(
+		this,
+		[this] {
+			rebindQueued_ = false;
+			// While a scene collection loads or unloads, the frontend events do the binding.
+			if (!shutDown_ && !collectionChanging_)
+				vertical_->rebind();
+		},
+		Qt::QueuedConnection);
 }
 
 void AppContext::onFrontendEvent(int event)
@@ -108,10 +138,20 @@ void AppContext::onFrontendEvent(int event)
 	switch (event) {
 	case OBS_FRONTEND_EVENT_SCENE_COLLECTION_CLEANUP:
 		// OBS is about to free the sources of this collection. Holding one would keep it alive.
+		collectionChanging_ = true;
 		vertical_->releaseSources();
 		break;
 	case OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGED:
+		collectionChanging_ = false;
 		vertical_->rebind();
+		break;
+	case OBS_FRONTEND_EVENT_STREAMING_STARTING:
+		if (config_.general.followObsStreaming)
+			outputs_->startAllEnabled();
+		break;
+	case OBS_FRONTEND_EVENT_STREAMING_STOPPING:
+		if (config_.general.followObsStreaming)
+			outputs_->stopAll();
 		break;
 	default:
 		break;
@@ -125,7 +165,12 @@ void AppContext::shutdown()
 	shutDown_ = true;
 
 	obs_frontend_remove_save_callback(onSceneCollectionSaveLoad, this);
+	sourceCreateSignal_.Disconnect();
+	sourceRemoveSignal_.Disconnect();
+	sourceRenameSignal_.Disconnect();
 
+	if (performance_)
+		performance_->shutdown();
 	// Outputs first: they hold encoders that read the vertical canvas.
 	if (outputs_)
 		outputs_->shutdown();
@@ -148,6 +193,8 @@ bool AppContext::saveConfig()
 void AppContext::notifyConfigChanged()
 {
 	saveConfig();
+	if (performance_)
+		performance_->applySettings();
 	Q_EMIT configChanged();
 }
 

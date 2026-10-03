@@ -14,6 +14,7 @@
 
 #include <obs.hpp>
 
+#include <atomic>
 #include <map>
 #include <memory>
 #include <string>
@@ -22,6 +23,7 @@
 namespace rd {
 
 class OutputManager;
+class PerformanceMonitor;
 class VerticalCanvasManager;
 
 // Owns everything RelayDock keeps alive while OBS runs: settings, providers, the credential
@@ -56,6 +58,7 @@ public:
 	EncoderCatalog &encoders() { return encoders_; }
 	OutputManager &outputs() { return *outputs_; }
 	VerticalCanvasManager &vertical() { return *vertical_; }
+	PerformanceMonitor &performance() { return *performance_; }
 	const IClock &clock() const { return clock_; }
 	const ConfigStore &configStore() const { return *store_; }
 
@@ -110,10 +113,22 @@ private:
 	EncoderCatalog encoders_;
 	std::unique_ptr<OutputManager> outputs_;
 	std::unique_ptr<VerticalCanvasManager> vertical_;
+	std::unique_ptr<PerformanceMonitor> performance_;
 	std::map<std::string, Adjustment> adjustments_;
 	std::vector<std::string> loadNotes_;
 	ConfigLoadStatus loadStatus_ = ConfigLoadStatus::CreatedDefault;
 	bool shutDown_ = false;
+
+	// A source appeared, went away or changed its name. Vertical layouts refer to sources,
+	// so they bind again. Calls are folded into one, on the UI thread.
+	void queueVerticalRebind();
+	static void onSourceListChanged(void *data, calldata_t *params);
+
+	OBSSignal sourceCreateSignal_;
+	OBSSignal sourceRemoveSignal_;
+	OBSSignal sourceRenameSignal_;
+	std::atomic<bool> rebindQueued_{false};
+	bool collectionChanging_ = false;
 };
 
 } // namespace rd

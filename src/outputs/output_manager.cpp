@@ -425,6 +425,91 @@ void OutputManager::reconnect(const std::string &id)
 	Q_EMIT destinationChanged(QString::fromStdString(id));
 }
 
+OutputManager::ApplyResult OutputManager::applyEffectiveChanges(const std::vector<std::string> &ids, bool allowReconnect)
+{
+	ApplyResult result;
+	if (shutDown_)
+		return result;
+
+	const StreamContext context = app_.streamContext();
+	auto inChange = [&](const std::string &id) { return std::find(ids.begin(), ids.end(), id) != ids.end(); };
+
+	// What each destination should stream with now.
+	std::map<std::string, EffectiveDestination> wanted;
+	for (const std::string &id : ids) {
+		const std::vector<EffectiveDestination> all = app_.resolveEffective(id);
+		const auto found = std::find_if(all.begin(), all.end(),
+						[&](const EffectiveDestination &destination) { return destination.id == id; });
+		if (found != all.end() && found->usable())
+			wanted[id] = *found;
+	}
+
+	std::vector<std::string> restart;
+	// Running encoders that can take the new bitrate in place, with the sessions they serve.
+	std::map<obs_encoder_t *, std::vector<Session *>> retunable;
+
+	for (const std::string &id : ids) {
+		Session *s = findSession(id);
+		const auto target = wanted.find(id);
+		if (!s || !s->output || target == wanted.end())
+			continue;
+		const DestinationPhase phase = s->state.runtime().phase;
+		if (phase != DestinationPhase::Live && phase != DestinationPhase::Reconnecting)
+			continue;
+		if (target->second.video == s->effective.video && target->second.audio == s->effective.audio)
+			continue; // Already streaming with these settings
+
+		EffectiveVideo bitrateOnly = s->effective.video;
+		bitrateOnly.bitrateKbps = target->second.video.bitrateKbps;
+		const VideoEncoderCaps *caps = context.findVideoEncoder(s->effective.video.encoderId);
+		const bool live = phase == DestinationPhase::Live && s->videoEncoder;
+		if (live && caps && caps->dynamicBitrate && bitrateOnly == target->second.video &&
+		    target->second.audio == s->effective.audio)
+			retunable[s->videoEncoder.Get()].push_back(s);
+		else
+			restart.push_back(id);
+	}
+
+	for (auto &entry : retunable) {
+		std::vector<Session *> &members = entry.second;
+		const EffectiveVideo from = members.front()->effective.video;
+		const EffectiveVideo &to = wanted[members.front()->id].video;
+
+		// The encoder changes for everyone attached to it. That is only right when every
+		// destination on it is part of this change and wants the same new settings.
+		bool everyone = true;
+		for (const auto &other : sessions_) {
+			if (other.second->videoEncoder.Get() != entry.first)
+				continue;
+			const auto target = wanted.find(other.first);
+			if (!inChange(other.first) || target == wanted.end() || !(target->second.video == to))
+				everyone = false;
+		}
+
+		const VideoEncoderCaps *caps = context.findVideoEncoder(from.encoderId);
+		if (everyone && caps && pool_.retune(from, to, *caps)) {
+			for (Session *s : members) {
+				s->effective = wanted[s->id];
+				result.retuned.push_back(s->id);
+				Q_EMIT destinationChanged(QString::fromStdString(s->id));
+			}
+		} else {
+			for (Session *s : members)
+				restart.push_back(s->id);
+		}
+	}
+
+	for (const std::string &id : restart) {
+		if (allowReconnect) {
+			reconnect(id);
+			result.reconnecting.push_back(id);
+		} else {
+			result.pending.push_back(id);
+		}
+	}
+	return result;
+}
+
 void OutputManager::stopAll()
 {
 	std::vector<std::string> ids;

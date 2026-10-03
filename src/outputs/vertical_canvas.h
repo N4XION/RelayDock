@@ -45,6 +45,8 @@ public:
 	video_t *acquireVideo(std::string &error);
 	void releaseVideo();
 	bool videoInUse() const { return videoUsers_ > 0; }
+	// The frames encoders read right now. nullptr while no encoder uses the canvas.
+	video_t *activeVideo() const { return videoUsers_ > 0 ? video_ : nullptr; }
 
 	// Keeps sources showing while the editor preview is open.
 	void addPreviewUser();
@@ -114,6 +116,8 @@ public:
 	video_t *acquireVideo(const std::string &layoutId, std::string &error);
 	void releaseVideo(const std::string &layoutId);
 	bool anyVideoInUse() const;
+	// The frames of a canvas an encoder is using, for measuring encoder lag. nullptr otherwise.
+	video_t *activeVideo(const std::string &layoutId) const;
 
 	int canvasWidth() const { return width_; }
 	int canvasHeight() const { return height_; }

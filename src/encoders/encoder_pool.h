@@ -37,6 +37,13 @@ public:
 	OBSEncoderAutoRelease acquireAudio(const EffectiveVideo &video, const EffectiveAudio &audio,
 					   std::string &error);
 
+	// Changes the bitrate of a running encoder and files it under the signature of its new
+	// settings, so a destination that starts later with those settings joins it. `from` and
+	// `to` may differ in bitrate only. Every destination on the encoder gets the new bitrate,
+	// so the caller must change them together. Returns false when no live encoder matches
+	// `from`, or when another encoder already runs with the `to` settings.
+	bool retune(const EffectiveVideo &from, const EffectiveVideo &to, const VideoEncoderCaps &caps);
+
 	// How many encoders the pool created that are still alive.
 	size_t liveVideoEncoders();
 	size_t liveAudioEncoders();

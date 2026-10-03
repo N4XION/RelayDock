@@ -343,6 +343,12 @@ bool VerticalCanvasManager::anyVideoInUse() const
 			   [](const auto &entry) { return entry.second->videoInUse(); });
 }
 
+video_t *VerticalCanvasManager::activeVideo(const std::string &layoutId) const
+{
+	const auto it = canvases_.find(layoutId);
+	return it == canvases_.end() ? nullptr : it->second->activeVideo();
+}
+
 void VerticalCanvasManager::setLayouts(std::vector<VerticalLayout> layouts)
 {
 	layouts_ = std::move(layouts);

@@ -32,6 +32,8 @@ set(
   src/legal/legal_documents.h
   src/network/bandwidth.cpp
   src/network/bandwidth.h
+  src/network/reachability.cpp
+  src/network/reachability.h
   src/network/stream_url.cpp
   src/network/stream_url.h
   src/performance/effective_settings.cpp
@@ -40,6 +42,10 @@ set(
   src/performance/metrics_window.h
   src/performance/optimizer.cpp
   src/performance/optimizer.h
+  src/performance/optimizer_text.cpp
+  src/performance/optimizer_text.h
+  src/performance/system_sampler.cpp
+  src/performance/system_sampler.h
   src/providers/custom_rtmp/custom_rtmp_provider.cpp
   src/providers/custom_rtmp/custom_rtmp_provider.h
   src/providers/facebook/facebook_provider.cpp
@@ -77,6 +83,10 @@ set(
   src/settings/config_store.h
   src/settings/migrations.cpp
   src/settings/migrations.h
+  src/settings/theme.cpp
+  src/settings/theme.h
+  src/update/update_check.cpp
+  src/update/update_check.h
   src/utils/clock.cpp
   src/utils/clock.h
   src/utils/i18n.cpp
@@ -87,6 +97,8 @@ set(
   src/utils/paths.h
   src/utils/strings.cpp
   src/utils/strings.h
+  src/utils/system_info.cpp
+  src/utils/system_info.h
   src/utils/uuid.cpp
   src/utils/uuid.h
 )
@@ -95,6 +107,10 @@ set(
   RELAYDOCK_PLUGIN_SOURCES
   src/app/app_context.cpp
   src/app/app_context.h
+  src/app/diagnostics_service.cpp
+  src/app/diagnostics_service.h
+  src/app/performance_monitor.cpp
+  src/app/performance_monitor.h
   src/encoders/encoder_catalog.cpp
   src/encoders/encoder_catalog.h
   src/encoders/encoder_pool.cpp
