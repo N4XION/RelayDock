@@ -1,4 +1,6 @@
 # CMake operating system bootstrap module
+#
+# Adapted from the official OBS plugin template (obsproject/obs-plugintemplate, GPL-2.0-or-later).
 
 include_guard(GLOBAL)
 

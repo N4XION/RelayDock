@@ -1,4 +1,6 @@
 # CMake Windows compiler configuration module
+#
+# Adapted from the official OBS plugin template (obsproject/obs-plugintemplate, GPL-2.0-or-later).
 
 include_guard(GLOBAL)
 
@@ -22,9 +24,8 @@ endif()
 set(_obs_msvc_c_options /MP /Zc:__cplusplus /Zc:preprocessor)
 set(_obs_msvc_cpp_options /MP /Zc:__cplusplus /Zc:preprocessor)
 
-if(CMAKE_CXX_STANDARD GREATER_EQUAL 20)
-  list(APPEND _obs_msvc_cpp_options /Zc:char8_t-)
-endif()
+# The OBS template turns char8_t off for C++20 here. RelayDock keeps it on: nlohmann/json
+# needs std::u8string in C++20 mode, and RelayDock uses no u8"" literals.
 
 add_compile_options(
   /W3
