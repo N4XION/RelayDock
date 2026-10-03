@@ -16,6 +16,10 @@ set(
   src/core/user_message.h
   src/core/vertical_layout.cpp
   src/core/vertical_layout.h
+  src/diagnostics/preflight.cpp
+  src/diagnostics/preflight.h
+  src/diagnostics/report.cpp
+  src/diagnostics/report.h
   src/encoders/encode_plan.cpp
   src/encoders/encode_plan.h
   src/encoders/encoder_caps.cpp
@@ -24,6 +28,10 @@ set(
   src/encoders/encoder_settings.h
   src/encoders/video_math.cpp
   src/encoders/video_math.h
+  src/legal/legal_documents.cpp
+  src/legal/legal_documents.h
+  src/network/bandwidth.cpp
+  src/network/bandwidth.h
   src/network/stream_url.cpp
   src/network/stream_url.h
   src/performance/effective_settings.cpp

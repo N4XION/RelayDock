@@ -9,6 +9,7 @@ set(
   unit/test_helpers.h
   unit/test_build_info.cpp
   unit/test_destination_state.cpp
+  unit/test_diagnostics.cpp
   unit/test_encoding.cpp
   unit/test_optimizer.cpp
   unit/test_providers.cpp
@@ -17,6 +18,7 @@ set(
   unit/test_utils.cpp
   unit/test_vertical_layout.cpp
   security/test_credentials.cpp
+  security/test_diagnostics_leaks.cpp
   security/test_redactor.cpp
   security/test_log_redaction.cpp
 )
