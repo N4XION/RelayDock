@@ -93,6 +93,10 @@ set(
   src/encoders/encoder_pool.h
   src/outputs/output_manager.cpp
   src/outputs/output_manager.h
+  src/outputs/program_mirror_source.cpp
+  src/outputs/program_mirror_source.h
+  src/outputs/vertical_canvas.cpp
+  src/outputs/vertical_canvas.h
   src/plugin-main.cpp
 )
 

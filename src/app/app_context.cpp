@@ -3,6 +3,7 @@
 #include "app/app_context.h"
 
 #include "outputs/output_manager.h"
+#include "outputs/vertical_canvas.h"
 #include "security/redactor.h"
 #include "security/windows_credential_store.h"
 #include "utils/i18n.h"
@@ -11,6 +12,7 @@
 #include "utils/strings.h"
 #include "utils/uuid.h"
 
+#include <obs-frontend-api.h>
 #include <obs-module.h>
 
 #include <algorithm>
@@ -23,6 +25,23 @@ namespace {
 bool lookupTranslation(const char *key, const char **translation)
 {
 	return obs_module_get_string(key, translation);
+}
+
+constexpr const char *kVerticalSaveKey = "relaydock_vertical";
+
+// OBS calls this when it saves or loads a scene collection. Vertical layouts live in the
+// collection because they refer to its sources.
+void onSceneCollectionSaveLoad(obs_data_t *data, bool saving, void *param)
+{
+	auto *app = static_cast<AppContext *>(param);
+	if (app->isShutDown())
+		return;
+	if (saving) {
+		obs_data_set_string(data, kVerticalSaveKey, app->vertical().saveText().c_str());
+	} else {
+		const char *text = obs_data_get_string(data, kVerticalSaveKey);
+		app->vertical().loadText(text ? text : "");
+	}
 }
 
 std::string credentialPrefix()
@@ -69,12 +88,34 @@ void AppContext::initialize()
 	// Register every saved secret with the redactor before anything can log.
 	vault_->primeRedactor();
 
+	vertical_ = std::make_unique<VerticalCanvasManager>(config_.verticalCanvas.width, config_.verticalCanvas.height);
 	outputs_ = std::make_unique<OutputManager>(*this);
+
+	obs_frontend_add_save_callback(onSceneCollectionSaveLoad, this);
 }
 
 void AppContext::onObsFinishedLoading()
 {
 	encoders_.refresh();
+	vertical_->rebind();
+}
+
+void AppContext::onFrontendEvent(int event)
+{
+	if (shutDown_)
+		return;
+
+	switch (event) {
+	case OBS_FRONTEND_EVENT_SCENE_COLLECTION_CLEANUP:
+		// OBS is about to free the sources of this collection. Holding one would keep it alive.
+		vertical_->releaseSources();
+		break;
+	case OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGED:
+		vertical_->rebind();
+		break;
+	default:
+		break;
+	}
 }
 
 void AppContext::shutdown()
@@ -83,8 +124,13 @@ void AppContext::shutdown()
 		return;
 	shutDown_ = true;
 
+	obs_frontend_remove_save_callback(onSceneCollectionSaveLoad, this);
+
+	// Outputs first: they hold encoders that read the vertical canvas.
 	if (outputs_)
 		outputs_->shutdown();
+	if (vertical_)
+		vertical_->shutdown();
 	if (store_)
 		saveConfig();
 }
@@ -223,6 +269,9 @@ std::vector<EffectiveDestination> AppContext::resolveEffective(const std::string
 			continue;
 		ResolveInput input;
 		input.config = destination;
+		// An empty or stale layout id means the first layout. Resolve it here, so two
+		// destinations on the same canvas compare as equal and can share an encoder.
+		input.config.verticalLayoutId = vertical_->resolveLayoutId(destination.verticalLayoutId);
 		input.provider = providers_.find(destination.provider);
 		input.adjustment = adjustmentFor(destination.id);
 		inputs.push_back(std::move(input));
@@ -258,13 +307,14 @@ video_t *AppContext::acquireVideo(const EffectiveVideo &video, std::string &erro
 		return frames;
 	}
 
-	error = "The vertical canvas is not set up.";
-	return nullptr;
+	return vertical_->acquireVideo(video.verticalLayoutId, error);
 }
 
-void AppContext::releaseVideo(const EffectiveVideo &)
+void AppContext::releaseVideo(const EffectiveVideo &video)
 {
 	// The OBS main video needs no release.
+	if (video.orientation == Orientation::Vertical)
+		vertical_->releaseVideo(video.verticalLayoutId);
 }
 
 } // namespace rd

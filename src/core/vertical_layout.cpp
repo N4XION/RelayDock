@@ -302,10 +302,14 @@ void moveItem(VerticalLayout &layout, const std::string &itemId, int newIndex)
 
 // ---- Saving ------------------------------------------------------------------------------------
 
-std::string serializeVerticalLayouts(const std::vector<VerticalLayout> &layouts)
+std::string serializeVerticalLayouts(const std::vector<VerticalLayout> &layouts, int canvasWidth, int canvasHeight)
 {
 	ordered_json root;
 	root["version"] = 1;
+	if (canvasWidth > 0 && canvasHeight > 0) {
+		root["canvas_width"] = canvasWidth;
+		root["canvas_height"] = canvasHeight;
+	}
 	ordered_json list = ordered_json::array();
 	for (const VerticalLayout &layout : layouts) {
 		ordered_json l;
@@ -338,15 +342,30 @@ std::string serializeVerticalLayouts(const std::vector<VerticalLayout> &layouts)
 	return root.dump(2);
 }
 
-bool parseVerticalLayouts(std::string_view jsonText, std::vector<VerticalLayout> &out)
+bool parseVerticalLayouts(std::string_view jsonText, std::vector<VerticalLayout> &out, int *canvasWidth,
+			  int *canvasHeight)
 {
 	out.clear();
+	if (canvasWidth)
+		*canvasWidth = 0;
+	if (canvasHeight)
+		*canvasHeight = 0;
+
 	const json root = json::parse(jsonText, nullptr, false, true);
 	if (root.is_discarded() || !root.is_object())
 		return false;
 	const auto layouts = root.find("layouts");
 	if (layouts == root.end() || !layouts->is_array())
 		return false;
+
+	const int savedWidth = static_cast<int>(readNumber(root, "canvas_width", 0));
+	const int savedHeight = static_cast<int>(readNumber(root, "canvas_height", 0));
+	if (savedWidth > 0 && savedHeight > 0) {
+		if (canvasWidth)
+			*canvasWidth = savedWidth;
+		if (canvasHeight)
+			*canvasHeight = savedHeight;
+	}
 
 	for (const json &l : *layouts) {
 		if (!l.is_object())

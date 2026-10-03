@@ -327,6 +327,23 @@ TEST_SUITE("core.vertical_layout.saving")
 		CHECK(parsed == original);
 	}
 
+	TEST_CASE("the canvas size the layouts were made for is saved with them")
+	{
+		const std::vector<VerticalLayout> layouts = {makeDefaultVerticalLayout(720, 1280)};
+		std::vector<VerticalLayout> parsed;
+		int width = -1;
+		int height = -1;
+		REQUIRE(parseVerticalLayouts(serializeVerticalLayouts(layouts, 720, 1280), parsed, &width, &height));
+		CHECK(width == 720);
+		CHECK(height == 1280);
+		CHECK(parsed == layouts);
+
+		// Text without a recorded size reports 0.
+		REQUIRE(parseVerticalLayouts(serializeVerticalLayouts(layouts), parsed, &width, &height));
+		CHECK(width == 0);
+		CHECK(height == 0);
+	}
+
 	TEST_CASE("text that is not a layout list is refused")
 	{
 		std::vector<VerticalLayout> parsed;

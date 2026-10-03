@@ -135,11 +135,16 @@ void moveItem(VerticalLayout &layout, const std::string &itemId, int newIndex);
 
 // ---- Saving ------------------------------------------------------------------------------------
 
-std::string serializeVerticalLayouts(const std::vector<VerticalLayout> &layouts);
+// Boxes are saved in canvas pixels, so the canvas size goes into the file with them. 0 means
+// the size is not recorded.
+std::string serializeVerticalLayouts(const std::vector<VerticalLayout> &layouts, int canvasWidth = 0,
+				     int canvasHeight = 0);
 
 // Reads layouts. Tolerates missing and wrong-typed values. Returns false when the text is not
-// a layout list at all.
-bool parseVerticalLayouts(std::string_view jsonText, std::vector<VerticalLayout> &out);
+// a layout list at all. The canvas size the layouts were saved for is returned when asked
+// for, 0 when the text does not record it.
+bool parseVerticalLayouts(std::string_view jsonText, std::vector<VerticalLayout> &out, int *canvasWidth = nullptr,
+			  int *canvasHeight = nullptr);
 
 // Repairs ids and boxes. Returns notes about what changed.
 std::vector<std::string> sanitizeVerticalLayouts(std::vector<VerticalLayout> &layouts, int canvasWidth, int canvasHeight);

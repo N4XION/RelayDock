@@ -22,6 +22,7 @@
 namespace rd {
 
 class OutputManager;
+class VerticalCanvasManager;
 
 // Owns everything RelayDock keeps alive while OBS runs: settings, providers, the credential
 // vault, the encoder catalog and the output manager. The interface talks to this object.
@@ -41,6 +42,8 @@ public:
 	void initialize();
 	// OBS finished loading its modules, so the encoder list is complete now.
 	void onObsFinishedLoading();
+	// A frontend event other than "finished loading" and "exit".
+	void onFrontendEvent(int event);
 	// OBS is exiting. Stops every output and releases every OBS object.
 	void shutdown();
 	bool isShutDown() const { return shutDown_; }
@@ -52,6 +55,7 @@ public:
 	SecretVault &vault() { return *vault_; }
 	EncoderCatalog &encoders() { return encoders_; }
 	OutputManager &outputs() { return *outputs_; }
+	VerticalCanvasManager &vertical() { return *vertical_; }
 	const IClock &clock() const { return clock_; }
 	const ConfigStore &configStore() const { return *store_; }
 
@@ -105,6 +109,7 @@ private:
 	std::unique_ptr<SecretVault> vault_;
 	EncoderCatalog encoders_;
 	std::unique_ptr<OutputManager> outputs_;
+	std::unique_ptr<VerticalCanvasManager> vertical_;
 	std::map<std::string, Adjustment> adjustments_;
 	std::vector<std::string> loadNotes_;
 	ConfigLoadStatus loadStatus_ = ConfigLoadStatus::CreatedDefault;

@@ -4,18 +4,24 @@
 
 #include "app/app_context.h"
 #include "outputs/output_manager.h"
+#include "outputs/vertical_canvas.h"
 #include "settings/config_json.h"
 #include "utils/log.h"
 #include "utils/paths.h"
 
+#include <graphics/vec4.h>
 #include <obs-frontend-api.h>
 #include <obs.h>
 #include <util/config-file.h>
 #include <util/platform.h>
 
+#include <QImage>
 #include <QMainWindow>
 
+#include <algorithm>
 #include <cstdlib>
+#include <cstring>
+#include <vector>
 
 namespace rd {
 
@@ -45,6 +51,105 @@ bool flag(const json &object, const char *key, bool fallback)
 {
 	const auto it = object.find(key);
 	return it != object.end() && it->is_boolean() ? it->get<bool>() : fallback;
+}
+
+// Renders a source to an image, on the OBS graphics thread, the way OBS takes a screenshot.
+struct RenderRequest {
+	obs_source_t *source = nullptr;
+	int width = 0;
+	int height = 0;
+	QImage image;
+	bool ok = false;
+};
+
+void renderSourceTask(void *param)
+{
+	auto *request = static_cast<RenderRequest *>(param);
+	obs_enter_graphics();
+
+	gs_texrender_t *texrender = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
+	gs_stagesurf_t *stage = gs_stagesurface_create(static_cast<uint32_t>(request->width),
+						       static_cast<uint32_t>(request->height), GS_RGBA);
+
+	if (gs_texrender_begin(texrender, static_cast<uint32_t>(request->width), static_cast<uint32_t>(request->height))) {
+		vec4 clear;
+		vec4_zero(&clear);
+		gs_clear(GS_CLEAR_COLOR, &clear, 0.0f, 0);
+		gs_ortho(0.0f, static_cast<float>(request->width), 0.0f, static_cast<float>(request->height), -100.0f, 100.0f);
+
+		gs_blend_state_push();
+		gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
+		obs_source_inc_showing(request->source);
+		obs_source_video_render(request->source);
+		obs_source_dec_showing(request->source);
+		gs_blend_state_pop();
+		gs_texrender_end(texrender);
+
+		gs_stage_texture(stage, gs_texrender_get_texture(texrender));
+		uint8_t *data = nullptr;
+		uint32_t lineSize = 0;
+		if (gs_stagesurface_map(stage, &data, &lineSize)) {
+			QImage image(request->width, request->height, QImage::Format_RGBA8888);
+			for (int y = 0; y < request->height; ++y)
+				memcpy(image.scanLine(y), data + static_cast<size_t>(y) * lineSize,
+				       static_cast<size_t>(request->width) * 4);
+			gs_stagesurface_unmap(stage);
+			request->image = image;
+			request->ok = true;
+		}
+	}
+
+	gs_stagesurface_destroy(stage);
+	gs_texrender_destroy(texrender);
+	obs_leave_graphics();
+}
+
+// "#RRGGBB" to red, green, blue.
+bool parseColor(const std::string &hex, int &r, int &g, int &b)
+{
+	if (hex.size() != 7 || hex[0] != '#')
+		return false;
+	try {
+		r = std::stoi(hex.substr(1, 2), nullptr, 16);
+		g = std::stoi(hex.substr(3, 2), nullptr, 16);
+		b = std::stoi(hex.substr(5, 2), nullptr, 16);
+	} catch (const std::exception &) {
+		return false;
+	}
+	return true;
+}
+
+// The bounding box of every pixel within `tolerance` of a colour.
+json measureColor(const QImage &image, int r, int g, int b, int tolerance)
+{
+	int left = image.width();
+	int top = image.height();
+	int right = -1;
+	int bottom = -1;
+	long long count = 0;
+	for (int y = 0; y < image.height(); ++y) {
+		const uchar *line = image.constScanLine(y);
+		for (int x = 0; x < image.width(); ++x) {
+			const uchar *pixel = line + x * 4;
+			if (std::abs(pixel[0] - r) <= tolerance && std::abs(pixel[1] - g) <= tolerance &&
+			    std::abs(pixel[2] - b) <= tolerance) {
+				++count;
+				left = std::min(left, x);
+				right = std::max(right, x);
+				top = std::min(top, y);
+				bottom = std::max(bottom, y);
+			}
+		}
+	}
+	json out;
+	out["pixels"] = count;
+	if (count > 0) {
+		out["x"] = left;
+		out["y"] = top;
+		out["width"] = right - left + 1;
+		out["height"] = bottom - top + 1;
+	}
+	return out;
 }
 
 } // namespace
@@ -288,6 +393,121 @@ ScenarioRunner::StepResult ScenarioRunner::beginStep(const json &step, std::stri
 			detail = "OBS did not apply the video settings: " + detail;
 			return StepResult::Failed;
 		}
+		return StepResult::Done;
+	}
+
+	if (op == "add_color_source") {
+		// Adds a plain coloured rectangle to the current OBS scene. Tests use it to put a
+		// known picture on screen without capturing anything from the PC.
+		int r = 0;
+		int g = 0;
+		int b = 0;
+		if (!parseColor(text(step, "color", "#FF0000"), r, g, b)) {
+			detail = "color must be #RRGGBB.";
+			return StepResult::Failed;
+		}
+		OBSSourceAutoRelease sceneSource = obs_frontend_get_current_scene();
+		obs_scene_t *scene = obs_scene_from_source(sceneSource);
+		if (!scene) {
+			detail = "OBS has no current scene.";
+			return StepResult::Failed;
+		}
+
+		OBSDataAutoRelease settings = obs_data_create();
+		// OBS stores colours as 0xAABBGGRR.
+		const long long abgr = 0xFF000000LL | (static_cast<long long>(b) << 16) | (static_cast<long long>(g) << 8) | r;
+		obs_data_set_int(settings, "color", abgr);
+		obs_data_set_int(settings, "width", static_cast<long long>(number(step, "width", 400)));
+		obs_data_set_int(settings, "height", static_cast<long long>(number(step, "height", 400)));
+
+		const std::string name = text(step, "name", "RelayDock test colour");
+		OBSSourceAutoRelease source = obs_source_create("color_source_v3", name.c_str(), settings, nullptr);
+		obs_sceneitem_t *item = source ? obs_scene_add(scene, source) : nullptr;
+		if (!item) {
+			detail = "OBS could not create the colour source.";
+			return StepResult::Failed;
+		}
+		vec2 position;
+		vec2_set(&position, static_cast<float>(number(step, "x", 0)), static_cast<float>(number(step, "y", 0)));
+		obs_sceneitem_set_pos(item, &position);
+		detail = obs_source_get_uuid(source);
+		return StepResult::Done;
+	}
+
+	if (op == "clear_scene") {
+		// Removes every item from the current OBS scene, so a test starts from a known picture.
+		OBSSourceAutoRelease sceneSource = obs_frontend_get_current_scene();
+		obs_scene_t *scene = obs_scene_from_source(sceneSource);
+		if (!scene) {
+			detail = "OBS has no current scene.";
+			return StepResult::Failed;
+		}
+		std::vector<obs_sceneitem_t *> items;
+		obs_scene_enum_items(
+			scene,
+			[](obs_scene_t *, obs_sceneitem_t *item, void *param) {
+				static_cast<std::vector<obs_sceneitem_t *> *>(param)->push_back(item);
+				return true;
+			},
+			&items);
+		for (obs_sceneitem_t *item : items) {
+			OBSSource source = obs_sceneitem_get_source(item);
+			obs_sceneitem_remove(item);
+			obs_source_remove(source);
+		}
+		detail = std::to_string(items.size()) + " item(s) removed";
+		return StepResult::Done;
+	}
+
+	if (op == "vertical_layout") {
+		// Replaces the vertical layouts with the ones given, in the saved-file format.
+		std::vector<VerticalLayout> layouts;
+		if (!step.contains("layouts") || !parseVerticalLayouts(json{{"layouts", step["layouts"]}}.dump(), layouts)) {
+			detail = "layouts must be an array of vertical layouts.";
+			return StepResult::Failed;
+		}
+		app_.vertical().setLayouts(layouts);
+		detail = std::to_string(app_.vertical().layouts().size()) + " layout(s)";
+		return StepResult::Done;
+	}
+
+	if (op == "render_vertical") {
+		// Renders the vertical canvas to an image and measures where a colour lands on it.
+		VerticalCanvas &canvas = app_.vertical().canvasFor(text(step, "layout_id"));
+		canvas.sync(app_.vertical().layoutFor(text(step, "layout_id")));
+
+		RenderRequest request;
+		request.source = canvas.sceneSource();
+		request.width = canvas.width();
+		request.height = canvas.height();
+		obs_queue_task(OBS_TASK_GRAPHICS, renderSourceTask, &request, true);
+		if (!request.ok) {
+			detail = "OBS could not render the vertical canvas.";
+			return StepResult::Failed;
+		}
+
+		json measured;
+		measured["width"] = request.width;
+		measured["height"] = request.height;
+		measured["missing_items"] = canvas.missingItems().size();
+		if (step.contains("find") && step["find"].is_object()) {
+			const int tolerance = static_cast<int>(number(step, "tolerance", 40));
+			for (const auto &entry : step["find"].items()) {
+				int r = 0;
+				int g = 0;
+				int b = 0;
+				if (!entry.value().is_string() || !parseColor(entry.value().get<std::string>(), r, g, b)) {
+					detail = "find values must be #RRGGBB.";
+					return StepResult::Failed;
+				}
+				measured["colors"][entry.key()] = measureColor(request.image, r, g, b, tolerance);
+			}
+		}
+		const std::string file = text(step, "file");
+		if (!file.empty())
+			measured["saved"] = request.image.save(QString::fromUtf8(file.c_str()), "PNG");
+
+		results_["renders"][text(step, "label", "render-" + std::to_string(index_))] = measured;
 		return StepResult::Done;
 	}
 

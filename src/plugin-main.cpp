@@ -26,6 +26,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #include "app/app_context.h"
 #include "build_info.h"
+#include "outputs/program_mirror_source.h"
 #include "utils/i18n.h"
 #include "utils/log.h"
 
@@ -103,6 +104,8 @@ void onFrontendEvent(enum obs_frontend_event event, void *)
 			g_app->shutdown();
 		break;
 	default:
+		if (g_app)
+			g_app->onFrontendEvent(static_cast<int>(event));
 		break;
 	}
 }
@@ -121,6 +124,8 @@ bool obs_module_load(void)
 #ifdef RELAYDOCK_TEST_HOOKS
 	rd::logWarning("This build contains the test scenario runner. Do not use it for real streams.");
 #endif
+
+	rd::registerProgramMirrorSource();
 
 	g_app = std::make_unique<rd::AppContext>();
 	g_app->initialize();
