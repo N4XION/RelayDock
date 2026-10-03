@@ -1,0 +1,15 @@
+# Keep line endings stable so builds and hashes match on every machine.
+* text=auto eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.iss text eol=crlf
+*.rc.in text eol=crlf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.zip binary
+
+# Vendored third-party code. Keep it out of language statistics and diffs.
+third_party/** linguist-vendored

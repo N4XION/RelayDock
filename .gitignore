@@ -1,0 +1,42 @@
+# Build output
+/build*/
+/.deps/
+/dist/
+/out/
+CMakeUserPresets.json
+CMakeSettings.json
+compile_commands.json
+
+# IDE and OS files
+/.vs/
+/.vscode/
+/.idea/
+*.user
+*.suo
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Test and tool output
+/tests/output/
+/test-results/
+*.log
+*.dmp
+
+# Local OBS test installs and their config
+/.obs-test/
+
+# Never commit secrets. See SECURITY.md.
+*.pem
+*.pfx
+*.p12
+*.key
+*.snk
+*.jks
+*.keystore
+.env
+.env.*
+*credentials*.json
+*secrets*.json
+stream-keys*
+streamkeys*
