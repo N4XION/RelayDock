@@ -179,8 +179,13 @@ if (Test-Selected 'onboarding') {
         $accepted = $run.Result.legal.accepted
         $records = @($accepted.records)
         $report.Check('onboarding: finishing records all six documents', ($accepted.complete -and $records.Count -eq 6))
-        $report.Check('onboarding: each record holds the document version, the time and the RelayDock version',
-            (@($records | Where-Object { $_.version -eq '1.0' -and $_.accepted_at -match '^\d{4}-\d\d-\d\dT' -and $_.app_version -match '^\d+\.\d+\.\d+' }).Count -eq 6))
+        # The version a record must hold is the one printed in the document that was shown.
+        $good = @($records | Where-Object {
+                $file = Join-Path $PSScriptRoot "..\..\resources\legal\$($_.document).md"
+                $printed = if (Test-Path $file) { [regex]::Match((Get-Content -LiteralPath $file -Raw), '(?m)^Version (\d+\.\d+)\.').Groups[1].Value } else { '' }
+                $printed -and $_.version -eq $printed -and $_.accepted_at -match '^\d{4}-\d\d-\d\dT' -and $_.app_version -match '^\d+\.\d+\.\d+' })
+        $report.Check('onboarding: each record holds the version printed in its document, the time and the RelayDock version',
+            ($good.Count -eq 6), (($records | ForEach-Object { "$($_.document) $($_.version)" }) -join ', '))
         $report.Check('onboarding: the dock unlocks after the review',
             ((Get-Button $ui.dock_accepted '+ Add Platform').enabled -and -not (Test-Label $ui.dock_accepted 'Before your first stream')))
         $report.Check('onboarding: an empty dock says how to begin', (Test-Label $ui.dock_accepted 'No destinations yet'))
@@ -619,11 +624,12 @@ if (Test-Selected 'tools') {
             ($after.Count -eq 2 -and $after[0].value -eq 0 -and $after[1].value -gt 250 -and $after[1].value -lt 600),
             "left $($after[0].value), top $($after[1].value)")
         $box = $run.Result.renders.after_save.colors.blue
-        # The box is 1080x960. A 16:9 picture filling it is cropped at the sides.
-        $report.Check('tools: after Save the canvas renders the item where the editor put it',
-            ($null -ne $box -and [math]::Abs($box.x) -le 4 -and [math]::Abs($box.y - $after[1].value) -le 4 -and
-             [math]::Abs($box.width - 1080) -le 4 -and [math]::Abs($box.height - 960) -le 4),
-            "x=$($box.x) y=$($box.y) $($box.width)x$($box.height)")
+        # The box is 1080x960. A new item fits: the whole 16:9 picture is 1080x607.5, centred in the box.
+        $bandTop = $after[1].value + (960 - 607.5) / 2
+        $report.Check('tools: after Save the canvas renders the whole picture inside the box the editor shows',
+            ($null -ne $box -and [math]::Abs($box.x) -le 4 -and [math]::Abs($box.y - $bandTop) -le 4 -and
+             [math]::Abs($box.width - 1080) -le 4 -and [math]::Abs($box.height - 607.5) -le 4),
+            "x=$($box.x) y=$($box.y) $($box.width)x$($box.height), box top $($after[1].value)")
     }
 }
 
