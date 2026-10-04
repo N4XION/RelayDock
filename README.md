@@ -4,17 +4,20 @@ A free and open-source OBS Studio multistream plugin that lets you stream to Twi
 
 Your streams go straight from your PC to each platform. RelayDock has no server, no account, no subscription and no telemetry.
 
-## Download
+## Download and install
 
-The newest version is release candidate 1.0.0-rc.1:
+You need Windows 11 (64-bit) and OBS Studio 32.0.0 or newer.
 
-- [RelayDock-1.0.0-rc.1-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/RelayDock-1.0.0-rc.1-windows-x64-Setup.exe), the installer, for an OBS Studio that is installed on your PC. Close OBS, run it, start OBS and open Docks, RelayDock.
-- [RelayDock-1.0.0-rc.1-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/RelayDock-1.0.0-rc.1-windows-x64.zip), for a portable OBS Studio.
-- [Release notes and checksums](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0-rc.1)
+1. Download the installer: [RelayDock-1.0.0-rc.1-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/RelayDock-1.0.0-rc.1-windows-x64-Setup.exe)
+2. Close OBS Studio.
+3. Open the downloaded file and follow its steps. If Windows shows "Windows protected your PC", choose More info, then Run anyway. Windows shows that because the file is not code-signed.
+4. Start OBS Studio, open the Docks menu and choose RelayDock.
 
-You need Windows 11 (64-bit) and OBS Studio 32.0.0 or newer. Windows SmartScreen may warn about the installer, because the files are not code-signed. [docs/installation.md](docs/installation.md) explains that and has the steps.
+You do not pick a folder. The installer puts RelayDock into `C:\ProgramData\obs-studio\plugins\relaydock`, the folder where OBS Studio looks for plugins. To remove it, open Windows Settings, Apps, Installed apps and uninstall RelayDock.
 
-Every version is on the [Releases](../../releases) page, and [docs/release-notes](docs/release-notes) has the notes of each one.
+For a portable OBS Studio, download [RelayDock-1.0.0-rc.1-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/RelayDock-1.0.0-rc.1-windows-x64.zip) and follow [docs/manual-installation.md](docs/manual-installation.md).
+
+This is release candidate 1.0.0-rc.1. Its [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0-rc.1) has the notes and the checksums, and [docs/installation.md](docs/installation.md) shows how to check your download, update and uninstall. Every version is on the [Releases](../../releases) page.
 
 ![The RelayDock dock inside OBS Studio with three destinations live](docs/screenshots/obs-with-dock.png)
 
@@ -50,16 +53,6 @@ If you try it with a real platform, a [platform test report](../../issues/new/ch
 - It runs on 64-bit Windows only.
 
 [docs/known-limitations.md](docs/known-limitations.md) has the full list.
-
-## Install
-
-You need Windows 11 (64-bit) and OBS Studio 32.0.0 or newer.
-
-1. Close OBS Studio.
-2. Download `RelayDock-<version>-windows-x64-Setup.exe` from the [Releases](../../releases) page and run it.
-3. Start OBS Studio and open Docks, RelayDock.
-
-The release files are not code-signed, so Windows SmartScreen may warn about them. [docs/installation.md](docs/installation.md) explains why, and how to verify your download against `SHA256SUMS.txt`. For a portable OBS, or to copy the files yourself, see [docs/manual-installation.md](docs/manual-installation.md).
 
 ## First stream
 
