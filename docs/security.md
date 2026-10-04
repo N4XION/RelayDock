@@ -7,7 +7,9 @@ This page describes what RelayDock does with your stream keys and your data, how
 | What | Where | Encrypted |
 | --- | --- | --- |
 | Stream keys and RTMP passwords | Windows Credential Manager, entries named `RelayDock:<id>:stream-key` and `RelayDock:<id>:password` | Yes, by Windows, for your Windows account |
+| The Twitch chat sign-in and the YouTube API key | Windows Credential Manager, entries named `RelayDock:<id>:chat-sign-in` and `RelayDock:<id>:api-key` | Yes, by Windows, for your Windows account |
 | Destinations and settings | `%APPDATA%\obs-studio\plugin_config\relaydock\config.json` | No. It holds no secret. |
+| Chat | Memory only, the newest 500 comments and events, until OBS closes | Not stored |
 | Vertical layouts | Your OBS scene collection file | No. It holds no secret. |
 | Log lines | The OBS log | No. Keys are removed before a line is written. |
 
@@ -59,11 +61,15 @@ OBS Studio writes each stream's server address to its own log. RelayDock cannot 
 
 ## What RelayDock sends
 
-RelayDock opens network connections in three cases, each started by you:
+RelayDock opens network connections in these cases, each started by you:
 
 1. A stream. It goes from your PC straight to the platform's server, over RTMPS where the platform offers it. Nothing passes through a RelayDock server. There is none.
 2. Test connection. One TCP connection to the destination's server and port. No data is sent.
 3. The update check, once each time OBS starts unless you switch that off under Settings, Updates, and when you choose Check for updates. One HTTPS request to `api.github.com` for the newest release. It carries the RelayDock version number and nothing about you. A build with no project page configured has no update check at all.
+4. Twitch chat, after you signed in under Settings, Chat. HTTPS requests to `id.twitch.tv` and `api.twitch.tv` and one WebSocket to `eventsub.wss.twitch.tv`. RelayDock holds a permission to read chat and nothing else. It has no client secret, because Twitch gives a program on a PC none.
+5. YouTube chat, after you saved an API key of your own and connected a stream. HTTPS requests to `www.googleapis.com`, with the key in a header, never in the address.
+
+Every one of these requests can be cancelled within about a tenth of a second, so closing OBS never waits for a server.
 
 RelayDock has no analytics, no telemetry, no crash upload and no account.
 

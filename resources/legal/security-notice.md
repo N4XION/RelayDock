@@ -1,6 +1,6 @@
 # Security and Credentials Notice
 
-Version 1.0. Last updated 4 October 2026.
+Version 1.1. Last updated 5 October 2026.
 
 This document is a draft written by the RelayDock contributors. No lawyer has reviewed it. Have it reviewed by a qualified lawyer before you rely on it for commercial use.
 
@@ -15,6 +15,8 @@ RelayDock saves stream keys and RTMP passwords in Windows Credential Manager. Wi
 You can see the entries in Windows under Control Panel, Credential Manager, Windows Credentials. Their names start with "RelayDock:". You can delete them there at any time.
 
 If Windows cannot save a key, RelayDock keeps the key in memory until OBS closes and tells you so. It never falls back to saving the key in plain text.
+
+When you set up chat, two more secrets are kept the same way: the Twitch sign-in, which lets RelayDock read your Twitch chat and nothing else, and your YouTube API key. RelayDock never sees your Twitch password. Treat the API key like a password as well: anyone who has it can use up the requests Google allows your key.
 
 ## 3. What this protection covers, and what it does not
 
@@ -36,7 +38,7 @@ Over plain RTMP (`rtmp://`), the stream key and the stream travel unencrypted. A
 
 ## 5. Logs, diagnostics and screenshots
 
-RelayDock removes every stream key and password it has handled from its log lines and from the diagnostic export. It also removes text that looks like a credential in a server address.
+RelayDock removes every stream key, password, chat sign-in and API key it has handled from its log lines and from the diagnostic export. It also removes text that looks like a credential in a server address.
 
 OBS Studio writes the server address of each stream to its own log. RelayDock cannot change that. For this reason, put secrets in the Stream key field, never in the Server URL.
 

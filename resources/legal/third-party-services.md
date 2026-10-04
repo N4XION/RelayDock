@@ -22,20 +22,30 @@ Some platforms set conditions for streaming to other services at the same time. 
 
 Platforms change their server addresses, limits, formats and rules without telling RelayDock. A destination that works today can stop working after such a change until RelayDock is updated or you adjust your settings. The limits RelayDock applies come from each platform's public documentation, checked on the dates recorded in the project's research notes. They can be out of date.
 
-RelayDock connects to each platform the way OBS Studio does, with a server address and a stream key over RTMP or RTMPS. It does not sign in to your platform accounts and uses no platform API on your behalf.
+To stream, RelayDock connects to each platform the way OBS Studio does, with a server address and a stream key over RTMP or RTMPS. It does not sign in to your platform accounts for that.
 
-## 5. Custom servers
+## 5. Chat
+
+RelayDock reads chat only from platforms you set it up for under Settings, Chat, and only through interfaces those platforms publish.
+
+- Twitch. You sign in on twitch.tv, and Twitch gives RelayDock a permission to read the chat of your channel. Twitch's terms and its developer agreement apply. You can end the permission at any time on twitch.tv under Settings, Connections.
+- YouTube. RelayDock uses YouTube API Services with an API key that you create yourself in a Google Cloud project of your own. By using this feature you agree to be bound by the YouTube Terms of Service, at https://www.youtube.com/t/terms. The Google Privacy Policy, at https://policies.google.com/privacy, applies to the requests. Your key has a daily amount of requests that Google sets.
+- TikTok and Facebook. RelayDock reads no chat from them. TikTok publishes no interface for it, and Facebook's needs an approval that RelayDock does not have.
+
+The chat dock is for you, not for your viewers. Twitch's simulcasting rules, on the date of this document, do not allow showing the chat of other platforms on your Twitch stream. Do not put the dock into a scene that goes to Twitch.
+
+## 6. Custom servers
 
 Custom RTMP and Custom RTMPS destinations connect to a server you name. You are responsible for knowing who runs that server and what it does with your stream.
 
-## 6. GitHub
+## 7. GitHub
 
 RelayDock's source code, releases and issue tracker are hosted on GitHub. RelayDock contacts GitHub for the update check: each time OBS Studio starts, unless you switch that off under Settings, Updates, and when you click Check for updates. GitHub's terms and privacy statement apply to that contact and to your use of the project pages.
 
-## 7. Software RelayDock builds on
+## 8. Software RelayDock builds on
 
 RelayDock runs inside OBS Studio and uses the Qt libraries that OBS Studio provides. Their licences are listed on the Open Source Licenses page.
 
-## 8. No responsibility for third parties
+## 9. No responsibility for third parties
 
 The RelayDock contributors do not control third-party services and are not responsible for their availability, their decisions about your account, their handling of your data or changes they make.

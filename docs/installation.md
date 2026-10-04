@@ -2,7 +2,7 @@
 
 ## What you need
 
-- Windows 11, 64-bit. Windows 10 64-bit works with the same OBS versions but is not part of the test matrix.
+- Windows 10 (version 2004 or newer) or Windows 11, 64-bit. All tests ran on Windows 11. Nobody has tested Windows 10 yet.
 - OBS Studio 32.0.0 or newer. RelayDock is tested with 32.0.4 and 32.2.2.
 
 RelayDock is free. It needs no account.

@@ -6,7 +6,7 @@ Your streams go straight from your PC to each platform. RelayDock has no server,
 
 ## Download and install
 
-You need Windows 11 (64-bit) and OBS Studio 32.0.0 or newer.
+You need Windows 10 or 11 (64-bit) and OBS Studio 32.0.0 or newer. All tests ran on Windows 11.
 
 1. Download the installer: [RelayDock-1.0.0-rc.2-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.2/RelayDock-1.0.0-rc.2-windows-x64-Setup.exe)
 2. Close OBS Studio.
@@ -21,6 +21,8 @@ For a portable OBS Studio, download [RelayDock-1.0.0-rc.2-windows-x64.zip](https
 
 This is release candidate 1.0.0-rc.2. Its [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0-rc.2) has the notes and the checksums, and [docs/installation.md](docs/installation.md) shows how to check your download, update and uninstall. [docs/versions.md](docs/versions.md) lists every version with its files and what changed.
 
+The chat dock, the platform logos and Uninstall RelayDock are in the source and come with the next version. 1.0.0-rc.2 does not have them.
+
 ![The RelayDock dock inside OBS Studio with three destinations live](docs/screenshots/obs-with-dock.png)
 
 ## Status
@@ -29,7 +31,7 @@ This is release candidate 1.0.0-rc.2.
 
 - Built and tested on Windows 11 with OBS Studio 32.0.4 and 32.2.2.
 - Every feature below is covered by automated tests that stream to a test server on the same PC.
-- TikTok accepted a stream from 1.0.0-rc.1, sent from an OBS Studio that got RelayDock from the installer. Twitch, YouTube and Facebook have not received a stream in the project's own testing yet. That needs real accounts.
+- TikTok accepted a stream from 1.0.0-rc.1. Twitch, YouTube and Facebook have not received a stream in the project's own testing yet. That needs real accounts.
 - The ZIP install is tested for this version. The installer test ran on 1.0.0-rc.1, and the installer script has not changed since.
 - [docs/testing.md](docs/testing.md) lists what is verified, and [docs/release-checklist.md](docs/release-checklist.md) lists what is still open before 1.0.0.
 
@@ -44,15 +46,17 @@ If you try it with a real platform, a [platform test report](../../issues/new/ch
 - Rule-based automatic optimisation that suggests or applies a lower bitrate, frame rate or resolution when frames drop, and restores them later. You can lock any setting.
 - A preflight check that says READY, WARNING or FAILED, with a reason and a fix for each finding.
 - Protects a running stream. It asks before OBS closes, keeps the PC awake, and keeps the OBS video settings locked while a destination connects or waits to reconnect.
+- Shows the comments of your Twitch and YouTube streams in one list, the RelayDock Chat dock, with Bits, Super Chats, gifts and new subscribers. [docs/chat.md](docs/chat.md) shows how to set it up.
 - Keeps stream keys in Windows Credential Manager. Never in a file, never in a log, never on screen.
 - Looks like part of OBS, or the way you set it: themes, accent colour, background image, spacing, saved layouts.
 
 ## What it does not do
 
-- It does not sign in to platforms. It cannot fetch your stream key, set a title, read chat or press Go live for you.
+- It cannot fetch your stream key, set a title or press Go live for you. It signs in to Twitch only to read chat, and only when you ask.
+- It reads no chat from TikTok or Facebook. TikTok publishes no way to do that, and Facebook's needs an approval RelayDock does not have.
 - It streams over RTMP and RTMPS only.
 - It does not record.
-- It runs on 64-bit Windows only.
+- It runs on 64-bit Windows 10 and 11 only, in OBS Studio 32 or newer. OBS Studio itself ended 32-bit Windows and Windows 7 and 8 with its version 28.
 
 [docs/known-limitations.md](docs/known-limitations.md) has the full list.
 

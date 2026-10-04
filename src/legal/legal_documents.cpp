@@ -13,8 +13,8 @@ const std::vector<LegalDocument> &legalDocuments()
 	// Versions must match the "Version" line in each document. A unit test checks this.
 	static const std::vector<LegalDocument> documents = {
 		{"terms-of-use", "Terms of Use", "1.0", "terms-of-use.md"},
-		{"privacy-policy", "Privacy Policy", "1.1", "privacy-policy.md"},
-		{"security-notice", "Security and Credentials Notice", "1.0", "security-notice.md"},
+		{"privacy-policy", "Privacy Policy", "1.2", "privacy-policy.md"},
+		{"security-notice", "Security and Credentials Notice", "1.1", "security-notice.md"},
 		{"third-party-services", "Third-Party Services Notice", "1.2", "third-party-services.md"},
 		{"streaming-disclaimer", "Streaming Disclaimer", "1.0", "streaming-disclaimer.md"},
 		{"open-source-licenses", "Open Source Licenses", "1.1", "open-source-licenses.md"},

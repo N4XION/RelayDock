@@ -13,11 +13,23 @@ Encrypted RTMPS connections use the same OBS output as plain RTMP, with TLS hand
 ## Platforms
 
 - RelayDock streams over RTMP and RTMPS. It has no SRT, RIST, WHIP or HLS output.
-- RelayDock does not sign in to any platform. It cannot fetch your stream key, set a title or category, read chat, show viewer numbers or press Go live for you. You do those on the platform.
+- RelayDock cannot fetch your stream key, set a title or category, show viewer numbers or press Go live for you. You do those on the platform. It signs in to Twitch only to read chat, and only when you ask.
 - Twitch's Enhanced Broadcasting, 2K, HEVC and Dual Format are features of OBS Studio itself and work only through OBS's own Stream settings. RelayDock sends Twitch one standard H.264 stream.
 - Only Twitch has a hidden test stream. For the other platforms, use the platform's own private or test mode.
 - Test connection checks that a server accepts a TCP connection. It cannot check a stream key and does not perform the TLS handshake.
 - Platforms change their limits and server addresses without notice. RelayDock's values are from the date shown under Settings, Platforms.
+
+## Chat
+
+- The chat dock reads Twitch and YouTube. It reads no chat from TikTok or Facebook. TikTok publishes no interface for live comments, and Meta's needs an approval that RelayDock does not have. [chat.md](chat.md) says what you can do for TikTok inside TikTok's rules.
+- Twitch chat needs an application id. A RelayDock that comes without one asks you to register an application with Twitch, free of charge, and to enter its Client ID.
+- YouTube chat needs an API key of your own, because YouTube forbids keys in open-source programs. It also needs the link to the stream, and a YouTube stream has a new link every time.
+- Google gives an API key a daily amount of requests. A long stream with a short pause between requests can use it up. RelayDock then stops reading until you connect again.
+- YouTube comments arrive in batches, a few seconds after they were written. Twitch comments arrive at once. The list is in the order of arrival, so a YouTube comment can stand below a Twitch comment that was written after it.
+- RelayDock shows chat. It cannot write to chat, delete comments or ban viewers.
+- Emotes show as their names. Badges are shown as "host" and "mod" only.
+- The dock is for you. Twitch's simulcasting rules do not allow showing the chat of other platforms on your Twitch stream.
+- The chat readers are tested against stand-ins for the two platforms. Nobody has used them with the real Twitch or the real YouTube yet.
 
 ## Video
 
@@ -50,8 +62,11 @@ Encrypted RTMPS connections use the same OBS output as plain RTMP, with TLS hand
 
 ## Windows and OBS
 
-- Windows, 64-bit, only. Tested on Windows 11.
+- Windows 10 and 11, 64-bit, only. Tested on Windows 11. Nobody has tested Windows 10.
 - OBS Studio 32.0.0 or newer. Tested with 32.0.4 and 32.2.2.
+- No 32-bit Windows and no Windows 7 or 8. OBS Studio ended both with its version 28. The last OBS Studio for them, 27.2.4, has no function for a second picture, which RelayDock needs for vertical video, and uses an older toolkit.
+- OBS Studio 28 to 31 are not supported yet. RelayDock uses functions that arrived in OBS Studio 30.0, 30.1 and 31.0. A build for OBS Studio 30.1 and newer is possible and not done.
+- On a laptop that runs on battery, Windows can ignore the request to stay awake. On the development laptop it accepted the request and still reported that nothing needed the system.
 - A portable OBS does not read `C:\ProgramData`, so the installer does not serve it. Use the ZIP. See [manual-installation.md](manual-installation.md).
 - While a destination is connecting, live or waiting to reconnect, OBS greys out its video settings and the PC stays awake. Both end when the last destination stops.
 - The release files are not code-signed, so Windows SmartScreen may warn about the installer. [installation.md](installation.md) explains how to verify the download.
