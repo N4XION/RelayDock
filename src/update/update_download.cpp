@@ -345,6 +345,40 @@ bool canDownloadUpdate(const ReleaseInfo &release, const DownloadRules &rules)
 	       isReleaseFile(release.checksumsUrl, rules, release.tag, kChecksumListName);
 }
 
+ChecksumFetch fetchInstallerChecksum(const ReleaseInfo &release, const UpdateDownloadConfig &config,
+				     const std::atomic<bool> &cancel, std::string &sha256, UserMessage &trouble)
+{
+	sha256.clear();
+	if (!canDownloadUpdate(release, config.rules)) {
+		trouble.what = loc("UpdateNow.Error.NoInstaller", "This release has no installer that RelayDock can check.");
+		trouble.detail.clear();
+		trouble.action = loc("UpdateNow.Error.NoInstaller.Action", "Open the release page and download the installer there.");
+		return ChecksumFetch::Failed;
+	}
+	if (cancel.load())
+		return ChecksumFetch::Cancelled;
+
+	Fetched list = fetch(release.checksumsUrl, kMaxChecksumListBytes, config, cancel, {});
+	if (list.cancelled)
+		return ChecksumFetch::Cancelled;
+	if (!list.ok) {
+		trouble = std::move(list.problem);
+		return ChecksumFetch::Failed;
+	}
+	const std::string expected = checksumFor(parseChecksumList(list.body), release.installerName);
+	if (expected.empty()) {
+		trouble = problem(loc("UpdateNow.Error.NoChecksum", "The checksum list of the release does not name the installer."));
+		return ChecksumFetch::Failed;
+	}
+	if (!release.installerSha256.empty() && release.installerSha256 != expected) {
+		trouble = problem(loc("UpdateNow.Error.Conflict",
+				      "GitHub and the checksum list of the release name different checksums for the installer."));
+		return ChecksumFetch::Failed;
+	}
+	sha256 = expected;
+	return ChecksumFetch::Found;
+}
+
 UpdateDownload downloadUpdate(const ReleaseInfo &release, const UpdateDownloadConfig &config,
 			      const std::atomic<bool> &cancel, const DownloadProgress &progress)
 {
@@ -373,17 +407,16 @@ UpdateDownload downloadUpdate(const ReleaseInfo &release, const UpdateDownloadCo
 		return cancelled();
 
 	// The checksum list first. It is small, and without it the installer is of no use.
-	Fetched list = fetch(release.checksumsUrl, kMaxChecksumListBytes, config, cancel, {});
-	if (list.cancelled)
+	std::string expected;
+	UserMessage trouble;
+	switch (fetchInstallerChecksum(release, config, cancel, expected, trouble)) {
+	case ChecksumFetch::Cancelled:
 		return cancelled();
-	if (!list.ok)
-		return failed(std::move(list.problem));
-	const std::string expected = checksumFor(parseChecksumList(list.body), release.installerName);
-	if (expected.empty())
-		return failed(problem(loc("UpdateNow.Error.NoChecksum", "The checksum list of the release does not name the installer.")));
-	if (!release.installerSha256.empty() && release.installerSha256 != expected)
-		return failed(problem(loc("UpdateNow.Error.Conflict",
-					  "GitHub and the checksum list of the release name different checksums for the installer.")));
+	case ChecksumFetch::Failed:
+		return failed(std::move(trouble));
+	case ChecksumFetch::Found:
+		break;
+	}
 
 	Fetched installer = fetch(release.installerUrl, config.maxInstallerBytes, config, cancel, progress);
 	if (installer.cancelled)

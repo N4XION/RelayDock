@@ -545,6 +545,44 @@ TEST_SUITE("update.download.network")
 	}
 }
 
+TEST_SUITE("update.download.live")
+{
+	// Skipped unless asked for by name. It asks the real GitHub: one question about the newest
+	// release of RelayDock, and one request for its checksum list. Nothing is saved, and no
+	// installer is downloaded. It shows that the addresses GitHub hands out for a real release
+	// pass the checks, the redirect to its file servers included.
+	//   relaydock-tests --no-skip -tc="live: the checksum list of the newest RelayDock release arrives from GitHub"
+	TEST_CASE("live: the checksum list of the newest RelayDock release arrives from GitHub" * doctest::skip())
+	{
+		const std::atomic<bool> cancel{false};
+		// An old version number, so that whatever is published counts as newer.
+		const UpdateResult found = checkForUpdate(kRepository, "0.0.1", cancel);
+		CAPTURE(found.error);
+		REQUIRE(found.status == UpdateStatus::UpdateAvailable);
+		const ReleaseInfo &release = found.release;
+		CAPTURE(release.tag);
+		CAPTURE(release.installerUrl);
+		CAPTURE(release.checksumsUrl);
+		CHECK(canDownloadUpdate(release, githubOnly()));
+		CHECK(release.installerSize > 0);
+
+		UpdateDownloadConfig config;
+		config.rules = githubOnly();
+		config.userAgent = "RelayDock-tests";
+		std::string sha256;
+		UserMessage trouble;
+		const ChecksumFetch result = fetchInstallerChecksum(release, config, cancel, sha256, trouble);
+		CAPTURE(trouble.text());
+		REQUIRE(result == ChecksumFetch::Found);
+		CHECK(sha256.size() == 64);
+		// GitHub computes a checksum of its own for every file. Both name the same file.
+		if (!release.installerSha256.empty())
+			CHECK(sha256 == release.installerSha256);
+		MESSAGE("release " << release.tag << ", " << release.installerName << ", " << release.installerSize << " bytes, sha256 " << sha256
+				   << std::string(release.installerSha256.empty() ? ", GitHub listed no checksum" : ", the same as GitHub lists"));
+	}
+}
+
 TEST_SUITE("update.download.files")
 {
 	TEST_CASE("each download gets a folder of its own")

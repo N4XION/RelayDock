@@ -94,6 +94,15 @@ struct UpdateDownload {
 // Bytes received so far and bytes expected. Called on the thread that downloads.
 using DownloadProgress = std::function<void(uint64_t received, uint64_t total)>;
 
+enum class ChecksumFetch { Found, Failed, Cancelled };
+
+// The first step of a download, on its own: fetches the checksum list of the release and gives
+// the checksum it names for the installer. Failed with a `problem` when the release cannot be
+// served, when the list does not name the installer, and when GitHub lists another checksum for
+// the file. It blocks, and saves nothing.
+ChecksumFetch fetchInstallerChecksum(const ReleaseInfo &release, const UpdateDownloadConfig &config,
+				     const std::atomic<bool> &cancel, std::string &sha256, UserMessage &problem);
+
 // Whether Update now can work for this release at all: it names an installer for its own
 // version, a checksum list, and both on the project's release pages.
 bool canDownloadUpdate(const ReleaseInfo &release, const DownloadRules &rules);
