@@ -148,6 +148,8 @@ set(
   src/ui/settings_pages.cpp
   src/ui/ui_common.cpp
   src/ui/ui_common.h
+  src/ui/update_dialog.cpp
+  src/ui/update_dialog.h
   src/ui/vertical_editor.cpp
   src/ui/vertical_editor.h
 )

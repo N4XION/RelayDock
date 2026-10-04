@@ -317,6 +317,11 @@ bool ScenarioRunner::uiStep(const std::string &op, const json &step, StepResult 
 			}
 			id = ref->second;
 		}
+		// A made-up newer release, to look at the update window without asking GitHub.
+		ReleaseInfo release;
+		release.tag = textOf(step, "tag");
+		release.url = textOf(step, "url");
+		release.installerUrl = textOf(step, "installer_url");
 		const std::string argument = what == "edit"       ? id
 					     : what == "add"      ? textOf(step, "provider")
 					     : what == "settings" ? textOf(step, "page")
@@ -325,7 +330,7 @@ bool ScenarioRunner::uiStep(const std::string &op, const json &step, StepResult 
 								  : std::string();
 		// From the event loop. A modal dialog blocks whoever opens it, and that must not be
 		// the scenario timer.
-		QTimer::singleShot(0, dock, [dock, what, argument] {
+		QTimer::singleShot(0, dock, [dock, what, argument, release] {
 			if (what == "edit")
 				dock->editDestination(argument);
 			else if (what == "add")
@@ -340,6 +345,8 @@ bool ScenarioRunner::uiStep(const std::string &op, const json &step, StepResult 
 				dock->runPreflight(false);
 			else if (what == "start_all")
 				dock->runPreflight(true);
+			else if (what == "update")
+				dock->showUpdate(release);
 		});
 		return true;
 	}

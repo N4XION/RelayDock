@@ -15,6 +15,7 @@
 #include "ui/legal_dialog.h"
 #include "ui/preflight_dialog.h"
 #include "ui/settings_dialog.h"
+#include "ui/update_dialog.h"
 #include "ui/vertical_editor.h"
 #include "utils/strings.h"
 
@@ -44,6 +45,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 
 namespace rd {
 
@@ -291,21 +293,48 @@ void RelayDockWidget::onObsFinishedLoading()
 	refreshNetwork();
 	refreshLegalGate();
 
-	// The update check at start-up is off unless the user switched it on, and a build without
-	// a project page has nothing to ask.
+	// The update check at start-up. It is on unless the user switched it off, and a build
+	// without a project page has nothing to ask.
 	const std::string repository = repositoryUrl();
-	if (app_.config().general.checkUpdatesOnStart && !repository.empty() && !startupCheck_) {
+	bool check = app_.config().general.checkUpdatesOnStart && !repository.empty() && !startupCheck_;
+#ifdef RELAYDOCK_TEST_HOOKS
+	// A test run starts OBS a hundred times, and GitHub answers 60 questions an hour. A test
+	// build asks only when a test says so.
+	check = check && std::getenv("RELAYDOCK_TEST_UPDATE_CHECK") != nullptr;
+#endif
+	if (check) {
 		startupCheck_ = new UpdateChecker(this);
 		connect(startupCheck_, &UpdateChecker::finished, this, [this](const UpdateResult &result) {
-			if (closed_ || result.status != UpdateStatus::UpdateAvailable)
-				return; // Quiet unless there is something new
-			releaseUrl_ = qs(result.release.url);
+			// Quiet unless there is a newer version that the user has not chosen to skip.
+			if (closed_ || !shouldAnnounceUpdate(result, app_.config().general.skippedUpdateVersion))
+				return;
+			offeredRelease_ = result.release;
 			updateBanner_->setMessage("neutral", describeUpdate(result, buildInfo().version));
-			updateBanner_->setAction(releaseUrl_.isEmpty() ? QString() : uiText("Updates.Open", "Open release page"));
+			updateBanner_->setAction(uiText("Update.Show", "How to update"));
 			updateBanner_->show();
+			// The first-run review comes first. Until it is done, the banner alone says it.
+			if (legalComplete(app_.config().legal))
+				showUpdate(offeredRelease_);
 		});
 		startupCheck_->start(repository, buildInfo().version);
 	}
+}
+
+void RelayDockWidget::showUpdate(const ReleaseInfo &release)
+{
+	if (closed_)
+		return;
+	// Not modal. OBS stays usable, and the window waits until the user looks at it.
+	auto *dialog = new UpdateDialog(*this, release, dialogParent());
+	dialog->setAttribute(Qt::WA_DeleteOnClose);
+	connect(dialog, &QDialog::finished, this, [this, tag = release.tag] {
+		// "Skip this version" also ends the reminder in the dock.
+		if (!closed_ && versionOfTag(tag) == app_.config().general.skippedUpdateVersion)
+			updateBanner_->hide();
+	});
+	dialog->show();
+	dialog->raise();
+	dialog->activateWindow();
 }
 
 void RelayDockWidget::onObsThemeChanged()
@@ -439,14 +468,10 @@ void RelayDockWidget::buildSections()
 		return section;
 	};
 
-	// ---- A newer release, when the user asked RelayDock to look at start-up -------------------
+	// ---- A newer release, found by the check at start-up ---------------------------------------
 	updateBanner_ = new Banner(*theme_, content_);
 	updateBanner_->hide();
-	connect(updateBanner_, &Banner::actionClicked, this, [this] {
-		// Only ever a github.com address. The parser drops anything else.
-		if (releaseUrl_.startsWith(QStringLiteral("https://github.com/")))
-			QDesktopServices::openUrl(QUrl(releaseUrl_));
-	});
+	connect(updateBanner_, &Banner::actionClicked, this, [this] { showUpdate(offeredRelease_); });
 	contentLayout_->addWidget(updateBanner_);
 
 	// ---- First-run review ----------------------------------------------------------------------

@@ -91,8 +91,10 @@ struct Placement {
 
 Placement computePlacement(const LayoutItem &item, int sourceWidth, int sourceHeight);
 
-// One item showing Program, filling the whole canvas. A 16:9 scene is centre-cropped to the
-// canvas, so a vertical stream works before the user arranges anything.
+// One item showing Program, fitted into the whole canvas. Viewers see all of a 16:9 scene as
+// a band across the middle, with empty space above and below, so a vertical stream works and
+// hides nothing before the user arranges anything. Fill, which crops the scene to the full
+// height, is one choice away in the editor.
 VerticalLayout makeDefaultVerticalLayout(int canvasWidth, int canvasHeight);
 
 enum class LayoutPreset {
@@ -140,11 +142,25 @@ void moveItem(VerticalLayout &layout, const std::string &itemId, int newIndex);
 std::string serializeVerticalLayouts(const std::vector<VerticalLayout> &layouts, int canvasWidth = 0,
 				     int canvasHeight = 0);
 
+// The format serializeVerticalLayouts writes.
+//   1  The first release. A new layout showed Program filling the canvas, cropped.
+//   2  A new layout shows all of Program, fitted. See upgradeVerticalLayouts.
+inline constexpr int kVerticalLayoutFormat = 2;
+
 // Reads layouts. Tolerates missing and wrong-typed values. Returns false when the text is not
 // a layout list at all. The canvas size the layouts were saved for is returned when asked
-// for, 0 when the text does not record it.
+// for, 0 when the text does not record it. The same goes for the format number.
 bool parseVerticalLayouts(std::string_view jsonText, std::vector<VerticalLayout> &out, int *canvasWidth = nullptr,
-			  int *canvasHeight = nullptr);
+			  int *canvasHeight = nullptr, int *format = nullptr);
+
+// Brings layouts that an older RelayDock saved up to date. Returns a note for every change.
+//
+// Format 1 to 2: a layout that is still the untouched standard layout of format 1, one item
+// showing Program that fills the whole canvas, changes to fit. That standard cropped the
+// sides of the picture, and people streamed with it without having chosen it. A layout that
+// was arranged in any way is left alone.
+std::vector<std::string> upgradeVerticalLayouts(std::vector<VerticalLayout> &layouts, int savedFormat, int canvasWidth,
+						int canvasHeight);
 
 // Repairs ids and boxes. Returns notes about what changed.
 std::vector<std::string> sanitizeVerticalLayouts(std::vector<VerticalLayout> &layouts, int canvasWidth, int canvasHeight);

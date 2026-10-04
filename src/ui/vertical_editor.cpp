@@ -967,7 +967,7 @@ void VerticalEditorDialog::addItem(LayoutItemKind kind, const std::string &sourc
 	item.kind = kind;
 	item.sourceName = sourceName;
 	item.sourceUuid = sourceUuid;
-	item.fit = kind == LayoutItemKind::Program ? FitMode::Fill : FitMode::Fit;
+	item.fit = FitMode::Fit; // Show all of it. Cropping is a choice the user makes.
 	applyPreset(item, kind == LayoutItemKind::Program ? LayoutPreset::FullCanvas : LayoutPreset::WideCenter,
 		    app.vertical().canvasWidth(), app.vertical().canvasHeight());
 	layout->items.push_back(item);

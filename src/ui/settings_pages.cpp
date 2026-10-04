@@ -804,28 +804,27 @@ void SettingsDialog::buildUpdates()
 	p.body->addWidget(result);
 	auto *onStart = new QCheckBox(uiText("Updates.OnStart", "Check when OBS starts"), p.page);
 	p.body->addWidget(onStart);
-	addNote(p.body, uiText("Updates.OnStart.Note", "Off unless you switch it on. With it on, OBS contacts GitHub once at each start."));
+	addNote(p.body, uiText("Updates.OnStart.Note",
+			       "On unless you switch it off. With it on, RelayDock asks GitHub once each time OBS starts and tells you when a newer version exists."));
 	p.body->addStretch(1);
 
 	updateChecker_ = new UpdateChecker(this);
-	auto releaseUrl = std::make_shared<QString>();
+	auto offered = std::make_shared<ReleaseInfo>();
 	connect(updateChecker_, &UpdateChecker::finished, this, [=, this](const UpdateResult &update) {
 		check->setEnabled(true);
 		const UserMessage message = describeUpdate(update, version);
-		const char *tone = update.status == UpdateStatus::UpdateAvailable ? "warning"
-				   : update.status == UpdateStatus::UpToDate      ? "ok"
-				   : update.status == UpdateStatus::Failed        ? "error"
-										  : "neutral";
+		const bool available = update.status == UpdateStatus::UpdateAvailable;
+		const char *tone = available                                    ? "warning"
+				   : update.status == UpdateStatus::UpToDate ? "ok"
+				   : update.status == UpdateStatus::Failed   ? "error"
+									     : "neutral";
 		result->setMessage(tone, message);
-		*releaseUrl = update.status == UpdateStatus::UpdateAvailable ? qs(update.release.url) : QString();
-		result->setAction(releaseUrl->isEmpty() ? QString() : uiText("Updates.Open", "Open release page"));
+		*offered = available ? update.release : ReleaseInfo{};
+		result->setAction(available ? uiText("Update.Show", "How to update") : QString());
 		result->show();
 	});
-	connect(result, &Banner::actionClicked, this, [releaseUrl] {
-		// Only ever a github.com address. The parser drops anything else.
-		if (releaseUrl->startsWith(QStringLiteral("https://github.com/")))
-			QDesktopServices::openUrl(QUrl(*releaseUrl));
-	});
+	// Whoever asks by hand is told, also about a version they skipped before.
+	connect(result, &Banner::actionClicked, this, [this, offered] { host_.showUpdate(*offered); });
 	connect(check, &QPushButton::clicked, this, [=, this] {
 		check->setEnabled(false);
 		result->setMessage("neutral", uiText("Updates.Checking", "Asking GitHub for the newest release..."));

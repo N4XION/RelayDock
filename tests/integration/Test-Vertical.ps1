@@ -81,6 +81,8 @@ if (Test-Selected 'picture') {
 
     $programFit = @(@{ id = [guid]::NewGuid().ToString(); name = 'Fit'; items = @(
                 @{ id = [guid]::NewGuid().ToString(); kind = 'program'; x = 0; y = 0; width = 1080; height = 1920; fit = 'fit' }) })
+    $programFill = @(@{ id = [guid]::NewGuid().ToString(); name = 'Fill'; items = @(
+                @{ id = [guid]::NewGuid().ToString(); kind = 'program'; x = 0; y = 0; width = 1080; height = 1920; fit = 'fill' }) })
     $twoItems = @(@{ id = [guid]::NewGuid().ToString(); name = 'Two'; items = @(
                 @{ id = [guid]::NewGuid().ToString(); kind = 'program'; x = 0; y = 0; width = 1080; height = 960; fit = 'fill' },
                 @{ id = [guid]::NewGuid().ToString(); kind = 'source'; source_name = 'RD yellow'; x = 0; y = 960; width = 1080; height = 960; fit = 'fit' }) })
@@ -103,7 +105,20 @@ if (Test-Selected 'picture') {
             @{ op = 'add_color_source'; name = 'RD green'; color = '#00FF00'; width = 200; height = 200; x = 100; y = 100 },
             @{ op = 'add_color_source'; name = 'RD yellow'; color = '#FFFF00'; width = 400; height = 200; x = 5000; y = 0 },
             @{ op = 'wait'; seconds = 2 },
-            @{ op = 'render_vertical'; label = 'default_fill'; find = $find; file = (Join-Path $dir 'default-fill.png') },
+            # What the first release saved for somebody who never opened the layout editor:
+            # Program filling the canvas. Loaded from a scene collection, it becomes a fit.
+            @{ op = 'vertical_load_saved'; saved = @{ version = 1; canvas_width = 1080; canvas_height = 1920; layouts = @(
+                        @{ id = [guid]::NewGuid().ToString(); name = 'Default'; items = @(
+                                @{ id = [guid]::NewGuid().ToString(); kind = 'program'; x = 0; y = 0; width = 1080; height = 1920; fit = 'fill' }) }) } },
+            @{ op = 'wait'; seconds = 1 },
+            @{ op = 'render_vertical'; label = 'upgraded'; find = $find; file = (Join-Path $dir 'upgraded.png') },
+            # The layout RelayDock makes by itself, before anybody arranged anything.
+            @{ op = 'vertical_layout'; layouts = @() },
+            @{ op = 'wait'; seconds = 1 },
+            @{ op = 'render_vertical'; label = 'default_layout'; find = $find; file = (Join-Path $dir 'default-layout.png') },
+            @{ op = 'vertical_layout'; layouts = $programFill },
+            @{ op = 'wait'; seconds = 1 },
+            @{ op = 'render_vertical'; label = 'default_fill'; find = $find; file = (Join-Path $dir 'program-fill.png') },
             @{ op = 'vertical_layout'; layouts = $programFit },
             @{ op = 'wait'; seconds = 1 },
             @{ op = 'render_vertical'; label = 'program_fit'; find = $find; file = (Join-Path $dir 'program-fit.png') },
@@ -128,9 +143,20 @@ if (Test-Selected 'picture') {
     if ($run.Result -and $run.Result.renders.missing) {
         $r = $run.Result.renders
 
-        # Default layout: Program fills the 1080x1920 canvas. Scale 1920/1080 = 1.778.
+        # The default layout shows all of the scene: a 16:9 band, 1080x607.5, in the middle.
+        $c = $r.default_layout.colors
+        $report.Check('picture: the canvas renders at 1080x1920', ($r.default_layout.width -eq 1080 -and $r.default_layout.height -eq 1920))
+        $report.Check('picture: a new layout shows the whole scene, not a cropped part of it', (Test-Box $c.blue 0 656 1080 608 2), (Format-Box $c.blue))
+        $report.Check('picture: in a new layout the square near the left edge is visible', (Test-Box $c.green 56.25 712.5 112.5 112.5), (Format-Box $c.green))
+
+        $c = $r.upgraded.colors
+        $report.Check('picture: the untouched cropped layout of the first release now shows the whole scene',
+            ((Test-Box $c.blue 0 656 1080 608 2) -and $c.green.pixels -gt 0), (Format-Box $c.blue))
+        $report.Check('picture: the OBS log says that the layout changed and how to crop again',
+            ($run.Log -match 'Vertical layouts: The layout "Default" was the standard layout of an earlier version'))
+
+        # Program with Fill covers the 1080x1920 canvas. Scale 1920/1080 = 1.778.
         $c = $r.default_fill.colors
-        $report.Check('picture: the canvas renders at 1080x1920', ($r.default_fill.width -eq 1080 -and $r.default_fill.height -eq 1920))
         $report.Check('picture: Fill keeps a square a square', ($c.red.pixels -gt 0 -and [math]::Abs($c.red.width - $c.red.height) -le 2), (Format-Box $c.red))
         $report.Check('picture: Fill scales the scene by canvas height over scene height', (Test-Box $c.red 184.9 604.4 711.1 711.1), (Format-Box $c.red))
         $report.Check('picture: Fill centres the scene, so the middle stays in the middle',
@@ -164,7 +190,7 @@ if (Test-Selected 'picture') {
 
         $report.Check('picture: an item whose source does not exist is skipped and reported', ($r.missing.missing_items -eq 1))
         $report.Check('picture: the rest of that layout still renders', ($r.missing.colors.blue.pixels -gt 0))
-        $report.Check('picture: images were saved for review', (Test-Path (Join-Path $dir 'default-fill.png')))
+        $report.Check('picture: images were saved for review', (Test-Path (Join-Path $dir 'default-layout.png')))
     }
 }
 

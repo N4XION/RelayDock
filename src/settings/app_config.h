@@ -12,7 +12,7 @@ namespace rd {
 // Everything RelayDock saves to its configuration file. No field here may hold a secret.
 // Stream keys and passwords live in the credential store.
 
-inline constexpr int kConfigSchemaVersion = 1;
+inline constexpr int kConfigSchemaVersion = 2;
 
 enum class PerformanceMode { Potato, Balanced, Quality, Custom };
 enum class OptimizationMode { Off, Suggest, Automatic };
@@ -121,7 +121,8 @@ struct GeneralConfig {
 	bool confirmStopAll = true;         // Ask before Stop All ends every stream.
 	bool preflightOnStartAll = true;    // Run the preflight check before Start All Enabled.
 	bool followObsStreaming = false;    // Start and stop with the OBS Start Streaming button.
-	bool checkUpdatesOnStart = false;   // Ask GitHub for the latest release when OBS starts.
+	bool checkUpdatesOnStart = true;    // Ask GitHub for the latest release when OBS starts.
+	std::string skippedUpdateVersion;   // "1.0.1": the user chose not to be told about this one.
 
 	bool operator==(const GeneralConfig &other) const = default;
 };

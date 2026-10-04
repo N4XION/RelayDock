@@ -141,7 +141,8 @@ AppConfig makeFullConfig()
 	config.general.confirmStopAll = false;
 	config.general.preflightOnStartAll = false;
 	config.general.followObsStreaming = true;
-	config.general.checkUpdatesOnStart = true;
+	config.general.checkUpdatesOnStart = false;
+	config.general.skippedUpdateVersion = "1.0.1";
 
 	config.verticalCanvas.width = 720;
 	config.verticalCanvas.height = 1280;
@@ -184,7 +185,9 @@ TEST_SUITE("settings.json")
 		CHECK(config.activeLayoutId == config.layouts.front().id);
 		CHECK(config.performanceMode == PerformanceMode::Balanced);
 		CHECK(config.optimizer.mode == OptimizationMode::Suggest);
-		CHECK_FALSE(config.general.checkUpdatesOnStart);
+		// Looking for a newer version at start-up is on. The Privacy Policy says so.
+		CHECK(config.general.checkUpdatesOnStart);
+		CHECK(config.general.skippedUpdateVersion.empty());
 		CHECK(config.legal.empty());
 	}
 
@@ -201,7 +204,7 @@ TEST_SUITE("settings.json")
 
 	TEST_CASE("missing keys fall back to defaults")
 	{
-		const ConfigParseResult parsed = parseConfig("{\"schema_version\": 1}");
+		const ConfigParseResult parsed = parseConfig("{\"schema_version\": 2}");
 		REQUIRE(parsed.ok);
 		CHECK(parsed.config.destinations.empty());
 		CHECK(parsed.config.performanceMode == PerformanceMode::Balanced);
@@ -212,7 +215,7 @@ TEST_SUITE("settings.json")
 	TEST_CASE("values of the wrong type fall back to defaults instead of failing")
 	{
 		const std::string text = R"({
-			"schema_version": 1,
+			"schema_version": 2,
 			"destinations": "nope",
 			"performance_mode": 12,
 			"optimizer": [],
@@ -241,7 +244,7 @@ TEST_SUITE("settings.json")
 	{
 		const std::string id = generateUuid();
 		const std::string text = R"({
-			"schema_version": 1,
+			"schema_version": 2,
 			"destinations": [
 				{"id": ")" + id + R"(", "provider": "twitch", "name": "A",
 				 "video": {"bitrate_kbps": 99999999, "width": 1921, "height": 1081, "fps": -5,
@@ -307,7 +310,7 @@ TEST_SUITE("settings.json")
 	{
 		const std::string layoutId = generateUuid();
 		const std::string text = R"({
-			"schema_version": 1,
+			"schema_version": 2,
 			"layouts": [{"id": ")" + layoutId + R"(", "name": "Mine",
 			             "section_order": ["network", "bogus", "network", "destinations"]}],
 			"active_layout_id": "stale-id"
@@ -324,7 +327,7 @@ TEST_SUITE("settings.json")
 	TEST_CASE("incomplete legal records are dropped")
 	{
 		const std::string text = R"({
-			"schema_version": 1,
+			"schema_version": 2,
 			"legal": [
 				{"document_id": "terms-of-use", "version": "1.0", "accepted_at_utc": "t", "app_version": "1.0.0"},
 				{"document_id": "", "version": "1.0"},
@@ -430,6 +433,34 @@ TEST_SUITE("settings.migrations")
 		CHECK_FALSE(result.ok);
 		CHECK(result.finalVersion == 1);
 		CHECK_FALSE(result.error.empty());
+	}
+
+	TEST_CASE("a version 1 file gets the update check at start-up switched on, once, and says so")
+	{
+		// Version 1 had the check off by default and could not tell a choice from that default.
+		const ConfigParseResult parsed = parseConfig(
+			R"({"schema_version": 1, "general": {"check_updates_on_start": false, "confirm_stop_all": false}})");
+		REQUIRE(parsed.ok);
+		CHECK(parsed.fileSchemaVersion == 1);
+		CHECK(parsed.config.general.checkUpdatesOnStart);
+		CHECK_FALSE(parsed.config.general.confirmStopAll); // Everything else is left alone
+		bool told = false;
+		for (const std::string &note : parsed.notes)
+			told = told || note.find("update check") != std::string::npos;
+		CHECK(told);
+
+		// A version 1 file without a "general" section migrates too.
+		const ConfigParseResult bare = parseConfig(R"({"schema_version": 1})");
+		REQUIRE(bare.ok);
+		CHECK(bare.config.general.checkUpdatesOnStart);
+
+		// Written again, it is a current file, and a choice made from now on stays.
+		AppConfig changed = parsed.config;
+		changed.general.checkUpdatesOnStart = false;
+		const ConfigParseResult again = parseConfig(serializeConfig(changed));
+		REQUIRE(again.ok);
+		CHECK(again.fileSchemaVersion == kConfigSchemaVersion);
+		CHECK_FALSE(again.config.general.checkUpdatesOnStart);
 	}
 
 	TEST_CASE("the real chain covers every version up to the current one")

@@ -59,6 +59,6 @@ Encrypted RTMPS connections use the same OBS output as plain RTMP, with TLS hand
 ## Other
 
 - The interface is in English. The locale system is in place, and translations are welcome.
-- RelayDock never updates itself. It can tell you that a newer release exists.
+- RelayDock never updates itself. It tells you when a newer release exists and opens the installer's download in your browser. You close OBS and run it.
 - RelayDock does not record. Use OBS for recording.
 - The clipboard is shared by every program on your PC. While a copied key is on it, other programs can read it.

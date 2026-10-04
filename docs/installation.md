@@ -66,9 +66,17 @@ Continue with [getting-started.md](getting-started.md).
 
 ## Update
 
-Install the new version over the old one. Close OBS first. Your destinations, settings and saved stream keys stay.
+RelayDock looks for a newer version each time OBS starts. When there is one, a window says so and offers to download the installer in your browser.
 
-RelayDock never updates itself. Settings, Updates has a Check for updates button. It asks GitHub for the newest release and shows a link. Nothing is downloaded.
+1. Choose Download installer in that window, or download the installer from [versions.md](versions.md).
+2. Close OBS Studio.
+3. Open the downloaded file and follow its steps.
+
+The installer replaces the old version. Your destinations, settings and saved stream keys stay.
+
+In the window, Later asks again at the next start, and Skip this version stays quiet until a newer one exists. To look by hand, or to switch the check at start-up off, open Settings, Updates.
+
+RelayDock never updates itself. It downloads nothing and installs nothing. A plugin cannot replace its own file while OBS runs, and a program that fetches and starts other programs is what security software looks for.
 
 ## Uninstall
 

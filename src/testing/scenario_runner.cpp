@@ -655,6 +655,18 @@ ScenarioRunner::StepResult ScenarioRunner::beginStep(const json &step, std::stri
 		return StepResult::Done;
 	}
 
+	if (op == "vertical_load_saved") {
+		// Loads vertical layouts the way a scene collection does: from the saved text, with
+		// its format number, through the upgrade of older formats.
+		if (!step.contains("saved") || !step["saved"].is_object()) {
+			detail = "saved must be the object a scene collection stores.";
+			return StepResult::Failed;
+		}
+		app_.vertical().loadText(step["saved"].dump());
+		detail = std::to_string(app_.vertical().layouts().size()) + " layout(s)";
+		return StepResult::Done;
+	}
+
 	if (op == "render_vertical") {
 		// Renders the vertical canvas to an image and measures where a colour lands on it.
 		VerticalCanvas &canvas = app_.vertical().canvasFor(text(step, "layout_id"));

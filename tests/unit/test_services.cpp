@@ -323,6 +323,66 @@ TEST_SUITE("update.check")
 		CHECK(evaluateRelease("1.0.0", next).status == UpdateStatus::UpToDate);
 	}
 
+	TEST_CASE("the installer of a release is found among its files, and only on github.com")
+	{
+		ReleaseInfo release;
+		std::string error;
+		REQUIRE(parseLatestRelease(
+			R"({"tag_name":"v1.0.1","html_url":"https://github.com/o/n/releases/tag/v1.0.1","assets":[
+			     {"name":"SHA256SUMS.txt","browser_download_url":"https://github.com/o/n/releases/download/v1.0.1/SHA256SUMS.txt"},
+			     {"name":"RelayDock-1.0.1-windows-x64.zip","browser_download_url":"https://github.com/o/n/releases/download/v1.0.1/RelayDock-1.0.1-windows-x64.zip"},
+			     {"name":"RelayDock-1.0.1-windows-x64-Setup.exe","browser_download_url":"https://github.com/o/n/releases/download/v1.0.1/RelayDock-1.0.1-windows-x64-Setup.exe"}]})",
+			release, error));
+		CHECK(release.installerUrl == "https://github.com/o/n/releases/download/v1.0.1/RelayDock-1.0.1-windows-x64-Setup.exe");
+
+		// An installer that is hosted anywhere else is not offered.
+		REQUIRE(parseLatestRelease(
+			R"({"tag_name":"v1.0.1","assets":[{"name":"X-Setup.exe","browser_download_url":"https://evil.example/X-Setup.exe"},
+			     {"name":"Y-Setup.exe","browser_download_url":"https://github.com/o/n/blob/main/Y-Setup.exe"}]})",
+			release, error));
+		CHECK(release.installerUrl.empty());
+
+		// No files, odd files, or no installer: no link, and no failure.
+		REQUIRE(parseLatestRelease(R"({"tag_name":"v1.0.1"})", release, error));
+		CHECK(release.installerUrl.empty());
+		REQUIRE(parseLatestRelease(R"({"tag_name":"v1.0.1","assets":[7,{"name":5},{"name":"a.zip"}]})", release, error));
+		CHECK(release.installerUrl.empty());
+
+		// The list of releases carries the files too.
+		std::vector<ReleaseInfo> releases;
+		REQUIRE(parseReleaseList(
+			R"([{"tag_name":"v1.0.0-rc.2","assets":[{"name":"RelayDock-1.0.0-rc.2-windows-x64-Setup.exe",
+			      "browser_download_url":"https://github.com/o/n/releases/download/v1.0.0-rc.2/RelayDock-1.0.0-rc.2-windows-x64-Setup.exe"}]}])",
+			releases, error));
+		REQUIRE(releases.size() == 1);
+		CHECK(releases[0].installerUrl.find("/releases/download/v1.0.0-rc.2/") != std::string::npos);
+	}
+
+	TEST_CASE("the check at start-up speaks up for a newer version only, and not for a skipped one")
+	{
+		UpdateResult result;
+		result.status = UpdateStatus::UpdateAvailable;
+		result.release.tag = "v1.0.1";
+		CHECK(shouldAnnounceUpdate(result, ""));
+		CHECK(shouldAnnounceUpdate(result, "1.0.0"));
+		CHECK_FALSE(shouldAnnounceUpdate(result, "1.0.1"));
+		CHECK_FALSE(shouldAnnounceUpdate(result, "v1.0.1"));
+		// Skipping one version does not silence the next one.
+		result.release.tag = "v1.0.2";
+		CHECK(shouldAnnounceUpdate(result, "1.0.1"));
+		// Text that is no version skips nothing.
+		CHECK(shouldAnnounceUpdate(result, "never"));
+
+		for (UpdateStatus quiet : {UpdateStatus::UpToDate, UpdateStatus::Failed, UpdateStatus::Cancelled, UpdateStatus::NotConfigured}) {
+			result.status = quiet;
+			CHECK_FALSE(shouldAnnounceUpdate(result, ""));
+		}
+
+		CHECK(versionOfTag("v1.0.1") == "1.0.1");
+		CHECK(versionOfTag("1.0.0-rc.2") == "1.0.0-rc.2");
+		CHECK(versionOfTag("nightly") == "nightly");
+	}
+
 	TEST_CASE("a release is compared with the running version")
 	{
 		ReleaseInfo release;

@@ -32,7 +32,7 @@ GitHub's free runners have no graphics chip, so OBS cannot run there. The integr
 | Upload budget | Sums and thresholds |
 | Legal documents | Versions match the files, acceptance records, re-review on change |
 | Theme | Text contrast for every mode and many user colours |
-| Update check | Version ordering, release parsing, cancellation |
+| Update check | Version ordering, release parsing, the installer link, when the check at start-up speaks up, cancellation |
 | Connection test | Reachable, refused, unresolvable, cancelled |
 
 ## Security tests
@@ -59,9 +59,9 @@ These run the real plugin inside a real OBS. Streams go to `rd-rtmp-sink`, a sma
 | Plugin load | RelayDock loads and unloads cleanly and adds no memory leak to what OBS reports by itself. |
 | Custom RTMP | A stream starts, carries video and audio at the set bitrate, and stops. The key is in neither the OBS log nor the settings file. |
 | Several destinations | Destinations with equal settings share one encoder and send identical video. Others get their own. A rejected or dropped destination does not disturb the rest. Reconnect, manual reconnect and recovery from a server outage work. Stop works while connecting. OBS refuses new video settings while a destination connects or waits to reconnect, which would otherwise crash it. The PC is kept awake while a destination is active. OBS closes cleanly while live, connecting and reconnecting. |
-| Vertical canvas | Rendered pictures are measured: fill, fit and crop place rectangles where the geometry says, so nothing is stretched. 16:9 and 9:16 stream together. The canvas leaves the render loop when unused. |
+| Vertical canvas | Rendered pictures are measured: fill, fit and crop place rectangles where the geometry says, so nothing is stretched. A new layout shows the whole scene, and the untouched cropped layout of the first release changes to that when it loads. 16:9 and 9:16 stream together. The canvas leaves the render loop when unused. |
 | Automatic optimisation | Against a server that reads too slowly: Automatic mode lowers the bitrate on the running encoder with no reconnect, Suggest mode changes nothing until accepted, Lock Setting restores the saved value, and quality comes back after the problem ends. |
-| Interface | The first-run review cannot be skipped or bypassed. The editor never shows a saved key. All 17 settings pages open, and changes made on the Performance, Network, Appearance and Layout pages apply and are saved. The card menu duplicates, moves, tests and removes. Preflight blocks Start All Enabled on a failure. The layout editor's preset is what the canvas renders. Closing OBS with a destination live brings up a question, and both answers do what they say. OBS closes cleanly while RelayDock windows are open. |
+| Interface | The first-run review cannot be skipped or bypassed. The editor never shows a saved key. All 17 settings pages open, and changes made on the Performance, Network, Appearance and Layout pages apply and are saved. The card menu duplicates, moves, tests and removes. Preflight blocks Start All Enabled on a failure. The layout editor's preset is what the canvas renders. Closing OBS with a destination live brings up a question, and both answers do what they say. The window that announces a newer version says how to update, and Skip this version is remembered. OBS closes cleanly while RelayDock windows are open. |
 
 Run them all:
 
@@ -101,7 +101,7 @@ No automated test connects to Twitch, YouTube, Facebook or TikTok. That needs a 
 | Twitch | Yes, checked 2026-10-04 | Not tested yet |
 | YouTube | Yes, checked 2026-10-04 | Not tested yet |
 | Facebook | Yes, checked 2026-10-04 | Not tested yet |
-| TikTok | TikTok publishes no fixed server or limits | Not tested yet |
+| TikTok | TikTok publishes no fixed server or limits | Yes, with 1.0.0-rc.1 on 2026-10-04. The project owner streamed a game to TikTok LIVE, and the picture arrived in the TikTok app. Sound, stopping and reconnecting were not checked. |
 | Custom RTMP | Not applicable | Tested against RelayDock's own test server |
 | Custom RTMPS | Not applicable | Not tested yet |
 

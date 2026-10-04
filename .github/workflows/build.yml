@@ -31,6 +31,9 @@ jobs:
       - name: Licence notice matches the vendored licences
         shell: pwsh
         run: ./scripts/update-third-party-licenses.ps1 -Check
+      - name: The versions page matches the changelog
+        shell: pwsh
+        run: ./scripts/update-versions.ps1 -Check
       - name: Documentation links and wording
         shell: pwsh
         run: ./scripts/check-docs.ps1

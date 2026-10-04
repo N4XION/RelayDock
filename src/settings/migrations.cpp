@@ -52,8 +52,22 @@ MigrationChain::Result MigrationChain::run(nlohmann::json &root, int fromVersion
 
 const MigrationChain &configMigrations()
 {
-	// Version 1 is the first released format, so there is nothing to migrate from yet.
-	static const MigrationChain chain;
+	static const MigrationChain chain = [] {
+		MigrationChain steps;
+
+		// 1 to 2. Version 1 had the update check at start-up off by default, and its file
+		// cannot tell a choice from that default. From version 2 the check is on unless the
+		// user switches it off, so it is switched on once here. The Privacy Policy changed
+		// with it, and RelayDock asks the user to review the new text.
+		steps.add({1, "The update check when OBS starts is now on. Switch it off under Settings, Updates.",
+			   [](nlohmann::json &root) {
+				   if (!root.contains("general") || !root["general"].is_object())
+					   root["general"] = nlohmann::json::object();
+				   root["general"]["check_updates_on_start"] = true;
+			   }});
+
+		return steps;
+	}();
 	return chain;
 }
 

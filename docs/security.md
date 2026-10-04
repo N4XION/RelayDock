@@ -63,7 +63,7 @@ RelayDock opens network connections in three cases, each started by you:
 
 1. A stream. It goes from your PC straight to the platform's server, over RTMPS where the platform offers it. Nothing passes through a RelayDock server. There is none.
 2. Test connection. One TCP connection to the destination's server and port. No data is sent.
-3. The update check, when you choose Check for updates or switched on the check at start-up. One HTTPS request to `api.github.com` for the newest release. It carries the RelayDock version number and nothing about you. A build with no project page configured has no update check at all.
+3. The update check, once each time OBS starts unless you switch that off under Settings, Updates, and when you choose Check for updates. One HTTPS request to `api.github.com` for the newest release. It carries the RelayDock version number and nothing about you. A build with no project page configured has no update check at all.
 
 RelayDock has no analytics, no telemetry, no crash upload and no account.
 

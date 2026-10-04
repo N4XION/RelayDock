@@ -1,16 +1,38 @@
-# Changelog
+# Versions
 
-RelayDock follows semantic versioning. A version is MAJOR.MINOR.PATCH:
+Every RelayDock version, its files and what changed in it. The newest is at the top.
 
-- MAJOR changes when an update breaks something you rely on, such as saved settings a newer version can no longer read.
-- MINOR adds features and keeps everything working.
-- PATCH fixes problems.
+`scripts/update-versions.ps1` makes this page from `CHANGELOG.md`. Change the text there, not here.
 
-A version with a suffix, such as `1.0.0-rc.1`, is a pre-release.
+| Version | Released | Kind | Installer | ZIP for a portable OBS | More |
+| --- | --- | --- | --- | --- | --- |
+| 1.0.0-rc.2 | 2026-10-04 | Release candidate | [RelayDock-1.0.0-rc.2-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.2/RelayDock-1.0.0-rc.2-windows-x64-Setup.exe) | [RelayDock-1.0.0-rc.2-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.2/RelayDock-1.0.0-rc.2-windows-x64.zip) | [What changed](#version-100-rc2), [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0-rc.2) |
+| 1.0.0-rc.1 | 2026-10-04 | Release candidate | [RelayDock-1.0.0-rc.1-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/RelayDock-1.0.0-rc.1-windows-x64-Setup.exe) | [RelayDock-1.0.0-rc.1-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/RelayDock-1.0.0-rc.1-windows-x64.zip) | [What changed](#version-100-rc1), [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0-rc.1) |
 
-Each version has a heading with its release date. `scripts/update-versions.ps1` builds `docs/versions.md` from this file: the table of versions, their files and their changes.
+Every release also carries `SHA256SUMS.txt`, with the SHA-256 hash of each file, and `THIRD_PARTY_LICENSES.txt`. [installation.md](installation.md) shows how to check a download against the hashes.
 
-## 1.0.0-rc.2 (2026-10-04)
+The newest version needs Windows 11 (64-bit) and OBS Studio 32.0.0 or newer.
+
+## Update from an older version
+
+1. Download the installer of the newer version from the table.
+2. Close OBS Studio.
+3. Open the downloaded file and follow its steps.
+
+The installer replaces the old version. Your destinations, settings and stream keys stay. For a portable OBS, copy the files from the ZIP over the old ones, as [manual-installation.md](manual-installation.md) describes.
+
+RelayDock looks for a newer version each time OBS starts and tells you when there is one. Settings, Updates has a Check for updates button and the switch for the check at start-up. RelayDock never downloads or installs anything by itself.
+
+## Version 1.0.0-rc.2
+
+Released 2026-10-04. Release candidate.
+
+Files:
+
+- [RelayDock-1.0.0-rc.2-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.2/RelayDock-1.0.0-rc.2-windows-x64-Setup.exe)
+- [RelayDock-1.0.0-rc.2-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.2/RelayDock-1.0.0-rc.2-windows-x64.zip)
+- [SHA256SUMS.txt](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.2/SHA256SUMS.txt)
+- [THIRD_PARTY_LICENSES.txt](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.2/THIRD_PARTY_LICENSES.txt)
 
 The second release candidate. It changes what a vertical stream looks like by default, and RelayDock now tells you when a newer version exists.
 
@@ -29,7 +51,16 @@ The second release candidate. It changes what a vertical stream looks like by de
 
 - TikTok accepted a stream from 1.0.0-rc.1. `docs/testing.md` says what was checked and what was not.
 
-## 1.0.0-rc.1 (2026-10-04)
+## Version 1.0.0-rc.1
+
+Released 2026-10-04. Release candidate.
+
+Files:
+
+- [RelayDock-1.0.0-rc.1-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/RelayDock-1.0.0-rc.1-windows-x64-Setup.exe)
+- [RelayDock-1.0.0-rc.1-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/RelayDock-1.0.0-rc.1-windows-x64.zip)
+- [SHA256SUMS.txt](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/SHA256SUMS.txt)
+- [THIRD_PARTY_LICENSES.txt](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/THIRD_PARTY_LICENSES.txt)
 
 The first release candidate. Everything listed here is built and covered by automated tests against a local test server. No real platform has received a stream from this version in the project's own testing yet. `docs/testing.md` and `docs/release-checklist.md` show what is verified and what is open.
 

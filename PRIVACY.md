@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Version 1.0. Last updated 4 October 2026.
+Version 1.1. Last updated 4 October 2026.
 
 This document is a draft written by the RelayDock contributors. No lawyer has reviewed it. Have it reviewed by a qualified lawyer before you rely on it for commercial use.
 
@@ -36,7 +36,7 @@ RelayDock connects to the internet only in these cases.
 
 - Streaming. When you start a destination, RelayDock connects from your computer to the server of that destination and sends your stream and your stream key to it. The connection goes straight from your computer to the platform or server you chose. It does not pass through any server run by the RelayDock contributors.
 - Test connection. When you click Test connection, RelayDock opens a network connection to the server you configured to see whether it answers, then closes it. It sends no stream and no stream key.
-- Update check. When you click Check for updates, or when you turn on the option to check at start-up, RelayDock asks GitHub for the latest RelayDock release. GitHub receives your IP address and the RelayDock version, as it does for any web request. RelayDock sends nothing else. The start-up check is off unless you turn it on. Builds without a configured project page have no update check.
+- Update check. Each time OBS Studio starts, and when you click Check for updates, RelayDock asks GitHub for the newest RelayDock release. GitHub receives your IP address and the RelayDock version, as it does for any web request. RelayDock sends nothing else. When a newer version exists, RelayDock tells you and offers a link to it. It downloads nothing and installs nothing by itself. You can switch the check at start-up off under Settings, Updates. Builds without a configured project page have no update check.
 
 RelayDock makes no other network connections.
 

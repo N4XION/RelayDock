@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 #include <set>
 
 namespace rd {
@@ -144,7 +145,7 @@ VerticalLayout makeDefaultVerticalLayout(int canvasWidth, int canvasHeight)
 	program.y = 0.0;
 	program.width = canvasWidth;
 	program.height = canvasHeight;
-	program.fit = FitMode::Fill;
+	program.fit = FitMode::Fit;
 	layout.items.push_back(std::move(program));
 	return layout;
 }
@@ -305,7 +306,7 @@ void moveItem(VerticalLayout &layout, const std::string &itemId, int newIndex)
 std::string serializeVerticalLayouts(const std::vector<VerticalLayout> &layouts, int canvasWidth, int canvasHeight)
 {
 	ordered_json root;
-	root["version"] = 1;
+	root["version"] = kVerticalLayoutFormat;
 	if (canvasWidth > 0 && canvasHeight > 0) {
 		root["canvas_width"] = canvasWidth;
 		root["canvas_height"] = canvasHeight;
@@ -343,13 +344,15 @@ std::string serializeVerticalLayouts(const std::vector<VerticalLayout> &layouts,
 }
 
 bool parseVerticalLayouts(std::string_view jsonText, std::vector<VerticalLayout> &out, int *canvasWidth,
-			  int *canvasHeight)
+			  int *canvasHeight, int *format)
 {
 	out.clear();
 	if (canvasWidth)
 		*canvasWidth = 0;
 	if (canvasHeight)
 		*canvasHeight = 0;
+	if (format)
+		*format = 0;
 
 	const json root = json::parse(jsonText, nullptr, false, true);
 	if (root.is_discarded() || !root.is_object())
@@ -357,6 +360,9 @@ bool parseVerticalLayouts(std::string_view jsonText, std::vector<VerticalLayout>
 	const auto layouts = root.find("layouts");
 	if (layouts == root.end() || !layouts->is_array())
 		return false;
+
+	if (format)
+		*format = static_cast<int>(readNumber(root, "version", 0));
 
 	const int savedWidth = static_cast<int>(readNumber(root, "canvas_width", 0));
 	const int savedHeight = static_cast<int>(readNumber(root, "canvas_height", 0));
@@ -401,6 +407,30 @@ bool parseVerticalLayouts(std::string_view jsonText, std::vector<VerticalLayout>
 		out.push_back(std::move(layout));
 	}
 	return true;
+}
+
+std::vector<std::string> upgradeVerticalLayouts(std::vector<VerticalLayout> &layouts, int savedFormat, int canvasWidth,
+						int canvasHeight)
+{
+	std::vector<std::string> notes;
+	if (savedFormat >= 2)
+		return notes;
+
+	for (VerticalLayout &layout : layouts) {
+		if (layout.items.size() != 1)
+			continue;
+		LayoutItem &item = layout.items.front();
+		const bool untouched = item.kind == LayoutItemKind::Program && item.fit == FitMode::Fill && item.visible &&
+				       item.x == 0.0 && item.y == 0.0 && item.width == canvasWidth && item.height == canvasHeight &&
+				       item.cropLeft == 0 && item.cropTop == 0 && item.cropRight == 0 && item.cropBottom == 0;
+		if (!untouched)
+			continue;
+		item.fit = FitMode::Fit;
+		notes.push_back(std::format(
+			"The layout \"{}\" was the standard layout of an earlier version, which cropped the sides of your picture. It now shows the whole picture. To crop again, open the layout editor and set Scaling to Fill.",
+			layout.name));
+	}
+	return notes;
 }
 
 std::vector<std::string> sanitizeVerticalLayouts(std::vector<VerticalLayout> &layouts, int canvasWidth, int canvasHeight)

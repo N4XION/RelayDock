@@ -403,10 +403,16 @@ void VerticalCanvasManager::loadText(const std::string &text)
 	std::vector<VerticalLayout> loaded;
 	int savedWidth = 0;
 	int savedHeight = 0;
-	if (!text.empty() && !parseVerticalLayouts(text, loaded, &savedWidth, &savedHeight)) {
+	int savedFormat = 0;
+	if (!text.empty() && !parseVerticalLayouts(text, loaded, &savedWidth, &savedHeight, &savedFormat)) {
 		logWarning("The vertical layouts saved in this scene collection could not be read. The default layout is used.");
 		loaded.clear();
 	}
+
+	// Layouts from an older RelayDock, in the canvas size they were saved for.
+	for (const std::string &note : upgradeVerticalLayouts(loaded, savedFormat, savedWidth > 0 ? savedWidth : width_,
+							      savedHeight > 0 ? savedHeight : height_))
+		logWarning("Vertical layouts: {}", note);
 
 	// Layouts are saved in canvas pixels. Scale them when the canvas size differs now.
 	if (savedWidth > 0 && savedHeight > 0 && (savedWidth != width_ || savedHeight != height_)) {

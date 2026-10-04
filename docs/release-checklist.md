@@ -12,6 +12,7 @@ GitHub Actions runs these on every push. All must pass on the commit that gets t
 - [ ] The locale file matches the source (`scripts/update-locale.ps1 -Check`)
 - [ ] The licence notice matches the vendored licences (`scripts/update-third-party-licenses.ps1 -Check`)
 - [ ] Documentation links and wording (`scripts/check-docs.ps1`)
+- [ ] The versions page matches the changelog (`scripts/update-versions.ps1 -Check`)
 - [ ] Unit tests
 - [ ] Security tests
 - [ ] The plugin builds with warnings treated as errors
@@ -105,13 +106,14 @@ These need a person, on a PC that has OBS Studio installed:
 The release workflow publishes by itself, so finish the gates above before you tag.
 
 1. Set `version` and `versionSuffix` in `buildspec.json`.
-2. Write `docs/release-notes/<version>.md` from `CHANGELOG.md`. Name every open gate in it.
-3. Read the release page before it exists: `scripts/publish-release.ps1 -Tag v<version> -Repository <owner>/RelayDock -DryRun`.
-4. Commit, push, and wait for the build of that commit to pass.
-5. Tag the commit `v<version>` and push the tag.
-6. GitHub Actions builds the files, checks that the build is reproducible, and publishes the release: the notes, the files, their hashes, the commit and the compiler version. A version with a suffix, such as `1.0.0-rc.1`, becomes a pre-release.
-7. Download the files from the release and run `Test-ZipInstall.ps1` and `Test-Installer.ps1` on them.
-8. Point the download links at the top of `README.md` at the new version, and commit.
+2. Give the version its section in `CHANGELOG.md`, with the release date in the heading, and run `scripts/update-versions.ps1`.
+3. Write `docs/release-notes/<version>.md` from `CHANGELOG.md`. Name every open gate in it.
+4. Read the release page before it exists: `scripts/publish-release.ps1 -Tag v<version> -Repository <owner>/RelayDock -DryRun`.
+5. Commit, push, and wait for the build of that commit to pass.
+6. Tag the commit `v<version>` and push the tag.
+7. GitHub Actions builds the files, checks that the build is reproducible, and publishes the release: the notes, the files, their hashes, the commit and the compiler version. A version with a suffix, such as `1.0.0-rc.1`, becomes a pre-release.
+8. Download the files from the release and run `Test-ZipInstall.ps1` on them, and `Test-Installer.ps1` on a PC that has no RelayDock installed.
+9. Point the download links at the top of `README.md` at the new version, and commit.
 
 ## Version numbers
 

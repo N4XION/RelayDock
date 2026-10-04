@@ -6,6 +6,9 @@
 #include "utils/uuid.h"
 
 #include <cmath>
+#include <functional>
+#include <string>
+#include <vector>
 
 using namespace rd;
 
@@ -134,14 +137,70 @@ TEST_SUITE("core.vertical_layout.placement")
 
 TEST_SUITE("core.vertical_layout.editing")
 {
-	TEST_CASE("the default layout shows Program across the whole canvas, cropped, never stretched")
+	TEST_CASE("the untouched standard layout of the first format changes from fill to fit, once")
+	{
+		const auto oldStandard = [] {
+			VerticalLayout layout = makeDefaultVerticalLayout(1080, 1920);
+			layout.items.front().fit = FitMode::Fill; // What format 1 created
+			return layout;
+		};
+
+		// Saved by the first release: upgraded, with a note that says what changed and how to undo it.
+		std::vector<VerticalLayout> layouts = {oldStandard()};
+		std::vector<std::string> notes = upgradeVerticalLayouts(layouts, 1, 1080, 1920);
+		CHECK(layouts[0].items[0].fit == FitMode::Fit);
+		REQUIRE(notes.size() == 1);
+		CHECK(notes[0].find("Default") != std::string::npos);
+		CHECK(notes[0].find("Fill") != std::string::npos);
+
+		// Saved by this version: a fill the user chose stays a fill.
+		layouts = {oldStandard()};
+		CHECK(upgradeVerticalLayouts(layouts, kVerticalLayoutFormat, 1080, 1920).empty());
+		CHECK(layouts[0].items[0].fit == FitMode::Fill);
+
+		// Anything that was arranged is left alone.
+		const auto untouchedAfter = [&](const std::function<void(VerticalLayout &)> &change) {
+			std::vector<VerticalLayout> arranged = {oldStandard()};
+			change(arranged[0]);
+			const std::vector<LayoutItem> before = arranged[0].items;
+			const bool quiet = upgradeVerticalLayouts(arranged, 1, 1080, 1920).empty();
+			return quiet && arranged[0].items.size() == before.size() && arranged[0].items[0].fit == before[0].fit;
+		};
+		CHECK(untouchedAfter([](VerticalLayout &l) { l.items[0].height = 960; }));
+		CHECK(untouchedAfter([](VerticalLayout &l) { l.items[0].y = 10; }));
+		CHECK(untouchedAfter([](VerticalLayout &l) { l.items[0].cropLeft = 100; }));
+		CHECK(untouchedAfter([](VerticalLayout &l) { l.items[0].visible = false; }));
+		CHECK(untouchedAfter([](VerticalLayout &l) { l.items[0].kind = LayoutItemKind::Source; }));
+		CHECK(untouchedAfter([](VerticalLayout &l) { l.items.push_back(l.items[0]); }));
+
+		// The format number travels with the saved text.
+		int format = 0;
+		std::vector<VerticalLayout> read;
+		REQUIRE(parseVerticalLayouts(serializeVerticalLayouts({oldStandard()}, 1080, 1920), read, nullptr, nullptr, &format));
+		CHECK(format == kVerticalLayoutFormat);
+		REQUIRE(parseVerticalLayouts(R"({"version": 1, "layouts": []})", read, nullptr, nullptr, &format));
+		CHECK(format == 1);
+		REQUIRE(parseVerticalLayouts(R"({"layouts": []})", read, nullptr, nullptr, &format));
+		CHECK(format == 0);
+	}
+
+	TEST_CASE("the default layout shows all of Program, fitted into the canvas, never cropped or stretched")
 	{
 		const VerticalLayout layout = makeDefaultVerticalLayout(1080, 1920);
 		CHECK(isUuid(layout.id));
 		REQUIRE(layout.items.size() == 1);
 		const LayoutItem &item = layout.items.front();
 		CHECK(item.kind == LayoutItemKind::Program);
-		CHECK(item.fit == FitMode::Fill);
+		CHECK(item.fit == FitMode::Fit);
+
+		// A 16:9 scene lands as a band across the middle, with nothing cut off.
+		const Placement placement = computePlacement(item, 1920, 1080);
+		CHECK(placement.drawn.width == doctest::Approx(1080.0));
+		CHECK(placement.drawn.height == doctest::Approx(607.5));
+		CHECK(placement.drawn.x == doctest::Approx(0.0));
+		CHECK(placement.drawn.y == doctest::Approx(656.25));
+		CHECK(placement.visible.width == doctest::Approx(placement.drawn.width));
+		CHECK(placement.visible.height == doctest::Approx(placement.drawn.height));
 		CHECK(item.x == 0.0);
 		CHECK(item.y == 0.0);
 		CHECK(item.width == 1080.0);

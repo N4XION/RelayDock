@@ -87,7 +87,7 @@ Lock a setting in a destination's editor to keep your own value whatever the mod
 
 Set a destination's Shape to Vertical in its Video settings. It then streams 9:16 from RelayDock's vertical canvas while your other destinations stream 16:9.
 
-A new vertical layout shows your OBS picture, centre-cropped. Open the layout editor from the destination's Video settings or from Settings, Vertical Layout to arrange sources yourself. The picture is never stretched: an item either fills its box and gets cropped, or fits inside it.
+A new vertical layout shows your whole OBS picture as a band across the middle, with empty space above and below. To fill the frame and crop the sides instead, open the layout editor, select the item and set Scaling to Fill. Open the editor from the destination's Video settings or from Settings, Vertical Layout to arrange sources yourself. The picture is never stretched: an item either fills its box and gets cropped, or fits inside it.
 
 ## Next
 

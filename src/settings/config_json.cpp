@@ -267,6 +267,7 @@ std::string serializeConfig(const AppConfig &config)
 	general["preflight_on_start_all"] = config.general.preflightOnStartAll;
 	general["follow_obs_streaming"] = config.general.followObsStreaming;
 	general["check_updates_on_start"] = config.general.checkUpdatesOnStart;
+	general["skipped_update_version"] = config.general.skippedUpdateVersion;
 	root["general"] = std::move(general);
 
 	ordered_json vertical;
@@ -388,6 +389,7 @@ ConfigParseResult parseConfig(std::string_view jsonText)
 		readBool(general, "follow_obs_streaming", config.general.followObsStreaming);
 	config.general.checkUpdatesOnStart =
 		readBool(general, "check_updates_on_start", config.general.checkUpdatesOnStart);
+	config.general.skippedUpdateVersion = readString(general, "skipped_update_version");
 
 	const json &vertical = readObject(root, "vertical_canvas");
 	config.verticalCanvas.width = readInt(vertical, "width", config.verticalCanvas.width);

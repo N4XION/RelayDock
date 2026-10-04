@@ -17,7 +17,7 @@ You do not pick a folder. The installer puts RelayDock into `C:\ProgramData\obs-
 
 For a portable OBS Studio, download [RelayDock-1.0.0-rc.1-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/RelayDock-1.0.0-rc.1-windows-x64.zip) and follow [docs/manual-installation.md](docs/manual-installation.md).
 
-This is release candidate 1.0.0-rc.1. Its [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0-rc.1) has the notes and the checksums, and [docs/installation.md](docs/installation.md) shows how to check your download, update and uninstall. Every version is on the [Releases](../../releases) page.
+This is release candidate 1.0.0-rc.1. Its [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0-rc.1) has the notes and the checksums, and [docs/installation.md](docs/installation.md) shows how to check your download, update and uninstall. [docs/versions.md](docs/versions.md) lists every version with its files and what changed.
 
 ![The RelayDock dock inside OBS Studio with three destinations live](docs/screenshots/obs-with-dock.png)
 
@@ -119,7 +119,7 @@ RelayDock adds work only for what you stream. Destinations with identical settin
 - Stream keys and RTMP passwords are saved in Windows Credential Manager, encrypted by Windows for your account.
 - The settings file has no field that can hold a key.
 - Keys are removed from every log line and from the diagnostics report.
-- RelayDock opens network connections only for your streams, for Test connection, and for the update check when you ask for it.
+- RelayDock opens network connections only for your streams, for Test connection, and for the update check. The check runs once when OBS starts, unless you switch that off, and when you ask for it.
 
 [docs/security.md](docs/security.md) describes the design and what it cannot protect against. Report security problems privately, as [SECURITY.md](SECURITY.md) explains.
 
@@ -128,6 +128,7 @@ RelayDock adds work only for what you stream. Destinations with identical settin
 | Topic | Page |
 | --- | --- |
 | Install, update, uninstall | [docs/installation.md](docs/installation.md) |
+| Every version, its files and its changes | [docs/versions.md](docs/versions.md) |
 | Install by hand, portable OBS | [docs/manual-installation.md](docs/manual-installation.md) |
 | First steps | [docs/getting-started.md](docs/getting-started.md) |
 | Modes, locks, optimisation | [docs/performance.md](docs/performance.md) |

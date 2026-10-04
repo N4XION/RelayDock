@@ -37,7 +37,7 @@ A new TikTok destination in RelayDock starts as Vertical with these values as it
 
 ## The vertical picture
 
-TikTok destinations stream from RelayDock's vertical canvas. A new layout shows your OBS picture, centre-cropped to 9:16. Open the layout editor from the destination's Video settings to place your camera, game and other sources yourself. See [getting-started.md](getting-started.md).
+TikTok destinations stream from RelayDock's vertical canvas. A new layout shows your whole OBS picture as a band across the middle of the 9:16 frame, so nothing is cut off. Open the layout editor from the destination's Video settings to change that: set Scaling to Fill to zoom in and crop the sides, or place your camera, game and other sources yourself. See [getting-started.md](getting-started.md).
 
 ## Test without an audience
 

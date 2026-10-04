@@ -47,6 +47,9 @@ struct ReleaseInfo {
 	std::string name; // Title of the release
 	std::string url;  // Release page on github.com
 	bool prerelease = false;
+	// Direct link to the installer of this release on github.com. Empty when the release has
+	// no file whose name ends in "-Setup.exe".
+	std::string installerUrl;
 };
 
 // Splits "https://github.com/owner/name" into its parts. Only github.com addresses are accepted.
@@ -81,6 +84,13 @@ struct UpdateResult {
 UpdateResult evaluateRelease(const std::string &currentVersion, const ReleaseInfo &release);
 
 UserMessage describeUpdate(const UpdateResult &result, const std::string &currentVersion);
+
+// Whether the check at start-up should tell the user about this result: only a newer version,
+// and not the one the user chose to skip. A failed check stays quiet, because nobody asked.
+bool shouldAnnounceUpdate(const UpdateResult &result, const std::string &skippedVersion);
+
+// "v1.0.1" and "1.0.1" both give "1.0.1". Text that is not a version comes back unchanged.
+std::string versionOfTag(const std::string &tag);
 
 // ---- Network -----------------------------------------------------------------------------------
 

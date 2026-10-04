@@ -134,6 +134,14 @@ You need the compiler version the release was built with. The release notes name
 
 It rebuilds `data\locale\en-US.ini` from the strings in the code. CI fails when that file is out of date.
 
+## After you change the changelog
+
+```powershell
+.\scripts\update-versions.ps1
+```
+
+It rebuilds `docs\versions.md`, the page that lists every version with its files and its changes. CI fails when that page is out of date.
+
 ## Options
 
 | CMake option | Default | Meaning |

@@ -558,7 +558,7 @@ void SettingsDialog::buildVertical()
 {
 	PageBuilder p = beginPage(uiText("Settings.Vertical", "Vertical Layout"),
 				  uiText("Vertical.Intro",
-					 "A vertical layout arranges your sources on the 9:16 canvas. Layouts belong to the OBS scene collection and are saved with it. A new layout shows your OBS picture, centre-cropped."));
+					 "A vertical layout arranges your sources on the 9:16 canvas. Layouts belong to the OBS scene collection and are saved with it. A new layout shows your whole OBS picture, with empty space above and below. To zoom in and crop the sides instead, open the editor and set Scaling to Fill."));
 	AppContext &app = host_.app();
 
 	auto *list = new QListWidget(p.page);

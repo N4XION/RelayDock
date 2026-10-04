@@ -4,6 +4,7 @@
 
 #include "core/user_message.h"
 #include "settings/theme.h"
+#include "update/update_check.h"
 #include "utils/i18n.h"
 
 #include <QColor>
@@ -47,6 +48,8 @@ public:
 	// Shows one legal document, or the first-run review when the id is empty.
 	virtual void showLegal(const std::string &documentId) = 0;
 	virtual void runPreflight(bool startAfterwards) = 0;
+	// Opens the window that says a newer RelayDock exists and how to get it.
+	virtual void showUpdate(const ReleaseInfo &release) = 0;
 };
 
 // ---- Text ----------------------------------------------------------------------------------------

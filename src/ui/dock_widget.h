@@ -92,6 +92,7 @@ public:
 	void openVerticalEditor(const std::string &layoutId) override;
 	void showLegal(const std::string &documentId) override;
 	void runPreflight(bool startAfterwards) override;
+	void showUpdate(const ReleaseInfo &release) override;
 
 protected:
 	void paintEvent(QPaintEvent *event) override;
@@ -135,7 +136,7 @@ private:
 
 	Banner *updateBanner_;
 	UpdateChecker *startupCheck_ = nullptr;
-	QString releaseUrl_;
+	ReleaseInfo offeredRelease_; // The newer version the banner and the update window are about
 	QFrame *legalPanel_;
 	QLabel *legalText_;
 

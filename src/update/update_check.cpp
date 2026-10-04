@@ -181,6 +181,10 @@ bool parseGitHubRepository(const std::string &url, std::string &owner, std::stri
 	return true;
 }
 
+namespace {
+bool readRelease(const nlohmann::json &object, ReleaseInfo &release);
+} // namespace
+
 bool parseLatestRelease(const std::string &json, ReleaseInfo &out, std::string &error)
 {
 	const nlohmann::json root = nlohmann::json::parse(json, nullptr, false);
@@ -199,18 +203,10 @@ bool parseLatestRelease(const std::string &json, ReleaseInfo &out, std::string &
 	}
 
 	ReleaseInfo release;
-	release.tag = tag->get<std::string>();
-	if (const auto name = root.find("name"); name != root.end() && name->is_string())
-		release.name = name->get<std::string>();
-	if (const auto url = root.find("html_url"); url != root.end() && url->is_string())
-		release.url = url->get<std::string>();
-	if (const auto pre = root.find("prerelease"); pre != root.end() && pre->is_boolean())
-		release.prerelease = pre->get<bool>();
-
-	// Only a link to github.com is ever shown or opened.
-	if (release.url.rfind("https://github.com/", 0) != 0)
-		release.url.clear();
-
+	if (!readRelease(root, release)) {
+		error = "The answer from GitHub names no release.";
+		return false;
+	}
 	out = std::move(release);
 	return true;
 }
@@ -235,6 +231,29 @@ bool readRelease(const nlohmann::json &object, ReleaseInfo &release)
 	// Only a link to github.com is ever shown or opened.
 	if (release.url.rfind("https://github.com/", 0) != 0)
 		release.url.clear();
+
+	// The installer among the files of the release.
+	release.installerUrl.clear();
+	if (const auto assets = object.find("assets"); assets != object.end() && assets->is_array()) {
+		for (const nlohmann::json &asset : *assets) {
+			if (!asset.is_object())
+				continue;
+			const auto name = asset.find("name");
+			const auto link = asset.find("browser_download_url");
+			if (name == asset.end() || !name->is_string() || link == asset.end() || !link->is_string())
+				continue;
+			const std::string file = name->get<std::string>();
+			const std::string address = link->get<std::string>();
+			const std::string suffix = "-Setup.exe";
+			const bool isInstaller = file.size() > suffix.size() &&
+						 file.compare(file.size() - suffix.size(), suffix.size(), suffix) == 0;
+			if (isInstaller && address.rfind("https://github.com/", 0) == 0 &&
+			    address.find("/releases/download/") != std::string::npos) {
+				release.installerUrl = address;
+				break;
+			}
+		}
+	}
 	return true;
 }
 
@@ -308,6 +327,27 @@ UpdateResult evaluateRelease(const std::string &currentVersion, const ReleaseInf
 	}
 	result.status = compareSemVer(latest, current) > 0 ? UpdateStatus::UpdateAvailable : UpdateStatus::UpToDate;
 	return result;
+}
+
+std::string versionOfTag(const std::string &tag)
+{
+	SemVer version;
+	if (!parseSemVer(tag, version))
+		return tag;
+	return !tag.empty() && (tag.front() == 'v' || tag.front() == 'V') ? tag.substr(1) : tag;
+}
+
+bool shouldAnnounceUpdate(const UpdateResult &result, const std::string &skippedVersion)
+{
+	if (result.status != UpdateStatus::UpdateAvailable)
+		return false;
+
+	SemVer offered;
+	SemVer skipped;
+	if (parseSemVer(result.release.tag, offered) && parseSemVer(skippedVersion, skipped) &&
+	    compareSemVer(offered, skipped) == 0)
+		return false;
+	return true;
 }
 
 UserMessage describeUpdate(const UpdateResult &result, const std::string &currentVersion)

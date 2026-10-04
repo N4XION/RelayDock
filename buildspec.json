@@ -28,7 +28,7 @@
     "name": "relaydock",
     "displayName": "RelayDock",
     "version": "1.0.0",
-    "versionSuffix": "rc.1",
+    "versionSuffix": "rc.2",
     "author": "RelayDock contributors",
     "repository": "N4XION/RelayDock",
     "obs": {

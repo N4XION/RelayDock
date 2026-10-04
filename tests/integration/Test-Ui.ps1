@@ -19,6 +19,8 @@ Drives the real RelayDock windows inside a real OBS and checks what they show an
   tools         The preflight window and the vertical layout editor.
   exit          Closing OBS with a destination live brings up a question. Keep streaming
                 leaves everything running, Close OBS ends the stream and closes.
+  update        The window that announces a newer version: what it says, Later, and Skip this
+                version. It is opened with a made-up release, so GitHub is not asked.
   shutdown      OBS closes while a RelayDock window is open: the settings window, the editor
                 with a connection test running, and the layout editor with its live preview.
 
@@ -390,11 +392,10 @@ if (Test-Selected 'settings') {
         $report.Check('settings: no page shows a stream key', ($leaks -eq 0))
         $report.Check('settings: About shows the version and the six legal documents',
             ((Test-Label $ui.page_about '^Version 1\.0\.0') -and @($ui.page_about.buttons | Where-Object { $_.text -eq 'View' }).Count -eq 6))
-        # Opening the page must not contact GitHub. The check runs on request only.
         $onStart = Get-Check $ui.page_updates 'Check when OBS starts'
-        $report.Check('settings: Updates offers a check on request, and the check at every start is off',
-            ($null -ne (Get-Button $ui.page_updates 'Check for updates') -and $null -ne $onStart -and -not $onStart.checked -and
-             (Test-Label $ui.page_updates 'never downloads or installs anything')))
+        $report.Check('settings: Updates offers a check on request, and the check at every start is on unless switched off',
+            ($null -ne (Get-Button $ui.page_updates 'Check for updates') -and $null -ne $onStart -and $onStart.checked -and
+             (Test-Label $ui.page_updates 'never downloads or installs anything') -and (Test-Label $ui.page_updates 'On unless you switch it off')))
         $report.Check('settings: choosing Potato on the Performance page slows measuring to every two seconds',
             ($run.Result.snapshots.potato.performance.tick_interval_ms -eq 2000))
         $report.Check('settings: an upload speed that is too low shows as exceeded',
@@ -623,6 +624,61 @@ if (Test-Selected 'tools') {
             ($null -ne $box -and [math]::Abs($box.x) -le 4 -and [math]::Abs($box.y - $after[1].value) -le 4 -and
              [math]::Abs($box.width - 1080) -le 4 -and [math]::Abs($box.height - 960) -le 4),
             "x=$($box.x) y=$($box.y) $($box.width)x$($box.height)")
+    }
+}
+
+# ---------------------------------------------------------------------------------------------
+if (Test-Selected 'update') {
+    Write-Host ''
+    Write-Host 'update: the window that announces a newer version'
+    $newer = @{ op = 'ui_open'; what = 'update'; tag = 'v9.9.9'
+                url = 'https://github.com/N4XION/RelayDock/releases/tag/v9.9.9'
+                installer_url = 'https://github.com/N4XION/RelayDock/releases/download/v9.9.9/RelayDock-9.9.9-windows-x64-Setup.exe' }
+    $outcome = Invoke-Ui 'update' @{ steps = @(
+            @{ op = 'clear' }, $video, @{ op = 'accept_legal' },
+            @{ op = 'ui_show_dock'; width = 400; height = 700 },
+            $newer,
+            @{ op = 'ui_wait'; target = 'dialog' },
+            @{ op = 'wait'; seconds = 1 },
+            @{ op = 'ui_state'; label = 'offer' },
+            @{ op = 'ui_grab'; file = 'update.png' },
+            @{ op = 'ui_click'; text = 'Later' },
+            @{ op = 'ui_wait'; target = 'dialog'; present = $false },
+            # Without an installer among the files, the window offers the release page.
+            @{ op = 'ui_open'; what = 'update'; tag = 'v9.9.9'; url = 'https://github.com/N4XION/RelayDock/releases/tag/v9.9.9' },
+            @{ op = 'ui_wait'; target = 'dialog' },
+            @{ op = 'ui_state'; label = 'page_only' },
+            @{ op = 'ui_click'; text = 'Later' },
+            @{ op = 'ui_wait'; target = 'dialog'; present = $false },
+            $newer,
+            @{ op = 'ui_wait'; target = 'dialog' },
+            @{ op = 'ui_click'; text = 'Skip this version' },
+            @{ op = 'ui_wait'; target = 'dialog'; present = $false },
+            @{ op = 'save_config' },
+            @{ op = 'quit' }) } 120
+    $run = $outcome.Run
+    Add-ObsRunChecks -Report $report -Run $run -Label 'update'
+
+    if ($run.Result -and $run.Result.ui.page_only) {
+        $offer = $run.Result.ui.offer
+        $report.Check('update: the window names the newer version and the one that runs',
+            ($offer.title -eq 'RelayDock update' -and (Test-Label $offer '^RelayDock 9\.9\.9 is available$') -and (Test-Label $offer '^You run 1\.\d+\.\d+')))
+        $report.Check('update: it says how to update in three steps and that everything stays',
+            ((Test-Label $offer '^1\. Choose Download installer') -and (Test-Label $offer '^2\. Close OBS Studio\.$') -and
+             (Test-Label $offer '^3\. Open the downloaded file') -and (Test-Label $offer 'destinations, settings and stream keys stay')))
+        $report.Check('update: it says that RelayDock installs nothing by itself and where to switch the check off',
+            (Test-Label $offer 'installs nothing by itself.*Settings, Updates'))
+        $report.Check('update: it offers Download installer, What changed, Later and Skip this version',
+            (@('Download installer', 'What changed', 'Later', 'Skip this version') | Where-Object { $null -eq (Get-Button $offer $_) }).Count -eq 0)
+        $report.Check('update: without an installer among the files it offers the release page',
+            ($null -ne (Get-Button $run.Result.ui.page_only 'Open release page') -and $null -eq (Get-Button $run.Result.ui.page_only 'Download installer') -and
+             (Test-Label $run.Result.ui.page_only '^1\. Choose Open release page')))
+        $configPath = Join-Path (Get-ObsConfigDir -ObsRoot $ObsRoot) 'plugin_config\relaydock\config.json'
+        $saved = if (Test-Path $configPath) { Get-Content $configPath -Raw | ConvertFrom-Json } else { $null }
+        $report.Check('update: Skip this version is remembered in the settings', ($null -ne $saved -and $saved.general.skipped_update_version -eq '9.9.9'),
+            [string]$saved.general.skipped_update_version)
+        $report.Check('update: Later skips nothing: the log has one skip line, from Skip this version',
+            (@([regex]::Matches($run.Log, 'chose to skip RelayDock 9\.9\.9')).Count -eq 1))
     }
 }
 

@@ -102,7 +102,8 @@ Destinations are named by a `ref` you choose when you add them.
 | `config_patch` | `patch` | Merges JSON into the saved settings. |
 | `accept_legal` | | Records the first-run review as done. |
 | `obs_user_config` | `section`, `name`, `value` | Sets a true or false value in the OBS user settings. |
-| `vertical_layout` | `layouts` | Replaces the vertical layouts. |
+| `vertical_layout` | `layouts` | Replaces the vertical layouts. An empty list gives the layout RelayDock makes by itself. |
+| `vertical_load_saved` | `saved` | Loads vertical layouts from the object a scene collection stores, through the upgrade of older formats. |
 | `optimizer_tuning` | `sustain_ms`, `cooldown_ms`, `recover_after_ms`, `probation_ms`, `drop_trigger` | Shortens the optimiser's timers for a test. |
 
 ### Streaming
@@ -147,7 +148,7 @@ Destinations are named by a `ref` you choose when you add them.
 | --- | --- | --- |
 | `ui_show_dock` | `area`: `floating`, `left`, `right`, `width`, `height` | Shows the dock. |
 | `ui_main_window` | `width`, `height`, `x`, `y` | Sizes and places the OBS window. |
-| `ui_open` | `what`: `add`, `edit`, `settings`, `legal`, `vertical`, `preflight`, `start_all`, plus `provider`, `ref`, `page`, `document`, `layout` | Opens a window the way the dock does. |
+| `ui_open` | `what`: `add`, `edit`, `settings`, `legal`, `vertical`, `preflight`, `start_all`, `update`, plus `provider`, `ref`, `page`, `document`, `layout`, and for `update` the made-up release: `tag`, `url`, `installer_url` | Opens a window the way the dock does. |
 | `ui_wait` | `target`, `present`, `timeout_sec` | Waits for a window to appear or close. |
 | `ui_state` | `target`, `label` | Records the window's buttons, boxes, labels, fields, number fields and lists, in reading order. A hidden field reports that it is hidden, never its text. |
 | `ui_click` | `target`, `text` | Presses the button with that text, name or tooltip. |
