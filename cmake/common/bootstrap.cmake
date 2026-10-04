@@ -44,6 +44,8 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/common")
 
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/buildspec.json" buildspec)
+# A change of buildspec.json configures again at the next build.
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/buildspec.json")
 
 string(JSON _name GET ${buildspec} name)
 string(JSON _display_name GET ${buildspec} displayName)
@@ -61,9 +63,14 @@ set(PLUGIN_VERSION_SUFFIX "${_version_suffix}")
 set(PLUGIN_OBS_MINIMUM_VERSION "${_obs_minimum}")
 set(PLUGIN_OBS_TESTED_VERSIONS "${_obs_tested}")
 
-# GitHub repository in "owner/name" form. Empty until the project has a public home.
-# Override with -DRELAYDOCK_REPOSITORY=owner/name.
-set(RELAYDOCK_REPOSITORY "${_repository}" CACHE STRING "GitHub repository (owner/name) used for links and update checks")
+# GitHub repository in "owner/name" form, for links and the update check. buildspec.json is the
+# only place that sets it. A fork that publishes its own releases changes it there.
+#
+# It is deliberately not a cache entry. An earlier version of this file cached it, and an
+# existing build folder then kept the first value it had seen: a build without a project page
+# after buildspec.json had gained one. The unset removes that old entry.
+unset(RELAYDOCK_REPOSITORY CACHE)
+set(RELAYDOCK_REPOSITORY "${_repository}")
 
 if(PLUGIN_VERSION_SUFFIX STREQUAL "")
   set(PLUGIN_VERSION_FULL "${PLUGIN_VERSION}")

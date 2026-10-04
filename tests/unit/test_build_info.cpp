@@ -4,7 +4,10 @@
 
 #include "build_info.h"
 
+#include <nlohmann/json.hpp>
+
 #include <cstring>
+#include <fstream>
 #include <string>
 
 TEST_SUITE("build_info")
@@ -45,6 +48,27 @@ TEST_SUITE("build_info")
 		const rd::BuildInfo &info = rd::buildInfo();
 		if (std::strchr(info.version, '-') != nullptr)
 			CHECK(rd::isDevelopmentBuild());
+	}
+
+	TEST_CASE("the build carries what buildspec.json says")
+	{
+		// A build folder that kept an older value would ship without its update check, or with
+		// the wrong version. This reads the file the build was configured from.
+		std::ifstream file(std::string(RD_SOURCE_DIR) + "/buildspec.json");
+		REQUIRE(file.good());
+		const nlohmann::json spec = nlohmann::json::parse(file, nullptr, false);
+		REQUIRE(spec.is_object());
+
+		const rd::BuildInfo &info = rd::buildInfo();
+		CHECK(std::string(info.repository) == spec.value("repository", std::string("missing")));
+		CHECK(std::string(info.versionNumeric) == spec.value("version", std::string("missing")));
+		CHECK(std::string(info.obsMinimumVersion) == spec["obs"].value("minimumVersion", std::string("missing")));
+
+		const std::string url = rd::repositoryUrl();
+		if (std::string(info.repository).empty())
+			CHECK(url.empty());
+		else
+			CHECK(url == "https://github.com/" + std::string(info.repository));
 	}
 
 	TEST_CASE("this build targets x64")
