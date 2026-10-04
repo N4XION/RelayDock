@@ -6,12 +6,13 @@ Every RelayDock version, its files and what changed in it. The newest is at the 
 
 | Version | Released | Kind | Installer | ZIP for a portable OBS | More |
 | --- | --- | --- | --- | --- | --- |
+| 1.0.0-rc.3 | 2026-10-05 | Release candidate | [RelayDock-1.0.0-rc.3-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.3/RelayDock-1.0.0-rc.3-windows-x64-Setup.exe) | [RelayDock-1.0.0-rc.3-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.3/RelayDock-1.0.0-rc.3-windows-x64.zip) | [What changed](#version-100-rc3), [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0-rc.3) |
 | 1.0.0-rc.2 | 2026-10-04 | Release candidate | [RelayDock-1.0.0-rc.2-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.2/RelayDock-1.0.0-rc.2-windows-x64-Setup.exe) | [RelayDock-1.0.0-rc.2-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.2/RelayDock-1.0.0-rc.2-windows-x64.zip) | [What changed](#version-100-rc2), [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0-rc.2) |
 | 1.0.0-rc.1 | 2026-10-04 | Release candidate | [RelayDock-1.0.0-rc.1-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/RelayDock-1.0.0-rc.1-windows-x64-Setup.exe) | [RelayDock-1.0.0-rc.1-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/RelayDock-1.0.0-rc.1-windows-x64.zip) | [What changed](#version-100-rc1), [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0-rc.1) |
 
 Every release also carries `SHA256SUMS.txt`, with the SHA-256 hash of each file, and `THIRD_PARTY_LICENSES.txt`. [installation.md](installation.md) shows how to check a download against the hashes.
 
-The newest version needs Windows 11 (64-bit) and OBS Studio 32.0.0 or newer.
+The newest version needs Windows 10 or 11 (64-bit) and OBS Studio 32.0.0 or newer.
 
 ## Update from an older version
 
@@ -22,6 +23,36 @@ The newest version needs Windows 11 (64-bit) and OBS Studio 32.0.0 or newer.
 The installer replaces the old version. Your destinations, settings and stream keys stay. For a portable OBS, copy the files from the ZIP over the old ones, as [manual-installation.md](manual-installation.md) describes.
 
 RelayDock looks for a newer version each time OBS starts and tells you when there is one. Settings, Updates has a Check for updates button and the switch for the check at start-up. RelayDock never downloads or installs anything by itself.
+
+## Version 1.0.0-rc.3
+
+Released 2026-10-05. Release candidate.
+
+Files:
+
+- [RelayDock-1.0.0-rc.3-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.3/RelayDock-1.0.0-rc.3-windows-x64-Setup.exe)
+- [RelayDock-1.0.0-rc.3-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.3/RelayDock-1.0.0-rc.3-windows-x64.zip)
+- [SHA256SUMS.txt](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.3/SHA256SUMS.txt)
+- [THIRD_PARTY_LICENSES.txt](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.3/THIRD_PARTY_LICENSES.txt)
+
+The third release candidate. It adds a chat dock for Twitch and YouTube, the logo of each platform, and an uninstall from inside RelayDock.
+
+### Added
+
+- RelayDock Chat, a second dock. It shows the comments of your Twitch and YouTube streams in one list, with Bits, Super Chats, gifts, new subscribers and raids. `docs/chat.md` shows how to set it up. Twitch needs a sign-in on twitch.tv and an application id. YouTube needs an API key of your own and the link to your stream. TikTok and Facebook are not read, because neither offers RelayDock a way to do it.
+- The badge of Twitch, TikTok, YouTube and Facebook shows the platform's logo. Settings, Appearance switches back to letters.
+- Uninstall under Settings, Updates. RelayDock starts its uninstaller, which waits until you close OBS. Keep RelayDock takes the request back. Your destinations, settings and stream keys stay unless you tick the box.
+
+### Changed
+
+- Closing OBS no longer waits for a web request that hangs. Every request RelayDock makes can be cancelled within about a tenth of a second.
+- When GitHub turns the update check away because too many requests came from your internet address, RelayDock says so. That happens on a shared address, such as a VPN.
+- Four documents have a new version, and RelayDock asks you to review them again: the Privacy Policy and the Security and Credentials Notice describe chat, the Third-Party Services Notice describes chat and the logos, and the Open Source Licenses page names the source of the logos.
+
+### Tested
+
+- The installer test and the new uninstall test run on a PC that has RelayDock installed, with a test build of the installer that Windows knows under another identity.
+- The chat readers are tested against stand-ins for Twitch and YouTube. Nobody has used them with the real platforms yet.
 
 ## Version 1.0.0-rc.2
 

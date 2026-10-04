@@ -10,6 +10,27 @@ A version with a suffix, such as `1.0.0-rc.1`, is a pre-release.
 
 Each version has a heading with its release date. `scripts/update-versions.ps1` builds `docs/versions.md` from this file: the table of versions, their files and their changes.
 
+## 1.0.0-rc.3 (2026-10-05)
+
+The third release candidate. It adds a chat dock for Twitch and YouTube, the logo of each platform, and an uninstall from inside RelayDock.
+
+### Added
+
+- RelayDock Chat, a second dock. It shows the comments of your Twitch and YouTube streams in one list, with Bits, Super Chats, gifts, new subscribers and raids. `docs/chat.md` shows how to set it up. Twitch needs a sign-in on twitch.tv and an application id. YouTube needs an API key of your own and the link to your stream. TikTok and Facebook are not read, because neither offers RelayDock a way to do it.
+- The badge of Twitch, TikTok, YouTube and Facebook shows the platform's logo. Settings, Appearance switches back to letters.
+- Uninstall under Settings, Updates. RelayDock starts its uninstaller, which waits until you close OBS. Keep RelayDock takes the request back. Your destinations, settings and stream keys stay unless you tick the box.
+
+### Changed
+
+- Closing OBS no longer waits for a web request that hangs. Every request RelayDock makes can be cancelled within about a tenth of a second.
+- When GitHub turns the update check away because too many requests came from your internet address, RelayDock says so. That happens on a shared address, such as a VPN.
+- Four documents have a new version, and RelayDock asks you to review them again: the Privacy Policy and the Security and Credentials Notice describe chat, the Third-Party Services Notice describes chat and the logos, and the Open Source Licenses page names the source of the logos.
+
+### Tested
+
+- The installer test and the new uninstall test run on a PC that has RelayDock installed, with a test build of the installer that Windows knows under another identity.
+- The chat readers are tested against stand-ins for Twitch and YouTube. Nobody has used them with the real platforms yet.
+
 ## 1.0.0-rc.2 (2026-10-04)
 
 The second release candidate. It changes what a vertical stream looks like by default, and RelayDock now tells you when a newer version exists.

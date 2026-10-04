@@ -87,7 +87,7 @@ foreach ($v in $versions) {
 $lines.Add('')
 $lines.Add('Every release also carries `SHA256SUMS.txt`, with the SHA-256 hash of each file, and `THIRD_PARTY_LICENSES.txt`. [installation.md](installation.md) shows how to check a download against the hashes.')
 $lines.Add('')
-$lines.Add("The newest version needs Windows 11 (64-bit) and OBS Studio $($spec.obs.minimumVersion) or newer.")
+$lines.Add("The newest version needs Windows 10 or 11 (64-bit) and OBS Studio $($spec.obs.minimumVersion) or newer.")
 $lines.Add('')
 $lines.Add('## Update from an older version')
 $lines.Add('')
