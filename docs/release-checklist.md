@@ -124,33 +124,36 @@ RelayDock is built against the oldest supported OBS version. Raising `obs.minimu
 
 Checked on 4 October 2026. "Open" means not done yet. Nothing on this list is assumed.
 
-The integration, performance and endurance tests ran on build `1.0.0-rc.1+9.54512d94d`. The commits after it changed documents, test scripts and result files, and no file under `src`. The release build checks ran on build `1.0.0-rc.1+10.378f8dc6e`.
+The unit tests, the integration suites and the release build checks ran on build `1.0.0-rc.1+13.d101eee6a`. That is the commit before the one that recorded these results.
 
-Those two ids are from before the first push to GitHub. That push corrected the commit author and replaced a Windows user name in one test line, which gave every commit a new id. Build `9.54512d94d` is commit `8efd158aa`, and build `10.378f8dc6e` is commit `4409f26ca`. Apart from that one line in `tests/security/test_diagnostics_leaks.cpp`, their files are the same.
+The performance measurements, the screenshots and the 30 minute endurance run are from build `1.0.0-rc.1+9.54512d94d`. Between the two builds, the update check and the project page setting changed. Nothing that streams changed: under `src`, only `src/update` differs.
+
+The id `54512d94d` is from before the first push to GitHub. That push corrected the commit author and replaced a Windows user name in one test line, which gave every commit a new id. Build `9.54512d94d` has the files of commit `8efd158aa`, apart from that one line in `tests/security/test_diagnostics_leaks.cpp`.
 
 | Gate | Status | Evidence, or what is missing |
 | --- | --- | --- |
-| 1. Automated checks | Passed on the development PC. Open in CI. | The four scripts pass, and so do 302 unit and security test cases. GitHub Actions has not run, because the repository is not on GitHub yet. |
-| 1. Two builds give the same DLL | Passed on the development PC | `scripts/check-reproducible.ps1`: two builds in one folder matched byte for byte. Against the packaged DLL from another folder, all code and data matched, and 73 bytes of time stamp and debug file identifier differed. |
-| 2. Integration tests, OBS 32.0.4 | Passed | 462 checks. [test-results/integration-obs-32.0.4.md](test-results/integration-obs-32.0.4.md) |
-| 2. Integration tests, OBS 32.2.2 | Passed | 462 checks. [test-results/integration-obs-32.2.2.md](test-results/integration-obs-32.2.2.md) |
+| 1. Automated checks | Passed, on the development PC and on GitHub Actions | The four scripts, the unit and security tests (306 test cases), the plugin build, the installer and the package. GitHub Actions passed on the first pushed commit, `0004220ee`, in all three jobs. The Actions tab of the repository shows every run since. |
+| 1. Two builds give the same DLL | Passed | `scripts/check-reproducible.ps1`: two builds in one folder matched byte for byte. Against the packaged DLL from another folder, all code and data matched, and 72 bytes of time stamp and debug file identifier differed. |
+| 2. Integration tests, OBS 32.0.4 | Passed | 462 checks, none failed, none skipped. [test-results/integration-obs-32.0.4.md](test-results/integration-obs-32.0.4.md) |
+| 2. Integration tests, OBS 32.2.2 | Passed | 462 checks, none failed, none skipped. [test-results/integration-obs-32.2.2.md](test-results/integration-obs-32.2.2.md) |
 | 2. Clipboard checks | Passed | Both ran: the key reached the clipboard and was gone 30 seconds later. |
-| 3. Performance | Measured | [performance-results.md](performance-results.md). There is no earlier release to compare with. |
-| 4. Endurance, 30 minutes | Passed | 28 of 28 checks. [test-results/endurance-30-min.md](test-results/endurance-30-min.md) |
-| 4. Endurance, 2 hours | Open | The run had not finished when this was written. |
-| 4. Endurance, 6 hours | Open | The run had not finished when this was written. |
+| 3. Performance | Measured | [performance-results.md](performance-results.md), on build `9.54512d94d`. There is no earlier release to compare with. |
+| 4. Endurance, 30 minutes | Passed | 28 of 28 checks, on build `9.54512d94d`. [test-results/endurance-30-min.md](test-results/endurance-30-min.md) |
+| 4. Endurance, 2 hours | Open | The run was stopped after a few minutes, because the installer cannot be tested while OBS is open. It starts again after this release is out. |
+| 4. Endurance, 6 hours | Open | It follows the 2 hour run. |
 | 5. Platforms | Open | Nobody has streamed to Twitch, YouTube, Facebook or TikTok with this version. It needs a person with accounts. |
 | 5. Custom RTMPS against a real server | Open | Local tests use plain RTMP. |
-| 6. Installer | Built. Installing is open. | `scripts/package.ps1` built it with Inno Setup 6.7.3. Started while OBS was running, it refused, installed nothing and left no uninstall entry. Nobody has installed, upgraded or uninstalled with it yet. |
+| 6. Installer | Passed. One step with a person is open. | `tests/integration/Test-Installer.ps1 -DefaultFolder`, 27 checks: install, install over an existing one, refusal while OBS runs, no OBS found, uninstall, uninstall with settings and keys, and an install into `C:\ProgramData\obs-studio\plugins\relaydock`, all without administrator rights. Nobody has started an installed OBS Studio with RelayDock put there by the installer. |
 | 6. ZIP install in a portable OBS | Passed | `tests/integration/Test-ZipInstall.ps1`, 18 checks, OBS 32.2.2. |
 | 6. The release build loads and unloads | Passed | `tests/integration/Test-PluginLoad.ps1` with the release build, 13 checks, OBS 32.2.2. |
+| 6. Windows SmartScreen | Open | Nobody has downloaded the installer from GitHub and run it yet. That is when SmartScreen shows what it shows. |
 | 7. Keys in the OBS log and the diagnostics report | Passed, automated | Every integration suite searches the OBS log for its test keys. The security tests plant a key in every field of the report. A person has not read a report after a real stream yet. |
 | 7. Copy Key and the clipboard history | Open | The automated checks cover the clipboard. Nobody has looked at Win+V after a copy yet. |
-| 7. Private vulnerability reporting | Open | GitHub offers the setting for public repositories. The repository is private. |
+| 7. Private vulnerability reporting | Done | Switched on in the repository settings. |
 | 7. The release DLL contains no path from the build PC | Passed | `scripts/package.ps1` checks it and refuses to package otherwise. |
 | 8. Platform limits | Checked 2026-10-04 | [research/platform-requirements.md](research/platform-requirements.md) |
-| 8. Screenshots | Made from the running plugin | `docs/screenshots`, by `tests/integration/Capture-Screenshots.ps1`, on build `54512d94d`. |
+| 8. Screenshots | Made from the running plugin | `docs/screenshots`, by `tests/integration/Capture-Screenshots.ps1`, on build `9.54512d94d`. The windows they show have not changed since. |
 | 8. Legal documents | Not reviewed by a lawyer | Each document says so in its first paragraph. |
-| 9. Publish | Open | The source is at github.com/N4XION/RelayDock, in a private repository. No release is published. `repository` in `buildspec.json` is empty, so this build has no update check. |
+| 9. Publish | Ready to tag | The repository is public at github.com/N4XION/RelayDock. Pushing the tag `v1.0.0-rc.1` builds the files and publishes this pre-release with the notes in [release-notes/1.0.0-rc.1.md](release-notes/1.0.0-rc.1.md). |
 
 Hardware that has not been tested: NVIDIA and Intel graphics, and Windows 10. See [testing.md](testing.md).
