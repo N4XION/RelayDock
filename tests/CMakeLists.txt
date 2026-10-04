@@ -7,10 +7,17 @@ set(
   RELAYDOCK_TEST_SOURCES
   unit/test_main.cpp
   unit/test_helpers.h
+  support/fake_platforms.cpp
+  support/fake_platforms.h
+  support/fake_server.cpp
+  support/fake_server.h
   unit/test_build_info.cpp
+  unit/test_chat.cpp
+  unit/test_chat_readers.cpp
   unit/test_destination_state.cpp
   unit/test_diagnostics.cpp
   unit/test_encoding.cpp
+  unit/test_network.cpp
   unit/test_optimizer.cpp
   unit/test_providers.cpp
   unit/test_services.cpp
@@ -27,7 +34,8 @@ set(
 
 add_executable(relaydock-tests ${RELAYDOCK_TEST_SOURCES})
 # powrprof: the sleep inhibitor test asks Windows what it is being kept awake for.
-target_link_libraries(relaydock-tests PRIVATE relaydock-core powrprof)
+# bcrypt: the test web server hashes the WebSocket key.
+target_link_libraries(relaydock-tests PRIVATE relaydock-core powrprof bcrypt)
 target_include_directories(relaydock-tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/unit")
 # The test files are large. Without /bigobj the compiler runs out of object file sections.
 target_compile_options(relaydock-tests PRIVATE /bigobj)

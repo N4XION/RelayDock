@@ -3,6 +3,7 @@
 #pragma once
 
 #include "core/user_message.h"
+#include "network/http_client.h"
 
 #include <atomic>
 #include <string>
@@ -78,6 +79,9 @@ struct UpdateResult {
 	UpdateStatus status = UpdateStatus::NotConfigured;
 	ReleaseInfo release;
 	std::string error; // For Failed. Never contains anything secret.
+	// For Failed: GitHub turned the request away because too many came from this internet
+	// address. GitHub answers 60 an hour for one address, and a VPN shares its address.
+	bool rateLimited = false;
 };
 
 // Compares the running version with a release.
@@ -92,22 +96,13 @@ bool shouldAnnounceUpdate(const UpdateResult &result, const std::string &skipped
 // "v1.0.1" and "1.0.1" both give "1.0.1". Text that is not a version comes back unchanged.
 std::string versionOfTag(const std::string &tag);
 
+// Whether GitHub's answer says that this internet address has asked too often.
+bool isRateLimited(const HttpResponse &response);
+
 // ---- Network -----------------------------------------------------------------------------------
 
-struct HttpResponse {
-	bool ok = false;      // The request completed and a status code arrived
-	int status = 0;       // HTTP status code
-	std::string body;
-	std::string error;
-};
-
-// One HTTPS GET with Windows' own HTTP stack and certificate checks. Blocks, so call it from a
-// worker thread. Gives up when `cancel` becomes true, after `timeoutMs`, or once the body
-// exceeds `maxBytes`.
-HttpResponse httpsGet(const std::string &host, const std::string &path, const std::string &userAgent,
-		      int timeoutMs, size_t maxBytes, const std::atomic<bool> &cancel);
-
-// The whole check. `repositoryUrl` is the project page, `currentVersion` the running version.
+// The whole check. It blocks, so call it from a worker thread. It ends at once when `cancel`
+// becomes true. `repositoryUrl` is the project page, `currentVersion` the running version.
 //
 // A finished release is only told about finished releases. A release candidate is also told
 // about newer release candidates, because whoever tests one wants the next one.

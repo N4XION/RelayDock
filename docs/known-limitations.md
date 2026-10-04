@@ -60,6 +60,6 @@ Encrypted RTMPS connections use the same OBS output as plain RTMP, with TLS hand
 
 - The interface is in English. The locale system is in place, and translations are welcome.
 - RelayDock never updates itself. It tells you when a newer release exists and opens the installer's download in your browser. You close OBS and run it.
-- The check for a newer version asks GitHub when OBS starts. On the development PC the answer came in under a second. If you close OBS while RelayDock still waits for it, OBS finishes closing when the answer arrives or when Windows gives up on the connection. Windows gives each step of a connection 10 seconds: finding the server, connecting, sending and receiving. Switch the check off under Settings, Updates.
+- GitHub answers 60 update checks an hour for one internet address. On a shared address, such as a VPN, that amount can be used up by others. The check then says so, and works again within the hour.
 - RelayDock does not record. Use OBS for recording.
 - The clipboard is shared by every program on your PC. While a copied key is on it, other programs can read it.

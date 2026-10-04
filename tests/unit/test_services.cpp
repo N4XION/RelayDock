@@ -423,6 +423,40 @@ TEST_SUITE("update.check")
 		}
 	}
 
+	TEST_CASE("GitHub turning a shared address away is told apart from a failure")
+	{
+		HttpResponse limited;
+		limited.ok = true;
+		limited.status = 403;
+		limited.body = R"json({"message":"API rate limit exceeded for 203.0.113.7. (But here's the good news: Authenticated requests get a higher rate limit.)","documentation_url":"https://docs.github.com/rest/overview/resources-in-the-rest-api#rate-limiting"})json";
+		CHECK(isRateLimited(limited));
+		limited.status = 429;
+		CHECK(isRateLimited(limited));
+
+		HttpResponse forbidden;
+		forbidden.ok = true;
+		forbidden.status = 403;
+		forbidden.body = R"({"message":"Repository access blocked"})";
+		CHECK_FALSE(isRateLimited(forbidden));
+		HttpResponse fine;
+		fine.ok = true;
+		fine.status = 200;
+		fine.body = R"({"tag_name":"v1.0.0","body":"mentions a rate limit"})";
+		CHECK_FALSE(isRateLimited(fine));
+
+		UpdateResult result;
+		result.status = UpdateStatus::Failed;
+		result.rateLimited = true;
+		result.error = "GitHub answered with status 403.";
+		const UserMessage message = describeUpdate(result, "1.0.0");
+		CHECK(contains(message.what, "no more update checks"));
+		CHECK(contains(message.action, "within the hour"));
+		// The address itself is nobody's business and is never shown.
+		CHECK_FALSE(contains(message.text(), "203.0.113.7"));
+		// At start-up nobody asked, so a turned-away check stays quiet.
+		CHECK_FALSE(shouldAnnounceUpdate(result, ""));
+	}
+
 	// Talks to GitHub, so it is skipped in the normal run. Run it with:
 	//   relaydock-tests --no-skip -tc="live: GitHub answers a release request"
 	TEST_CASE("live: GitHub answers a release request" * doctest::skip())

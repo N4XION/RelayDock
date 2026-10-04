@@ -7,10 +7,6 @@
 
 #include <nlohmann/json.hpp>
 
-#include <windows.h>
-
-#include <winhttp.h>
-
 #include <charconv>
 #include <format>
 #include <vector>
@@ -41,26 +37,6 @@ bool isNumeric(std::string_view text)
 	}
 	return true;
 }
-
-std::wstring widen(const std::string &text)
-{
-	if (text.empty())
-		return {};
-	const int length = MultiByteToWideChar(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), nullptr, 0);
-	std::wstring out(static_cast<size_t>(length), L'\0');
-	MultiByteToWideChar(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), out.data(), length);
-	return out;
-}
-
-struct InternetHandle {
-	HINTERNET handle = nullptr;
-	~InternetHandle()
-	{
-		if (handle)
-			WinHttpCloseHandle(handle);
-	}
-	explicit operator bool() const { return handle != nullptr; }
-};
 
 } // namespace
 
@@ -366,6 +342,12 @@ UserMessage describeUpdate(const UpdateResult &result, const std::string &curren
 				     "Open the release page to read what changed and download it. RelayDock never installs updates by itself.");
 		break;
 	case UpdateStatus::Failed:
+		if (result.rateLimited) {
+			message.what = loc("Update.RateLimited", "GitHub takes no more update checks from your internet address this hour.");
+			message.action = loc("Update.RateLimited.Action",
+					     "That happens on an address many people share, such as a VPN. Try again within the hour.");
+			break;
+		}
 		message.what = loc("Update.Failed", "The update check did not finish.");
 		message.detail = result.error;
 		message.action = loc("Update.Failed.Action", "Check your internet connection and try again later.");
@@ -379,77 +361,10 @@ UserMessage describeUpdate(const UpdateResult &result, const std::string &curren
 
 // ---- Network -----------------------------------------------------------------------------------
 
-HttpResponse httpsGet(const std::string &host, const std::string &path, const std::string &userAgent,
-		      int timeoutMs, size_t maxBytes, const std::atomic<bool> &cancel)
+bool isRateLimited(const HttpResponse &response)
 {
-	HttpResponse response;
-
-	const InternetHandle session{WinHttpOpen(widen(userAgent).c_str(), WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
-						 WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0)};
-	if (!session) {
-		response.error = std::format("Windows could not open an HTTP session (error {}).", GetLastError());
-		return response;
-	}
-	WinHttpSetTimeouts(session.handle, timeoutMs, timeoutMs, timeoutMs, timeoutMs);
-
-	const InternetHandle connection{WinHttpConnect(session.handle, widen(host).c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0)};
-	if (!connection) {
-		response.error = std::format("Windows could not prepare the connection (error {}).", GetLastError());
-		return response;
-	}
-
-	// WINHTTP_FLAG_SECURE: TLS with Windows' certificate checks. They stay at their defaults.
-	const InternetHandle request{WinHttpOpenRequest(connection.handle, L"GET", widen(path).c_str(), nullptr,
-							WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE)};
-	if (!request) {
-		response.error = std::format("Windows could not create the request (error {}).", GetLastError());
-		return response;
-	}
-
-	if (cancel.load()) {
-		response.error = "cancelled";
-		return response;
-	}
-
-	const wchar_t *headers = L"Accept: application/vnd.github+json\r\nX-GitHub-Api-Version: 2022-11-28\r\n";
-	if (!WinHttpSendRequest(request.handle, headers, static_cast<DWORD>(-1), WINHTTP_NO_REQUEST_DATA, 0, 0, 0) ||
-	    !WinHttpReceiveResponse(request.handle, nullptr)) {
-		response.error = std::format("The request failed (Windows error {}).", GetLastError());
-		return response;
-	}
-
-	DWORD status = 0;
-	DWORD statusSize = sizeof(status);
-	if (!WinHttpQueryHeaders(request.handle, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX,
-				 &status, &statusSize, WINHTTP_NO_HEADER_INDEX)) {
-		response.error = std::format("The answer had no status (Windows error {}).", GetLastError());
-		return response;
-	}
-	response.status = static_cast<int>(status);
-
-	std::vector<char> chunk(16 * 1024);
-	for (;;) {
-		if (cancel.load()) {
-			response.error = "cancelled";
-			return response;
-		}
-		DWORD read = 0;
-		if (!WinHttpReadData(request.handle, chunk.data(), static_cast<DWORD>(chunk.size()), &read)) {
-			response.error = std::format("Reading the answer failed (Windows error {}).", GetLastError());
-			return response;
-		}
-		if (read == 0)
-			break;
-		if (response.body.size() + read > maxBytes) {
-			response.error = "The answer was larger than expected and was discarded.";
-			response.body.clear();
-			return response;
-		}
-		response.body.append(chunk.data(), read);
-	}
-
-	response.ok = true;
-	return response;
+	// GitHub answers 403 or 429 and says "API rate limit exceeded" in the message.
+	return response.ok && (response.status == 403 || response.status == 429) && containsNoCase(response.body, "rate limit");
 }
 
 UpdateResult checkForUpdate(const std::string &repositoryUrl, const std::string &currentVersion,
@@ -477,8 +392,15 @@ UpdateResult checkForUpdate(const std::string &repositoryUrl, const std::string 
 	// The list carries the notes and the files of every release in it, so it gets more room.
 	const size_t maxBytes = candidate ? 2 * 1024 * 1024 : 512 * 1024;
 
-	const HttpResponse response = httpsGet("api.github.com", path, agent, 10000, maxBytes, cancel);
-	if (cancel.load() || response.error == "cancelled") {
+	HttpRequest request;
+	request.url = "https://api.github.com" + path;
+	request.headers = {{"Accept", "application/vnd.github+json"}, {"X-GitHub-Api-Version", "2022-11-28"}};
+	request.userAgent = agent;
+	request.timeoutMs = 10000;
+	request.maxBytes = maxBytes;
+
+	const HttpResponse response = httpRequest(request, cancel);
+	if (cancel.load() || response.cancelled()) {
 		result.status = UpdateStatus::Cancelled;
 		return result;
 	}
@@ -494,6 +416,7 @@ UpdateResult checkForUpdate(const std::string &repositoryUrl, const std::string 
 	}
 	if (response.status != 200) {
 		result.status = UpdateStatus::Failed;
+		result.rateLimited = isRateLimited(response);
 		result.error = std::format("GitHub answered with status {}.", response.status);
 		return result;
 	}

@@ -8,6 +8,18 @@ set(
   RELAYDOCK_CORE_SOURCES
   src/build_info.cpp
   src/build_info.h
+  src/chat/chat_types.cpp
+  src/chat/chat_types.h
+  src/chat/chat_worker.cpp
+  src/chat/chat_worker.h
+  src/chat/twitch_chat.cpp
+  src/chat/twitch_chat.h
+  src/chat/twitch_protocol.cpp
+  src/chat/twitch_protocol.h
+  src/chat/youtube_chat.cpp
+  src/chat/youtube_chat.h
+  src/chat/youtube_protocol.cpp
+  src/chat/youtube_protocol.h
   src/core/destination_state.cpp
   src/core/destination_state.h
   src/core/output_stop.h
@@ -32,10 +44,15 @@ set(
   src/legal/legal_documents.h
   src/network/bandwidth.cpp
   src/network/bandwidth.h
+  src/network/http_client.cpp
+  src/network/http_client.h
   src/network/reachability.cpp
   src/network/reachability.h
   src/network/stream_url.cpp
   src/network/stream_url.h
+  src/network/websocket_client.cpp
+  src/network/websocket_client.h
+  src/network/winhttp_async.h
   src/performance/effective_settings.cpp
   src/performance/effective_settings.h
   src/performance/metrics_window.cpp
