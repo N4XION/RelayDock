@@ -21,6 +21,9 @@ The first release candidate. Everything listed here is built and covered by auto
 - A vertical layout editor with a live preview.
 - Automatic reconnect with growing waits, and a manual Reconnect.
 - A hidden test stream for Twitch. Test connection for every destination.
+- A question before OBS closes while a destination is active.
+- The PC and the display stay awake while a destination is active.
+- OBS keeps its video settings locked while a destination is connecting, live or waiting to reconnect. Without that lock, a change during a reconnect wait crashes OBS.
 
 ### Performance
 

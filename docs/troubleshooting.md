@@ -74,6 +74,27 @@ RelayDock retries with a growing wait: your first wait, then one and a half time
 
 Reconnect in the card's menu drops the connection and starts again at once.
 
+## The PC does not go to sleep
+
+RelayDock keeps the PC and the display awake while a destination is connecting, live or reconnecting. A destination that waits to reconnect counts, even hours after its connection dropped. Stop All ends the request.
+
+The OBS log shows both moments:
+
+```
+[RelayDock] A destination is active. RelayDock keeps the PC and the display awake.
+[RelayDock] No destination is active. Windows may sleep again.
+```
+
+To see what keeps your PC awake right now, run `powercfg /requests` in a terminal started as administrator. RelayDock appears there as "RelayDock is streaming".
+
+Closing a laptop lid still does what your Windows power settings say. Set "When I close the lid" to "Do nothing" before you stream with the lid closed.
+
+## OBS will not let me change the video settings
+
+OBS greys out Settings, Video and says the video output is currently active while anything streams or records. That includes a RelayDock destination that is connecting, live or waiting to reconnect. Choose Stop All in RelayDock, change the setting, and start again.
+
+RelayDock keeps this lock on purpose while a destination waits to reconnect. Changing the canvas under a waiting destination would crash OBS at its next connection attempt.
+
 ## Destinations do not share an encoder
 
 They share only when their video settings match exactly. Settings, Streaming shows the plan. Common reasons for a split:

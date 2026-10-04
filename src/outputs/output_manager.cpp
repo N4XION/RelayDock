@@ -64,6 +64,9 @@ OutputManager::OutputManager(AppContext &app, QObject *parent) : QObject(parent)
 	sampleTimer_.setInterval(1000);
 	connect(&sampleTimer_, &QTimer::timeout, this, &OutputManager::sample);
 	sampleTimer_.start();
+	// Every change of phase is announced with destinationChanged. A direct connection, so the
+	// guard is up before start() creates the first encoder.
+	connect(this, &OutputManager::destinationChanged, this, [this](const QString &) { updateActivity(); });
 }
 
 OutputManager::~OutputManager()
@@ -539,6 +542,7 @@ void OutputManager::forget(const std::string &id)
 	}
 	releaseObsObjects(*s);
 	sessions_.erase(id);
+	updateActivity();
 }
 
 void OutputManager::shutdown()
@@ -570,9 +574,51 @@ void OutputManager::shutdown()
 		releaseObsObjects(s);
 	}
 	sessions_.clear();
+	setActivity(false);
 
 	if (stopped > 0)
 		logInfo("Stopped {} output(s) for shutdown.", stopped);
+}
+
+// ---- Activity ----------------------------------------------------------------------------------
+
+void OutputManager::updateActivity()
+{
+	if (shutDown_)
+		return;
+	if (anyActive()) {
+		setActivity(true);
+		return;
+	}
+
+	// A manual reconnect stops a destination and starts it again in the same turn. Look again
+	// when the current work is done, so the guard is not taken down in between.
+	if (!activityOn_ || deactivationQueued_)
+		return;
+	deactivationQueued_ = true;
+	QMetaObject::invokeMethod(
+		this,
+		[this] {
+			deactivationQueued_ = false;
+			if (!shutDown_ && !anyActive())
+				setActivity(false);
+		},
+		Qt::QueuedConnection);
+}
+
+void OutputManager::setActivity(bool active)
+{
+	if (active == activityOn_)
+		return;
+	activityOn_ = active;
+
+	// While a destination holds encoders, OBS must not replace the video they were made for.
+	if (!videoGuard_.setActive(active) && active && !guardFailureLogged_) {
+		guardFailureLogged_ = true;
+		logWarning("OBS did not start RelayDock's video guard. Do not change the OBS video settings while a "
+			   "destination is connecting or reconnecting.");
+	}
+	Q_EMIT activeChanged(active);
 }
 
 // ---- Signals from OBS ----------------------------------------------------------------------------
@@ -798,6 +844,12 @@ bool OutputManager::anyActive() const
 {
 	return std::any_of(sessions_.begin(), sessions_.end(),
 			   [](const auto &entry) { return entry.second->state.runtime().active(); });
+}
+
+int OutputManager::activeCount() const
+{
+	return static_cast<int>(std::count_if(sessions_.begin(), sessions_.end(),
+					      [](const auto &entry) { return entry.second->state.runtime().active(); }));
 }
 
 int OutputManager::liveCount() const

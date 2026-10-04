@@ -83,6 +83,7 @@ If a key may have leaked, reset it on the platform. Every platform lets you issu
 - The build downloads OBS Studio's sources and dependencies pinned by SHA-256 hash in `buildspec.json`.
 - RelayDock contains no packer, no obfuscation, no self-updater and no code that downloads or runs other code.
 - Every release file has its SHA-256 hash in `SHA256SUMS.txt`.
+- The build is reproducible. Two builds of one commit in one folder give the same `relaydock.dll`, byte for byte. A build in another folder differs only in the time stamp fields and in the identifier of the debug file. `scripts/check-reproducible.ps1` checks both, and [building-from-source.md](building-from-source.md) shows how to compare your own build with a release.
 - The files are not code-signed. Code-signing certificates that Windows trusts cost money. [installation.md](installation.md) explains the SmartScreen message and how to verify a download.
 - The SignPath Foundation signs releases of open-source projects for free when a project meets its conditions, among them an OSI-approved licence and release builds made from a public repository. RelayDock can apply once its repository and first releases are public. Until a certificate is granted, releases stay unsigned and the checksums are the way to verify them.
 - The debug file path stored in the DLL is the file name only, so a release carries no path from the PC that built it. `scripts/package.ps1` refuses to package a DLL that contains the builder's user name or the test scenario runner.

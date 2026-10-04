@@ -5,6 +5,7 @@
 #include "core/destination_state.h"
 #include "encoders/encode_plan.h"
 #include "encoders/encoder_pool.h"
+#include "outputs/video_guard.h"
 #include "performance/effective_settings.h"
 
 #include <QObject>
@@ -99,6 +100,8 @@ public:
 	DestinationStats stats(const std::string &id) const;
 	DestinationSessionInfo sessionInfo(const std::string &id) const;
 	bool anyActive() const;
+	// Destinations that are starting, live, reconnecting or stopping.
+	int activeCount() const;
 	int liveCount() const;
 	// Sum of the measured bitrates of every live destination.
 	int totalBitrateKbps() const;
@@ -112,6 +115,8 @@ Q_SIGNALS:
 	void destinationChanged(const QString &id);
 	// New stats are available for the live destinations.
 	void statsUpdated();
+	// The first destination became active, or the last one stopped being active.
+	void activeChanged(bool anyActive);
 
 private:
 	struct Session;
@@ -129,6 +134,9 @@ private:
 	// about to return.
 	void joinStopThreadsFor(const std::string &id);
 	void sample();
+	// Call after anything that can change whether a destination is active.
+	void updateActivity();
+	void setActivity(bool active);
 
 	// Run on the UI thread, posted by the signal handlers.
 	void handleStarted(const std::string &id, uint64_t generation);
@@ -154,6 +162,13 @@ private:
 	QTimer sampleTimer_;
 	uint64_t nextGeneration_ = 1;
 	bool shutDown_ = false;
+
+	// On from the first destination that starts until the last one has let go of its
+	// encoders. See VideoGuard for why.
+	VideoGuard videoGuard_;
+	bool activityOn_ = false;
+	bool deactivationQueued_ = false;
+	bool guardFailureLogged_ = false;
 };
 
 } // namespace rd

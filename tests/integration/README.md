@@ -43,8 +43,17 @@ Pass one name to `-Only` per run.
 | `Test-Performance.ps1` | Measurements, not checks. Writes a report. |
 | `Test-Endurance.ps1` | A long stream with a measurement every minute. |
 | `Run-All.ps1` | The first six, with a results table. |
+| `Test-ZipInstall.ps1` | The release ZIP, copied into a portable OBS by the steps of `docs/manual-installation.md`, then removed again. |
 
 `Test-Ui.ps1` shows the OBS window, because a hidden window has no layout to check. The other suites keep OBS in the system tray.
+
+`Test-ZipInstall.ps1` and `Test-PluginLoad.ps1` need no test hooks. Run both against the release build before a release:
+
+```powershell
+.\scripts\package.ps1
+.\tests\integration\Test-PluginLoad.ps1 -ObsRoot C:\obs-test -PluginRunDir build_x64\rundir\RelWithDebInfo
+.\tests\integration\Test-ZipInstall.ps1 -ObsRoot C:\obs-test -ZipPath (Get-Item release\RelayDock-*-windows-x64.zip)
+```
 
 ## How a test works
 
@@ -81,14 +90,16 @@ Destinations are named by a `ref` you choose when you add them.
 | Step | Fields | What it does |
 | --- | --- | --- |
 | `clear` | | Removes every destination and every test credential. |
-| `obs_video` | `base_width`, `base_height`, `output_width`, `output_height`, `fps` | Sets the OBS canvas, output size and frame rate. |
+| `obs_video` | `base_width`, `base_height`, `output_width`, `output_height`, `fps`, `expect` | Sets the OBS canvas, output size and frame rate. `expect`: `applied` (the default), `refused` for a change OBS must turn down, or `any`. |
 | `add_color_source` | `name`, `color`, `width`, `height`, `x`, `y` | Adds a coloured rectangle to the current scene. |
 | `add_moving_picture` | `file`, `speed_x`, `speed_y` | Adds a picture that scrolls across the whole canvas. |
 | `clear_scene` | | Removes every item from the current scene. |
+| `deselect_scene` | | Deselects every item, so OBS draws no editing guides in its preview. |
 | `add_destination` | `ref`, `provider`, `config`, `stream_key`, `password` | Adds a destination. `config` uses the names of the settings file. |
 | `set` | `performance_mode`, `enabled`, `optimizer`, `upload_kbps` | Changes settings. |
 | `config_patch` | `patch` | Merges JSON into the saved settings. |
 | `accept_legal` | | Records the first-run review as done. |
+| `obs_user_config` | `section`, `name`, `value` | Sets a true or false value in the OBS user settings. |
 | `vertical_layout` | `layouts` | Replaces the vertical layouts. |
 | `optimizer_tuning` | `sustain_ms`, `cooldown_ms`, `recover_after_ms`, `probation_ms`, `drop_trigger` | Shortens the optimiser's timers for a test. |
 
@@ -118,13 +129,13 @@ Destinations are named by a `ref` you choose when you add them.
 
 | Step | Fields | Records |
 | --- | --- | --- |
-| `snapshot` | `label` | Every destination's phase, error, statistics, effective settings and encoder, plus OBS and RelayDock measurements. |
+| `snapshot` | `label` | Every destination's phase, error, statistics, effective settings and encoder, plus OBS and RelayDock measurements, the OBS video size, whether OBS counts video as in use and whether RelayDock keeps the PC awake. |
 | `render_vertical` | `label`, `layout`, `find`, `file` | Renders the vertical canvas to an image and measures where given colours are. |
 | `preflight` | `label` | The preflight report. |
 | `diagnostics` | `label` | The diagnostics report text. |
 | `legal_state` | `label` | Which legal documents are accepted. |
 | `save_config` | | Writes the settings file now. |
-| `quit` | | Ends the scenario and closes OBS. |
+| `quit` | `confirm` | Ends the scenario and closes OBS. `confirm` names the button to press when a question comes up on the way out. |
 
 ### Interface
 

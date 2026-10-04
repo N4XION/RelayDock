@@ -24,13 +24,14 @@ param(
     [Parameter(Mandatory)][string]$ObsRoot,
     [Parameter(Mandatory)][string]$BuildDir,
     [int]$Minutes = 30,
-    [string]$OutDir = (Join-Path $PSScriptRoot "..\output\endurance-$Minutes"),
+    [string]$OutDir = '',
     [int]$Port = 19390,
     # Memory may grow by this share between minute 5 and the end before the run counts as failed.
     [double]$MaxMemoryGrowthPercent = 15.0
 )
 
 $ErrorActionPreference = 'Stop'
+if (-not $OutDir) { $OutDir = Join-Path $PSScriptRoot "..\output\endurance-$Minutes" }
 Import-Module (Join-Path $PSScriptRoot 'ObsTestHarness.psm1') -Force
 
 $paths = Get-BuildPaths -BuildDir $BuildDir

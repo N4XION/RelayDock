@@ -20,12 +20,15 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 
+#include <QMainWindow>
 #include <QPointer>
 
 #include "app/app_context.h"
 #include "build_info.h"
 #include "outputs/program_mirror_source.h"
+#include "outputs/video_guard.h"
 #include "ui/dock_widget.h"
+#include "ui/exit_guard.h"
 #include "utils/i18n.h"
 #include "utils/log.h"
 
@@ -133,6 +136,7 @@ bool obs_module_load(void)
 #endif
 
 	rd::registerProgramMirrorSource();
+	rd::registerVideoGuardOutput();
 
 	g_app = std::make_unique<rd::AppContext>();
 	g_app->initialize();
@@ -146,6 +150,10 @@ bool obs_module_load(void)
 		return false;
 	}
 	g_dock = dock;
+
+	// Asks before OBS closes with a destination active. A child of the dock, so OBS deletes
+	// it with the dock.
+	new rd::ExitGuard(*g_app, static_cast<QMainWindow *>(obs_frontend_get_main_window()), dock);
 
 	obs_frontend_add_tools_menu_item(
 		rd::loc("Tools.Settings", "RelayDock Settings").c_str(),

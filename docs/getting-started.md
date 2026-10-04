@@ -41,12 +41,16 @@ Tell RelayDock your upload speed once, under Settings, Network. Then the check c
 
 A card shows CONNECTING, then LIVE with the bitrate, dropped frames and time. If a destination fails, its card says what failed, what RelayDock knows about it and what to check. The other destinations keep streaming.
 
+While a destination is connecting, live or reconnecting, RelayDock asks Windows to keep the PC and the display awake, the way OBS does for its own stream. The request ends when the last destination stops.
+
 ## 5. Stop
 
 - Stop one destination with the stop button on its card.
 - Stop everything with Stop All.
 
 A destination that takes long to stop shows STOPPING. Press its button again to cut it off at once.
+
+Closing OBS ends every stream. When you close OBS while a destination is active, RelayDock asks first: Close OBS or Keep streaming. The question follows the OBS setting "Show active outputs warning on exit" under Settings, Advanced. With that setting off, OBS closes without asking.
 
 ## What the cards show
 

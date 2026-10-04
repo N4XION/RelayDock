@@ -16,6 +16,8 @@ Each test below is one OBS run against the local RTMP sink.
   manual-reconnect   Reconnect on request cuts and restores one destination.
   recovery           The server goes away and comes back. The destination recovers.
   stop-connecting    Stop while a connection attempt hangs. The OBS window must stay responsive.
+  video-settings     OBS refuses new video settings while a destination connects or waits to
+                     reconnect, and accepts them again when nothing is active.
   shutdown-live      OBS closes while two destinations are live.
   shutdown-connecting   OBS closes while a connection attempt hangs.
   shutdown-reconnecting OBS closes while a destination waits to reconnect.
@@ -31,12 +33,13 @@ Needs a build with RELAYDOCK_TEST_HOOKS=ON (preset windows-hooks-x64).
 param(
     [Parameter(Mandatory)][string]$ObsRoot,
     [Parameter(Mandatory)][string]$BuildDir,
-    [string]$OutDir = (Join-Path $PSScriptRoot '..\output\multi-destination'),
+    [string]$OutDir = '',
     [string[]]$Only = @(),
     [int]$Port = 19350
 )
 
 $ErrorActionPreference = 'Stop'
+if (-not $OutDir) { $OutDir = Join-Path $PSScriptRoot '..\output\multi-destination' }
 Import-Module (Join-Path $PSScriptRoot 'ObsTestHarness.psm1') -Force
 
 $paths = Get-BuildPaths -BuildDir $BuildDir
@@ -243,6 +246,7 @@ if (Test-Selected 'isolation') {
         $report.Check('isolation: the server saw one uninterrupted session for the healthy destination', ($good.sessions -eq 1 -and @($good.session_records)[0].ended -eq 'client'))
         $report.Check('isolation: the server refused the rejected key', ($outcome.Sink.streams.($keys.rejected).rejected -ge 1))
         $report.Check('isolation: failed destinations hold no output', (-not $later.rejected.has_output -and -not $later.unreachable.has_output -and -not $later.dropped.has_output))
+        $report.Check('isolation: the PC is kept awake for the one destination that is live', ($run.Result.snapshots.later.keeps_awake -eq $true))
     }
 }
 
@@ -348,6 +352,7 @@ if (Test-Selected 'recovery') {
         $outage = $run.Result.snapshots.outage.destinations.a
         $recovered = $run.Result.snapshots.recovered.destinations.a
         $report.Check('recovery: the destination shows Reconnecting during the outage', ($outage.phase -eq 'reconnecting' -and $outage.reconnect_attempt -ge 1))
+        $report.Check('recovery: the PC is kept awake while the destination waits to reconnect', ($run.Result.snapshots.outage.keeps_awake -eq $true))
         $report.Check('recovery: the destination is live again after the server returns', ($recovered.phase -eq 'live' -and $recovered.reconnects -ge 1), "$($recovered.reconnects) reconnect(s)")
         $report.Check('recovery: the returned server receives video', ($after.streams.$key.video_bytes -gt 100000), "$($after.streams.$key.video_bytes) bytes")
         $retries = @($run.Log -split "`n" | Where-Object { $_ -match 'Sink a lost its connection\. Retry' }).Count
@@ -387,6 +392,80 @@ if (Test-Selected 'stop-connecting') {
             "longest pauses $($s.stop_requested.max_ui_gap_ms) and $($s.stopped.max_ui_gap_ms) ms")
         $report.Check('stop-connecting: the destination ends idle with no error', ($s.stopped.destinations.hang.phase -eq 'idle' -and [string]$s.stopped.destinations.hang.error -eq ''))
         $report.Check('stop-connecting: the healthy destination stayed live throughout', ($s.stopped.destinations.good.phase -eq 'live'))
+    }
+}
+
+# ---------------------------------------------------------------------------------------------
+if (Test-Selected 'video-settings') {
+    Write-Host ''
+    Write-Host 'video-settings: OBS video settings cannot change under a destination that holds encoders'
+    # An encoder that is not encoding does not stop OBS from replacing its video. Without
+    # RelayDock's video guard, OBS accepts the change in both cases below and crashes at the
+    # next connection attempt.
+    $keys = @{ a = 'droponce4-vid-a-51c0de77'; hang = 'ok-vid-hang-b82e19f4' }
+    $change = @{ op = 'obs_video'; base_width = 1280; base_height = 720; output_width = 852; output_height = 480; fps = '30' }
+    $outcome = Invoke-WithSink 'video-settings' @{ steps = @(
+            @{ op = 'clear' }, $video, @{ op = 'set'; performance_mode = 'balanced' },
+            @{ op = 'snapshot'; label = 'idle' },
+            (Add-Destination 'a' $keys.a @{ connection = @{ auto_reconnect = $true; reconnect_attempts = 5; reconnect_delay_sec = 6 } }),
+            (Add-Destination 'hang' $keys.hang @{} "rtmp://127.0.0.1:$blackholePort/live"),
+            # 1. While a destination waits to reconnect.
+            @{ op = 'start'; ref = 'a' },
+            @{ op = 'wait_phase'; ref = 'a'; phase = 'live'; timeout_sec = 30 },
+            @{ op = 'wait_phase'; ref = 'a'; phase = 'reconnecting'; timeout_sec = 40 },
+            @{ op = 'wait'; seconds = 1 },
+            @{ op = 'snapshot'; label = 'waiting' },
+            ($change + @{ expect = 'refused' }),
+            @{ op = 'wait_reconnects'; ref = 'a'; count = 1; timeout_sec = 60 },
+            @{ op = 'wait'; seconds = 5 },
+            @{ op = 'snapshot'; label = 'recovered' },
+            @{ op = 'stop'; ref = 'a' },
+            @{ op = 'wait_idle'; timeout_sec = 40 },
+            # 2. While a destination is still connecting.
+            @{ op = 'start'; ref = 'hang' },
+            @{ op = 'wait'; seconds = 3 },
+            @{ op = 'snapshot'; label = 'connecting' },
+            ($change + @{ expect = 'refused' }),
+            @{ op = 'stop'; ref = 'hang' },
+            @{ op = 'wait'; seconds = 2 },
+            @{ op = 'stop'; ref = 'hang' },
+            @{ op = 'wait_idle'; timeout_sec = 90 },
+            @{ op = 'wait'; seconds = 1 },
+            # 3. With nothing active, OBS accepts the change.
+            @{ op = 'snapshot'; label = 'stopped' },
+            ($change + @{ expect = 'applied' }),
+            @{ op = 'snapshot'; label = 'changed' },
+            $video,
+            @{ op = 'quit' }) } 300
+    $run = $outcome.Run
+    Add-ObsRunChecks -Report $report -Run $run -Label 'video-settings' -Secrets $keys.Values
+
+    if ($run.Result -and $run.Result.snapshots.changed) {
+        $s = $run.Result.snapshots
+        # In order: the canvas for this test, the two changes OBS must refuse, the one it must
+        # accept, and the canvas again.
+        $changes = @($run.Result.video_changes)
+        $stream = $outcome.Sink.streams.($keys.a)
+
+        $report.Check('video-settings: with nothing active, OBS does not count video as in use', ($s.idle.obs.video_active -eq $false))
+        $report.Check('video-settings: the destination was waiting to reconnect', ($s.waiting.destinations.a.phase -eq 'reconnecting'))
+        $report.Check('video-settings: OBS counts video as in use while a destination waits to reconnect', ($s.waiting.obs.video_active -eq $true))
+        $report.Check('video-settings: OBS refused new video settings while the destination waited to reconnect',
+            ($changes[1].applied -eq $false), [string]$changes[1].video)
+        $report.Check('video-settings: the destination reconnected and is live', ($s.recovered.destinations.a.phase -eq 'live' -and $s.recovered.destinations.a.reconnects -eq 1))
+        $report.Check('video-settings: OBS still has the video settings the stream started with',
+            ($s.recovered.obs.base_width -eq 1920 -and $s.recovered.obs.output_width -eq 1280),
+            "$($s.recovered.obs.base_width)x$($s.recovered.obs.base_height) canvas, $($s.recovered.obs.output_width)x$($s.recovered.obs.output_height) output")
+        $report.Check('video-settings: the server received video again after the reconnect',
+            ($stream.sessions -eq 2 -and @($stream.session_records)[1].bytes -gt 100000), "$(@($stream.session_records)[1].bytes) bytes in the second session")
+        $report.Check('video-settings: the other destination was still connecting', ($s.connecting.destinations.hang.phase -eq 'starting'))
+        $report.Check('video-settings: OBS counts video as in use while a destination connects', ($s.connecting.obs.video_active -eq $true))
+        $report.Check('video-settings: OBS refused new video settings while the destination was connecting',
+            ($changes[2].applied -eq $false), [string]$changes[2].video)
+        $report.Check('video-settings: after the last destination stopped, video is free again',
+            ($s.stopped.obs.video_active -eq $false -and $s.stopped.keeps_awake -eq $false))
+        $report.Check('video-settings: OBS then accepts new video settings',
+            ($changes[3].applied -eq $true -and $s.changed.obs.base_width -eq 1280 -and $s.changed.obs.output_width -eq 852), [string]$changes[3].video)
     }
 }
 

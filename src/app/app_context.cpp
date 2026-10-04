@@ -92,6 +92,7 @@ void AppContext::initialize()
 
 	vertical_ = std::make_unique<VerticalCanvasManager>(config_.verticalCanvas.width, config_.verticalCanvas.height);
 	outputs_ = std::make_unique<OutputManager>(*this);
+	connect(outputs_.get(), &OutputManager::activeChanged, this, &AppContext::setKeepAwake);
 	performance_ = std::make_unique<PerformanceMonitor>(*this);
 
 	obs_frontend_add_save_callback(onSceneCollectionSaveLoad, this);
@@ -100,6 +101,7 @@ void AppContext::initialize()
 	sourceCreateSignal_.Connect(handler, "source_create", onSourceListChanged, this);
 	sourceRemoveSignal_.Connect(handler, "source_remove", onSourceListChanged, this);
 	sourceRenameSignal_.Connect(handler, "source_rename", onSourceListChanged, this);
+	videoResetSignal_.Connect(handler, "video_reset", onVideoReset, this);
 }
 
 void AppContext::onObsFinishedLoading()
@@ -114,6 +116,19 @@ void AppContext::onSourceListChanged(void *data, calldata_t *)
 {
 	// OBS raises this on whatever thread changed the source list. Hand over to the UI thread.
 	static_cast<AppContext *>(data)->queueVerticalRebind();
+}
+
+void AppContext::onVideoReset(void *data, calldata_t *)
+{
+	// Nothing is saved. Listeners only compute what they show again.
+	auto *app = static_cast<AppContext *>(data);
+	QMetaObject::invokeMethod(
+		app,
+		[app] {
+			if (!app->shutDown_)
+				Q_EMIT app->configChanged();
+		},
+		Qt::QueuedConnection);
 }
 
 void AppContext::queueVerticalRebind()
@@ -171,16 +186,38 @@ void AppContext::shutdown()
 	sourceCreateSignal_.Disconnect();
 	sourceRemoveSignal_.Disconnect();
 	sourceRenameSignal_.Disconnect();
+	videoResetSignal_.Disconnect();
 
 	if (performance_)
 		performance_->shutdown();
 	// Outputs first: they hold encoders that read the vertical canvas.
 	if (outputs_)
 		outputs_->shutdown();
+	setKeepAwake(false);
 	if (vertical_)
 		vertical_->shutdown();
 	if (store_)
 		saveConfig();
+}
+
+void AppContext::setKeepAwake(bool wanted)
+{
+	if (wanted == sleepInhibitor_.active())
+		return;
+
+	if (!sleepInhibitor_.setActive(wanted)) {
+		// Only switching it on can fail. Say so once, not on every state change.
+		if (!sleepRefusalLogged_) {
+			sleepRefusalLogged_ = true;
+			logWarning("Windows refused the request to stay awake. The PC can go to sleep during a stream. "
+				   "Check the Windows power settings.");
+		}
+		return;
+	}
+	if (wanted)
+		logInfo("A destination is active. RelayDock keeps the PC and the display awake.");
+	else
+		logInfo("No destination is active. Windows may sleep again.");
 }
 
 bool AppContext::saveConfig()

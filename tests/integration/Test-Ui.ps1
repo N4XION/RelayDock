@@ -17,6 +17,8 @@ Drives the real RelayDock windows inside a real OBS and checks what they show an
   cards         The card menu: duplicate, move, test connection and remove, and the grid.
   restart       A destination and its key survive an OBS restart and stream again.
   tools         The preflight window and the vertical layout editor.
+  exit          Closing OBS with a destination live brings up a question. Keep streaming
+                leaves everything running, Close OBS ends the stream and closes.
   shutdown      OBS closes while a RelayDock window is open: the settings window, the editor
                 with a connection test running, and the layout editor with its live preview.
 
@@ -31,12 +33,13 @@ Needs a build with RELAYDOCK_TEST_HOOKS=ON (preset windows-hooks-x64).
 param(
     [Parameter(Mandatory)][string]$ObsRoot,
     [Parameter(Mandatory)][string]$BuildDir,
-    [string]$OutDir = (Join-Path $PSScriptRoot '..\output\ui'),
+    [string]$OutDir = '',
     [string[]]$Only = @(),
     [int]$Port = 19370
 )
 
 $ErrorActionPreference = 'Stop'
+if (-not $OutDir) { $OutDir = Join-Path $PSScriptRoot '..\output\ui' }
 Import-Module (Join-Path $PSScriptRoot 'ObsTestHarness.psm1') -Force
 
 $paths = Get-BuildPaths -BuildDir $BuildDir
@@ -247,6 +250,11 @@ if (Test-Selected 'destination') {
             @{ op = 'wait'; seconds = $clearWait },
             @{ op = 'ui_clipboard'; expect = $key; label = 'after_30s' },
             @{ op = 'ui_state'; target = 'dock'; label = 'dock_stopped' },
+            # A new output size in OBS: the card must show what the destination would stream now.
+            @{ op = 'obs_video'; base_width = 1280; base_height = 720; output_width = 852; output_height = 480; fps = '30' },
+            @{ op = 'wait'; seconds = 1 },
+            @{ op = 'ui_state'; target = 'dock'; label = 'dock_resized' },
+            $video,
             @{ op = 'quit' }) } 300 -WithSink
     $run = $outcome.Run
     Add-ObsRunChecks -Report $report -Run $run -Label 'destination' -Secrets @($key)
@@ -291,6 +299,8 @@ if (Test-Selected 'destination') {
                 ((Test-Label $ui.editor_copied 'Windows did not accept the clipboard data') -and $run.Result.clipboard.copied.matches -eq $false))
         }
         $report.Check('destination: the Stop button on the card stops the stream', (Test-Label $ui.dock_stopped '^READY$'))
+        $report.Check('destination: the card follows a change of the OBS output size',
+            ((Test-Label $ui.dock_stopped '1280x720 at 30 FPS') -and (Test-Label $ui.dock_resized '852x480 at 30 FPS')))
     }
 }
 
@@ -609,6 +619,47 @@ if (Test-Selected 'tools') {
             ($null -ne $box -and [math]::Abs($box.x) -le 4 -and [math]::Abs($box.y - $after[1].value) -le 4 -and
              [math]::Abs($box.width - 1080) -le 4 -and [math]::Abs($box.height - 960) -le 4),
             "x=$($box.x) y=$($box.y) $($box.width)x$($box.height)")
+    }
+}
+
+# ---------------------------------------------------------------------------------------------
+if (Test-Selected 'exit') {
+    Write-Host ''
+    Write-Host 'exit: RelayDock asks before OBS closes with a destination active'
+    $key = 'ok-ui-exit-5e21b7c9'
+    $outcome = Invoke-Ui 'exit' @{ steps = @(
+            @{ op = 'clear' }, $video, @{ op = 'accept_legal' },
+            # The test harness switches the OBS exit warning off. This test is about that warning.
+            @{ op = 'obs_user_config'; section = 'General'; name = 'ConfirmOnExit'; value = $true },
+            @{ op = 'add_destination'; ref = 'a'; provider = 'custom_rtmp'; stream_key = $key; config = @{ name = 'My server'; server_url = $server } },
+            @{ op = 'ui_show_dock'; width = 400; height = 700 },
+            @{ op = 'start'; ref = 'a' },
+            @{ op = 'wait_phase'; ref = 'a'; phase = 'live'; timeout_sec = 30 },
+            @{ op = 'wait'; seconds = 2 },
+            @{ op = 'ui_close'; target = 'main' },
+            @{ op = 'ui_wait'; target = 'message'; timeout_sec = 15 },
+            @{ op = 'ui_state'; target = 'message'; label = 'question' },
+            @{ op = 'ui_grab'; target = 'message'; file = 'exit-question.png' },
+            @{ op = 'ui_click'; target = 'message'; text = 'Keep streaming' },
+            @{ op = 'ui_wait'; target = 'message'; present = $false },
+            @{ op = 'wait'; seconds = 3 },
+            @{ op = 'snapshot'; label = 'kept' },
+            @{ op = 'quit'; confirm = 'Close OBS' }) } 240 -WithSink
+    $run = $outcome.Run
+    Add-ObsRunChecks -Report $report -Run $run -Label 'exit' -Secrets @($key)
+
+    if ($run.Result -and $run.Result.ui.question) {
+        $question = $run.Result.ui.question
+        $stream = $outcome.Sink.streams.$key
+        $report.Check('exit: closing OBS with a live destination brings up a question', ($question.title -eq 'RelayDock is streaming'))
+        $report.Check('exit: the question says how many destinations are active and what closing does',
+            (Test-Label $question '^1 destination is active\. Closing OBS ends its stream\.$'))
+        $report.Check('exit: it offers Close OBS and Keep streaming',
+            ($null -ne (Get-Button $question 'Close OBS') -and $null -ne (Get-Button $question 'Keep streaming')))
+        $report.Check('exit: Keep streaming leaves OBS open and the destination live', ($run.Result.snapshots.kept.destinations.a.phase -eq 'live'))
+        $report.Check('exit: the question did not interrupt the stream', ($null -ne $stream -and $stream.sessions -eq 1))
+        $report.Check('exit: Close OBS stops the stream and closes OBS',
+            ($run.Log -match 'You confirmed it' -and $run.Log -match '\[RelayDock\] Stopped 1 output\(s\) for shutdown'))
     }
 }
 

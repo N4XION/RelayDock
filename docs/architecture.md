@@ -7,7 +7,7 @@ RelayDock is one OBS plugin module, `relaydock.dll`. Inside, the code has two la
 | Plugin layer (needs OBS and Qt)                                |
 |   ui/         dock, cards, editor, settings, onboarding        |
 |   app/        AppContext, PerformanceMonitor, diagnostics      |
-|   outputs/    OutputManager, vertical canvas                   |
+|   outputs/    OutputManager, vertical canvas, video guard      |
 |   encoders/   EncoderCatalog, EncoderPool                      |
 +---------------------------------------------------------------+
 | Core library (plain C++20 and Win32, no OBS, no Qt)            |
@@ -36,6 +36,7 @@ That split is why most of RelayDock is tested without OBS. `relaydock-tests.exe`
 | Finished loading | Reads the encoder list, binds vertical layouts to sources, starts the performance monitor. |
 | Scene collection cleanup | Releases every reference to the collection's sources. |
 | Scene collection changed | Binds vertical layouts again. |
+| The main window is asked to close | `ExitGuard` asks first when a destination is active, because OBS only asks for its own outputs. |
 | Exit | Closes RelayDock's windows, stops every output and waits for it, releases every OBS object, saves settings. This happens while OBS is still intact. |
 | `obs_module_unload` | Destroys `AppContext`. |
 
@@ -48,6 +49,11 @@ Each destination gets its own OBS output and service (`rtmp_output`, `rtmp_custo
 OBS raises output signals on its own threads. The handlers copy what they need and post it to the interface thread. They touch nothing else.
 
 Stopping an output can block inside OBS while a connection attempt is in flight. So stops run on short-lived worker threads, and shutdown joins them.
+
+From the moment the first destination starts until the last one has released its encoders, two things are in force:
+
+- `SleepInhibitor` (core) asks Windows to keep the PC and the display awake. It uses a power request, not `SetThreadExecutionState`, because that state belongs to the interface thread and OBS sets and clears it for its own stream.
+- `VideoGuard` keeps OBS from changing its video settings. OBS refuses that change only while an encoder is capturing. The encoder of a destination that is connecting, or that waits to reconnect, is not capturing. OBS would free the video the encoder was created for and crash at the next connection attempt. The guard is a raw video output of RelayDock's own on a view of 16 by 16 pixels. While it runs, OBS counts video as in use and greys out its Video settings, as it does during its own stream. `tests/integration/Test-MultiDestination.ps1 -Only video-settings` covers both cases.
 
 ## Effective settings and encoder sharing
 
@@ -68,7 +74,7 @@ A locked setting keeps its saved value. An unlocked one follows the mode, inside
 
 A vertical destination reads from a vertical canvas: a private OBS scene rendered by an `obs_view_t` at the canvas size. RelayDock uses the view API because OBS documents it as stable.
 
-The view joins the OBS render loop only while an encoder or the layout editor uses it. With no vertical destination live, it costs nothing.
+The view joins the OBS render loop only while an encoder uses it. With no vertical destination active, it costs nothing. The layout editor draws the scene directly and needs no view.
 
 `computePlacement` (core) decides where a source lands in its box: Fill scales it to cover the box and crops, Fit scales it to fit inside. Both use one scale factor for width and height, which is what "never stretched" means. `VerticalCanvas` turns that into OBS scene item bounds and crop.
 

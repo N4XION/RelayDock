@@ -20,8 +20,11 @@
 #include <util/config-file.h>
 #include <util/platform.h>
 
+#include <QAbstractButton>
+#include <QApplication>
 #include <QImage>
 #include <QMainWindow>
+#include <QMessageBox>
 
 #include <algorithm>
 #include <cstdlib>
@@ -455,7 +458,20 @@ ScenarioRunner::StepResult ScenarioRunner::beginStep(const json &step, std::stri
 	if (op == "obs_video") {
 		// Sets the OBS canvas, output size and frame rate, so a test does not depend on the
 		// monitor of the PC it runs on.
+		//
+		// "expect": "refused" is for the opposite case. OBS turns a change of video settings
+		// down while video is in use, and the step passes when it does. Ask for a size that
+		// differs from the current one, or the step cannot tell. "any" accepts both.
+		const std::string expect = text(step, "expect", "applied");
 		config_t *profile = obs_frontend_get_profile_config();
+		const uint64_t oldBaseCx = config_get_uint(profile, "Video", "BaseCX");
+		const uint64_t oldBaseCy = config_get_uint(profile, "Video", "BaseCY");
+		const uint64_t oldOutputCx = config_get_uint(profile, "Video", "OutputCX");
+		const uint64_t oldOutputCy = config_get_uint(profile, "Video", "OutputCY");
+		const uint64_t oldFpsType = config_get_uint(profile, "Video", "FPSType");
+		const char *oldFpsText = config_get_string(profile, "Video", "FPSCommon");
+		const std::string oldFps = oldFpsText ? oldFpsText : "";
+
 		const int baseWidth = static_cast<int>(number(step, "base_width", 1920));
 		const int baseHeight = static_cast<int>(number(step, "base_height", 1080));
 		config_set_uint(profile, "Video", "BaseCX", static_cast<uint64_t>(baseWidth));
@@ -469,13 +485,31 @@ ScenarioRunner::StepResult ScenarioRunner::beginStep(const json &step, std::stri
 
 		obs_video_info ovi{};
 		obs_get_video_info(&ovi);
+		const bool applied = static_cast<int>(ovi.base_width) == baseWidth && static_cast<int>(ovi.base_height) == baseHeight;
 		detail = std::to_string(ovi.base_width) + "x" + std::to_string(ovi.base_height) + " base, " +
 			 std::to_string(ovi.output_width) + "x" + std::to_string(ovi.output_height) + " output, " +
 			 std::to_string(ovi.fps_num) + "/" + std::to_string(ovi.fps_den) + " FPS";
-		if (static_cast<int>(ovi.base_width) != baseWidth || static_cast<int>(ovi.base_height) != baseHeight) {
+		if (!applied) {
+			// Leave the profile as it was, so a later reset does not pick these values up.
+			config_set_uint(profile, "Video", "BaseCX", oldBaseCx);
+			config_set_uint(profile, "Video", "BaseCY", oldBaseCy);
+			config_set_uint(profile, "Video", "OutputCX", oldOutputCx);
+			config_set_uint(profile, "Video", "OutputCY", oldOutputCy);
+			config_set_uint(profile, "Video", "FPSType", oldFpsType);
+			config_set_string(profile, "Video", "FPSCommon", oldFps.c_str());
+			config_save(profile);
+		}
+		results_["video_changes"].push_back({{"applied", applied}, {"expect", expect}, {"video", detail}});
+
+		if (expect == "applied" && !applied) {
 			detail = "OBS did not apply the video settings: " + detail;
 			return StepResult::Failed;
 		}
+		if (expect == "refused" && applied) {
+			detail = "OBS applied the video settings, and the test expected it to refuse: " + detail;
+			return StepResult::Failed;
+		}
+		detail = (applied ? "applied: " : "refused: ") + detail;
 		return StepResult::Done;
 	}
 
@@ -558,6 +592,25 @@ ScenarioRunner::StepResult ScenarioRunner::beginStep(const json &step, std::stri
 		obs_sceneitem_set_bounds_type(item, OBS_BOUNDS_STRETCH);
 		obs_sceneitem_set_bounds(item, &bounds);
 		detail = std::to_string(obs_source_get_width(source)) + "x" + std::to_string(obs_source_get_height(source));
+		return StepResult::Done;
+	}
+
+	if (op == "deselect_scene") {
+		// OBS selects a source when it is added and draws editing guides around it in the
+		// preview. A picture of the window looks cleaner without them.
+		OBSSourceAutoRelease sceneSource = obs_frontend_get_current_scene();
+		obs_scene_t *scene = obs_scene_from_source(sceneSource);
+		if (!scene) {
+			detail = "OBS has no current scene.";
+			return StepResult::Failed;
+		}
+		obs_scene_enum_items(
+			scene,
+			[](obs_scene_t *, obs_sceneitem_t *item, void *) {
+				obs_sceneitem_select(item, false);
+				return true;
+			},
+			nullptr);
 		return StepResult::Done;
 	}
 
@@ -681,7 +734,23 @@ ScenarioRunner::StepResult ScenarioRunner::beginStep(const json &step, std::stri
 		return StepResult::Done;
 	}
 
+	if (op == "obs_user_config") {
+		// Sets a true or false value in the OBS user settings, the ones OBS keeps in user.ini.
+		config_t *user = obs_frontend_get_user_config();
+		const std::string section = text(step, "section", "General");
+		const std::string name = text(step, "name", "");
+		if (!user || name.empty()) {
+			detail = "obs_user_config needs a name.";
+			return StepResult::Failed;
+		}
+		config_set_bool(user, section.c_str(), name.c_str(), step.value("value", false));
+		detail = section + "/" + name + " = " + (step.value("value", false) ? "true" : "false");
+		return StepResult::Done;
+	}
+
 	if (op == "quit") {
+		// "confirm" names the button to press when a question comes up while OBS closes.
+		quitConfirmButton_ = text(step, "confirm", "");
 		finish(true, {});
 		return StepResult::Done;
 	}
@@ -888,12 +957,21 @@ json ScenarioRunner::snapshot()
 		history.push_back({{"text", applied.text}, {"automatic", applied.automatic}});
 	out["optimizer_history"] = std::move(history);
 
+	out["keeps_awake"] = app_.keepsAwake();
+
 	out["encoders"] = {{"video_live", app_.outputs().encoderPool().liveVideoEncoders()},
 			   {"audio_live", app_.outputs().encoderPool().liveAudioEncoders()}};
 
 	video_t *video = obs_get_video();
+	obs_video_info videoInfo{};
+	obs_get_video_info(&videoInfo);
 	out["obs"] = {
 		{"version", obs_get_version_string()},
+		{"video_active", obs_video_active()},
+		{"base_width", videoInfo.base_width},
+		{"base_height", videoInfo.base_height},
+		{"output_width", videoInfo.output_width},
+		{"output_height", videoInfo.output_height},
 		{"render_total_frames", obs_get_total_frames()},
 		{"render_lagged_frames", obs_get_lagged_frames()},
 		{"encode_total_frames", video ? video_output_get_total_frames(video) : 0},
@@ -951,6 +1029,30 @@ void ScenarioRunner::finish(bool ok, const std::string &failure)
 
 	if (auto *window = static_cast<QMainWindow *>(obs_frontend_get_main_window()))
 		QMetaObject::invokeMethod(window, "close", Qt::QueuedConnection);
+
+	// The scenario asked for a question to be answered on the way out. The question runs its
+	// own event loop inside the close, so a timer is the way to reach it.
+	if (!quitConfirmButton_.empty()) {
+		auto *clicker = new QTimer(this);
+		clicker->setInterval(200);
+		connect(clicker, &QTimer::timeout, this, [this, clicker] {
+			for (QWidget *widget : QApplication::topLevelWidgets()) {
+				auto *box = qobject_cast<QMessageBox *>(widget);
+				if (!box || !box->isVisible())
+					continue;
+				for (QAbstractButton *button : box->buttons()) {
+					if (button->text().remove(QLatin1Char('&')).toStdString() == quitConfirmButton_) {
+						clicker->stop();
+						logInfo("Scenario: pressing \"{}\" in \"{}\".", quitConfirmButton_,
+							box->windowTitle().toStdString());
+						button->click();
+						return;
+					}
+				}
+			}
+		});
+		clicker->start();
+	}
 }
 
 } // namespace rd

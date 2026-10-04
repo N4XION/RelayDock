@@ -15,6 +15,7 @@ set(
   unit/test_providers.cpp
   unit/test_services.cpp
   unit/test_settings.cpp
+  unit/test_sleep_inhibitor.cpp
   unit/test_stream_url.cpp
   unit/test_utils.cpp
   unit/test_vertical_layout.cpp
@@ -25,7 +26,8 @@ set(
 )
 
 add_executable(relaydock-tests ${RELAYDOCK_TEST_SOURCES})
-target_link_libraries(relaydock-tests PRIVATE relaydock-core)
+# powrprof: the sleep inhibitor test asks Windows what it is being kept awake for.
+target_link_libraries(relaydock-tests PRIVATE relaydock-core powrprof)
 target_include_directories(relaydock-tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/unit")
 # The test files are large. Without /bigobj the compiler runs out of object file sections.
 target_compile_options(relaydock-tests PRIVATE /bigobj)

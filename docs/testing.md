@@ -58,10 +58,10 @@ These run the real plugin inside a real OBS. Streams go to `rd-rtmp-sink`, a sma
 | --- | --- |
 | Plugin load | RelayDock loads and unloads cleanly and adds no memory leak to what OBS reports by itself. |
 | Custom RTMP | A stream starts, carries video and audio at the set bitrate, and stops. The key is in neither the OBS log nor the settings file. |
-| Several destinations | Destinations with equal settings share one encoder and send identical video. Others get their own. A rejected or dropped destination does not disturb the rest. Reconnect, manual reconnect and recovery from a server outage work. Stop works while connecting. OBS closes cleanly while live, connecting and reconnecting. |
+| Several destinations | Destinations with equal settings share one encoder and send identical video. Others get their own. A rejected or dropped destination does not disturb the rest. Reconnect, manual reconnect and recovery from a server outage work. Stop works while connecting. OBS refuses new video settings while a destination connects or waits to reconnect, which would otherwise crash it. The PC is kept awake while a destination is active. OBS closes cleanly while live, connecting and reconnecting. |
 | Vertical canvas | Rendered pictures are measured: fill, fit and crop place rectangles where the geometry says, so nothing is stretched. 16:9 and 9:16 stream together. The canvas leaves the render loop when unused. |
 | Automatic optimisation | Against a server that reads too slowly: Automatic mode lowers the bitrate on the running encoder with no reconnect, Suggest mode changes nothing until accepted, Lock Setting restores the saved value, and quality comes back after the problem ends. |
-| Interface | The first-run review cannot be skipped or bypassed. The editor never shows a saved key. All 17 settings pages open, and changes made on the Performance, Network, Appearance and Layout pages apply and are saved. The card menu duplicates, moves, tests and removes. Preflight blocks Start All Enabled on a failure. The layout editor's preset is what the canvas renders. OBS closes cleanly while RelayDock windows are open. |
+| Interface | The first-run review cannot be skipped or bypassed. The editor never shows a saved key. All 17 settings pages open, and changes made on the Performance, Network, Appearance and Layout pages apply and are saved. The card menu duplicates, moves, tests and removes. Preflight blocks Start All Enabled on a failure. The layout editor's preset is what the canvas renders. Closing OBS with a destination live brings up a question, and both answers do what they say. OBS closes cleanly while RelayDock windows are open. |
 
 Run them all:
 
@@ -70,6 +70,15 @@ Run them all:
 ```
 
 `tests/integration/README.md` explains the setup and every scenario step.
+
+## The release build
+
+The suites above use a test build, which contains the scenario runner. A release build does not. Two checks use the files you download:
+
+| Check | What it proves |
+| --- | --- |
+| `Test-PluginLoad.ps1` with the release build | The release DLL loads and unloads cleanly in OBS. |
+| `Test-ZipInstall.ps1` | The ZIP has the layout the manual guide shows. Copied into a portable OBS by the guide's steps, RelayDock loads from the OBS folder, finds its text and closes cleanly. With the files removed, OBS starts without it. |
 
 ## Results
 
@@ -107,7 +116,7 @@ Copy Key needs the Windows clipboard. A sandboxed or service session has none. T
 
 ### The installer
 
-CI builds the installer. Installing, upgrading and uninstalling on a clean PC is a manual step in the release checklist.
+The release workflow builds the installer with Inno Setup. Nobody has built or run the installer yet. Installing, upgrading and uninstalling on a clean PC is a manual step in the release checklist.
 
 ### Other PCs
 

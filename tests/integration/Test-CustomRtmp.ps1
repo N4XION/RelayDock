@@ -21,12 +21,13 @@ Needs a build with RELAYDOCK_TEST_HOOKS=ON (preset windows-hooks-x64).
 param(
     [Parameter(Mandatory)][string]$ObsRoot,
     [Parameter(Mandatory)][string]$BuildDir,
-    [string]$OutDir = (Join-Path $PSScriptRoot '..\output\custom-rtmp'),
+    [string]$OutDir = '',
     [int]$Port = 19350,
     [int]$LiveSeconds = 10
 )
 
 $ErrorActionPreference = 'Stop'
+if (-not $OutDir) { $OutDir = Join-Path $PSScriptRoot '..\output\custom-rtmp' }
 Import-Module (Join-Path $PSScriptRoot 'ObsTestHarness.psm1') -Force
 
 $paths = Get-BuildPaths -BuildDir $BuildDir
@@ -80,6 +81,8 @@ if ($null -ne $result -and $result.snapshots.live) {
     $report.Check('The destination starts idle', ($before.phase -eq 'idle'))
     $report.Check('The destination is live', ($live.phase -eq 'live'))
     $report.Check('The destination reports no error while live', ([string]$live.error -eq ''))
+    $report.Check('RelayDock keeps the PC awake while the destination is live, and not before',
+        ($result.snapshots.live.keeps_awake -eq $true -and $result.snapshots.before.keeps_awake -eq $false))
     $report.Check('A video encoder and an audio encoder run', ($result.snapshots.live.encoders.video_live -eq 1 -and $result.snapshots.live.encoders.audio_live -eq 1))
     $report.Check('RelayDock measures a bitrate', ($live.stats.bitrate_kbps -gt 0), "$($live.stats.bitrate_kbps) Kbps")
     $report.Check('No frames were dropped on a local connection', ($live.stats.dropped_frames -eq 0), "$($live.stats.dropped_frames) dropped")
@@ -121,6 +124,7 @@ if ($null -ne $result -and $result.snapshots.live) {
     $report.Check('The destination is idle after Stop', ($stopped.phase -eq 'idle'))
     $report.Check('Stop left no error behind', ([string]$stopped.error -eq ''))
     $report.Check('The output was released after Stop', (-not $stopped.has_output))
+    $report.Check('Windows may sleep again after Stop', ($result.snapshots.stopped.keeps_awake -eq $false))
     $report.Check('The encoders were destroyed after Stop', ($result.snapshots.stopped.encoders.video_live -eq 0 -and $result.snapshots.stopped.encoders.audio_live -eq 0))
 }
 

@@ -9,6 +9,7 @@
 #include "settings/app_config.h"
 #include "settings/config_store.h"
 #include "utils/clock.h"
+#include "utils/sleep_inhibitor.h"
 
 #include <QObject>
 
@@ -91,6 +92,10 @@ public:
 	// ---- Streaming --------------------------------------------------------------------------
 	StreamContext streamContext() const;
 
+	// Whether RelayDock asks Windows to stay awake right now. It does while any destination is
+	// starting, live, reconnecting or stopping, the way OBS does for its own stream.
+	bool keepsAwake() const { return sleepInhibitor_.active(); }
+
 	// Effective settings of every enabled destination. `alsoId` adds one destination that is
 	// not enabled, for starting it by hand.
 	std::vector<EffectiveDestination> resolveEffective(const std::string &alsoId = {}) const;
@@ -129,14 +134,24 @@ private:
 	ConfigLoadStatus loadStatus_ = ConfigLoadStatus::CreatedDefault;
 	bool shutDown_ = false;
 
+	// Follows the destinations: awake while one is active, free to sleep when none is.
+	void setKeepAwake(bool wanted);
+	SleepInhibitor sleepInhibitor_{"RelayDock is streaming"};
+	bool sleepRefusalLogged_ = false;
+
 	// A source appeared, went away or changed its name. Vertical layouts refer to sources,
 	// so they bind again. Calls are folded into one, on the UI thread.
 	void queueVerticalRebind();
 	static void onSourceListChanged(void *data, calldata_t *params);
 
+	// OBS applied new video settings. What a destination would stream with depends on the
+	// canvas size and frame rate, so the interface has new numbers to show.
+	static void onVideoReset(void *data, calldata_t *params);
+
 	OBSSignal sourceCreateSignal_;
 	OBSSignal sourceRemoveSignal_;
 	OBSSignal sourceRenameSignal_;
+	OBSSignal videoResetSignal_;
 	std::atomic<bool> rebindQueued_{false};
 	bool collectionChanging_ = false;
 };

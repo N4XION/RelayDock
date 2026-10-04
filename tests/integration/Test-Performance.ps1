@@ -29,7 +29,7 @@ Needs a build with RELAYDOCK_TEST_HOOKS=ON (preset windows-hooks-x64).
 param(
     [Parameter(Mandatory)][string]$ObsRoot,
     [Parameter(Mandatory)][string]$BuildDir,
-    [string]$OutDir = (Join-Path $PSScriptRoot '..\output\performance'),
+    [string]$OutDir = '',
     [string[]]$Only = @(),
     [int]$Port = 19380,
     [int]$MeasureSec = 30,
@@ -39,6 +39,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+if (-not $OutDir) { $OutDir = Join-Path $PSScriptRoot '..\output\performance' }
 Import-Module (Join-Path $PSScriptRoot 'ObsTestHarness.psm1') -Force
 
 $paths = Get-BuildPaths -BuildDir $BuildDir

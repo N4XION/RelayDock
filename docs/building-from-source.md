@@ -108,6 +108,24 @@ This builds the release preset, then writes to `release\`:
 
 GitHub Actions runs the same script for a tagged release.
 
+## Check that the build is reproducible
+
+```powershell
+.\scripts\check-reproducible.ps1
+```
+
+The script builds the plugin twice from scratch in the same folder and requires the two DLLs to match byte for byte.
+
+To compare your own build with a released DLL, check out the tag of that release, then:
+
+```powershell
+.\scripts\check-reproducible.ps1 -Builds 1 -CompareWith C:\Downloads\relaydock\bin\64bit\relaydock.dll
+```
+
+Your build folder differs from the one the release was built in. The linker stamps a DLL with an identifier it derives from the debug file, and the debug file records the build folder. So the two DLLs differ in the time stamp fields and in the identifier of the debug file, and in nothing else. The script ignores exactly those fields and requires all code and all data to match.
+
+You need the compiler version the release was built with. The release notes name it.
+
 ## After you change interface text
 
 ```powershell

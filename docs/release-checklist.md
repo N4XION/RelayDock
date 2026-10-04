@@ -16,6 +16,7 @@ GitHub Actions runs these on every push. All must pass on the commit that gets t
 - [ ] Security tests
 - [ ] The plugin builds with warnings treated as errors
 - [ ] The ZIP, the installer and `SHA256SUMS.txt` are produced
+- [ ] Two builds give the same DLL (`scripts/check-reproducible.ps1`, in the release workflow)
 
 ## 2. Integration tests
 
@@ -74,7 +75,8 @@ On a PC or virtual machine that has OBS Studio installed and never had RelayDock
 - [ ] Uninstall removes the plugin folder
 - [ ] Uninstall with "also remove settings and keys" removes `plugin_config\relaydock` and the `RelayDock:` credentials
 - [ ] On a PC without OBS, the installer says so
-- [ ] The ZIP install works in a portable OBS, following [manual-installation.md](manual-installation.md)
+- [ ] The ZIP install works in a portable OBS, following [manual-installation.md](manual-installation.md) (`tests/integration/Test-ZipInstall.ps1`)
+- [ ] The release build loads and unloads cleanly (`tests/integration/Test-PluginLoad.ps1` with the release build)
 - [ ] What Windows SmartScreen shows is noted in the release notes
 
 ## 7. Security
@@ -100,7 +102,7 @@ On a PC or virtual machine that has OBS Studio installed and never had RelayDock
 2. Commit, then tag the commit `v<version>`.
 3. Push the tag. GitHub Actions builds the files and creates a draft release.
 4. Download the files from the draft and check their hashes against `SHA256SUMS.txt`.
-5. Write the release notes from `CHANGELOG.md`. Name every open gate.
+5. Write the release notes from `CHANGELOG.md`. Name every open gate. Name the compiler version from the build log (the line "The CXX compiler identification is MSVC ..."), so others can reproduce the build.
 6. Publish the draft.
 
 ## Version numbers

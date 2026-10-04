@@ -119,6 +119,18 @@ function Initialize-ObsTestConfig {
             ''
         )
         [System.IO.File]::WriteAllLines($userIni, $lines, (New-Object System.Text.UTF8Encoding($false)))
+    } else {
+        # A test can switch the OBS exit warning on, and OBS saves that. Every run starts with
+        # it off, or a scenario that ends with a destination live would wait for an answer.
+        $text = [System.IO.File]::ReadAllText($userIni)
+        if ($text -match '(?m)^ConfirmOnExit=') {
+            $fixed = [regex]::Replace($text, '(?m)^ConfirmOnExit=[^\r\n]*', 'ConfirmOnExit=false')
+        } else {
+            $fixed = [regex]::Replace($text, '(?m)^\[General\]', "[General]`nConfirmOnExit=false")
+        }
+        if ($fixed -ne $text) {
+            [System.IO.File]::WriteAllText($userIni, $fixed, (New-Object System.Text.UTF8Encoding($false)))
+        }
     }
 
     $globalIni = Join-Path $config 'global.ini'
@@ -203,9 +215,11 @@ function Get-ObsLogPath {
 
     $logs = Join-Path (Get-ObsConfigDir -ObsRoot $Session.ObsRoot) 'logs'
     if (-not (Test-Path $logs)) { return $null }
+    # By creation time, not by last write: the log of a run that ended a moment ago was also
+    # written to a moment ago, and it must not be taken for this run's log.
     $file = Get-ChildItem -LiteralPath $logs -Filter '*.txt' |
-        Where-Object { $_.LastWriteTime -ge $Session.StartedAt.AddSeconds(-2) } |
-        Sort-Object LastWriteTime -Descending |
+        Where-Object { $_.CreationTime -ge $Session.StartedAt.AddSeconds(-2) } |
+        Sort-Object CreationTime -Descending |
         Select-Object -First 1
     if ($file) { return $file.FullName }
     return $null

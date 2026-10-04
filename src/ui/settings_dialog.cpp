@@ -236,7 +236,7 @@ void SettingsDialog::buildGeneral()
 			       "The check runs in an instant. When everything is ready, your streams start without another click."));
 	p.body->addWidget(follow);
 	addNote(p.body, uiText("General.FollowObs.Note",
-			       "With this on, RelayDock starts every enabled destination when OBS starts streaming and stops them when OBS stops. OBS needs its own stream set up under OBS Settings, Stream for that button to work."));
+			       "With this on, RelayDock starts every enabled destination when you start the OBS stream and stops them when you stop it. If the OBS stream ends by itself, for example after an error, RelayDock's destinations keep running. OBS needs its own stream set up under OBS Settings, Stream for that button to work."));
 
 	addHeading(p.body, uiText("General.Language", "Language"));
 	addNote(p.body, uiText("General.Language.Note",

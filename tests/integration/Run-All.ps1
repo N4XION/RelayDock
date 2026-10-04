@@ -20,11 +20,12 @@ Needs a build with RELAYDOCK_TEST_HOOKS=ON (preset windows-hooks-x64).
 param(
     [Parameter(Mandatory)][string]$ObsRoot,
     [Parameter(Mandatory)][string]$BuildDir,
-    [string]$OutDir = (Join-Path $PSScriptRoot '..\output\all'),
+    [string]$OutDir = '',
     [string]$ResultsFile = ''
 )
 
 $ErrorActionPreference = 'Stop'
+if (-not $OutDir) { $OutDir = Join-Path $PSScriptRoot '..\output\all' }
 Import-Module (Join-Path $PSScriptRoot 'ObsTestHarness.psm1') -Force
 $paths = Get-BuildPaths -BuildDir $BuildDir
 $obsVersion = (Get-Item (Join-Path $ObsRoot 'bin\64bit\obs64.exe')).VersionInfo.ProductVersion

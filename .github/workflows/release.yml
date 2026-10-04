@@ -56,6 +56,14 @@ jobs:
         shell: pwsh
         run: ./scripts/package.ps1 -Preset windows-ci-x64 -SkipBuild -RequireInstaller
 
+      # Two more builds from scratch. They must match each other byte for byte, and match the
+      # packaged DLL in all code and data.
+      - name: The build is reproducible
+        shell: pwsh
+        run: |
+          Expand-Archive (Get-Item release/RelayDock-*-windows-x64.zip) -DestinationPath "$env:RUNNER_TEMP/released"
+          ./scripts/check-reproducible.ps1 -Preset windows-ci-x64 -ScratchDir "$env:RUNNER_TEMP/repro" -CompareWith "$env:RUNNER_TEMP/released/relaydock/bin/64bit/relaydock.dll"
+
       - name: Upload release files
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

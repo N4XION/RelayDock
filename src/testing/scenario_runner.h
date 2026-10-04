@@ -62,6 +62,7 @@ private:
 	size_t index_ = 0;
 	bool waiting_ = false;
 	bool finished_ = false;
+	std::string quitConfirmButton_;
 	bool keepCredentials_ = false;
 	int64_t stepStartedMs_ = 0;
 	int64_t scenarioStartedMs_ = 0;

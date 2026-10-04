@@ -22,12 +22,14 @@ Needs a build with RELAYDOCK_TEST_HOOKS=ON (preset windows-hooks-x64).
 param(
     [Parameter(Mandatory)][string]$ObsRoot,
     [Parameter(Mandatory)][string]$BuildDir,
-    [string]$OutDir = (Join-Path $PSScriptRoot '..\..\docs\screenshots'),
-    [string]$WorkDir = (Join-Path $PSScriptRoot '..\output\screenshots'),
+    [string]$OutDir = '',
+    [string]$WorkDir = '',
     [int]$Port = 19400
 )
 
 $ErrorActionPreference = 'Stop'
+if (-not $OutDir) { $OutDir = Join-Path $PSScriptRoot '..\..\docs\screenshots' }
+if (-not $WorkDir) { $WorkDir = Join-Path $PSScriptRoot '..\output\screenshots' }
 Import-Module (Join-Path $PSScriptRoot 'ObsTestHarness.psm1') -Force
 
 $paths = Get-BuildPaths -BuildDir $BuildDir
@@ -94,6 +96,7 @@ $main = $scene + @(
     @{ op = 'ui_main_window'; width = 1400; height = 820 },
     @{ op = 'ui_show_dock'; area = 'right'; width = 400 },
     @{ op = 'wait'; seconds = 2 },
+    @{ op = 'deselect_scene' },
     @{ op = 'start_all' },
     @{ op = 'wait_phase'; ref = 'twitch'; phase = 'live'; timeout_sec = 40 },
     @{ op = 'wait_phase'; ref = 'youtube'; phase = 'live'; timeout_sec = 40 },

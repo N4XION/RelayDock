@@ -95,6 +95,8 @@ set(
   src/utils/log.h
   src/utils/paths.cpp
   src/utils/paths.h
+  src/utils/sleep_inhibitor.cpp
+  src/utils/sleep_inhibitor.h
   src/utils/strings.cpp
   src/utils/strings.h
   src/utils/system_info.cpp
@@ -124,6 +126,8 @@ set(
   src/outputs/program_mirror_source.h
   src/outputs/vertical_canvas.cpp
   src/outputs/vertical_canvas.h
+  src/outputs/video_guard.cpp
+  src/outputs/video_guard.h
   src/plugin-main.cpp
   src/ui/destination_card.cpp
   src/ui/destination_card.h
@@ -131,6 +135,8 @@ set(
   src/ui/destination_dialog.h
   src/ui/dock_widget.cpp
   src/ui/dock_widget.h
+  src/ui/exit_guard.cpp
+  src/ui/exit_guard.h
   src/ui/key_clipboard.cpp
   src/ui/key_clipboard.h
   src/ui/legal_dialog.cpp
