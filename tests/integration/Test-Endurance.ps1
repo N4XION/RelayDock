@@ -141,6 +141,9 @@ if ($run.Result -and $run.Result.snapshots.stopped) {
     $report.Check('the OBS interface never stalled for a second', ($gap -lt 1000), "longest gap $gap ms")
     $report.Check('everything stopped and every encoder was freed',
         ($run.Result.snapshots.stopped.encoders.video_live -eq 0 -and -not $run.Result.snapshots.stopped.destinations.a.has_output))
+    $notAwake = @($shots | Where-Object { $_.keeps_awake -ne $true }).Count
+    $report.Check('RelayDock asked Windows to stay awake for the whole run and let go at the end',
+        ($notAwake -eq 0 -and $run.Result.snapshots.stopped.keeps_awake -eq $false), "$notAwake minute(s) without the request")
 
     # ---- Report file ---------------------------------------------------------------------------
     $system = Get-CimInstance Win32_Processor | Select-Object -First 1
@@ -149,6 +152,8 @@ if ($run.Result -and $run.Result.snapshots.stopped) {
     $lines.Add('')
     $lines.Add("Run on $(Get-Date -Format 'yyyy-MM-dd') with ``tests/integration/Test-Endurance.ps1 -Minutes $Minutes``. Every number is measured.")
     $lines.Add('')
+    $buildMatch = [regex]::Match($run.Log, '\[RelayDock\] Loading version (\S+)')
+    $lines.Add("- RelayDock build $($buildMatch.Groups[1].Value)")
     $lines.Add("- PC: $($system.Name.Trim()), $([Environment]::ProcessorCount) threads")
     $lines.Add("- OBS Studio $obsVersion, canvas 1280x720 at 30 FPS, scrolling random noise")
     $lines.Add('- Three destinations to a test server on the same PC: two horizontal ones on one shared encoder, one vertical one')

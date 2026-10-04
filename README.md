@@ -4,7 +4,7 @@ A free and open-source OBS Studio multistream plugin that lets you stream to Twi
 
 Your streams go straight from your PC to each platform. RelayDock has no server, no account, no subscription and no telemetry.
 
-![The RelayDock dock inside OBS Studio with two destinations live](docs/screenshots/obs-with-dock.png)
+![The RelayDock dock inside OBS Studio with three destinations live](docs/screenshots/obs-with-dock.png)
 
 ## Status
 
@@ -12,7 +12,9 @@ This is release candidate 1.0.0-rc.1.
 
 - Built and tested on Windows 11 with OBS Studio 32.0.4 and 32.2.2.
 - Every feature below is covered by automated tests that stream to a test server on the same PC.
-- No real platform has received a stream from this version in the project's own testing yet. That needs real accounts. [docs/testing.md](docs/testing.md) lists what is verified, and [docs/release-checklist.md](docs/release-checklist.md) lists what is still open before 1.0.0.
+- No real platform has received a stream from this version in the project's own testing yet. That needs real accounts.
+- The ZIP install is tested. The installer has not been built or run yet.
+- [docs/testing.md](docs/testing.md) lists what is verified, and [docs/release-checklist.md](docs/release-checklist.md) lists what is still open before 1.0.0.
 
 If you try it with a real platform, a [platform test report](../../issues/new/choose) helps the next person.
 
@@ -24,6 +26,7 @@ If you try it with a real platform, a [platform test report](../../issues/new/ch
 - Four performance modes: Potato, Balanced, Quality and Custom.
 - Rule-based automatic optimisation that suggests or applies a lower bitrate, frame rate or resolution when frames drop, and restores them later. You can lock any setting.
 - A preflight check that says READY, WARNING or FAILED, with a reason and a fix for each finding.
+- Protects a running stream. It asks before OBS closes, keeps the PC awake, and keeps the OBS video settings locked while a destination connects or waits to reconnect.
 - Keeps stream keys in Windows Credential Manager. Never in a file, never in a log, never on screen.
 - Looks like part of OBS, or the way you set it: themes, accent colour, background image, spacing, saved layouts.
 
@@ -70,7 +73,7 @@ Every picture here is a capture of the real plugin running in OBS Studio, made b
 
 ### Destinations
 
-![Destination cards in the dock, one live, one ready](docs/screenshots/dock-live.png)
+![Destination cards in the dock: three live, one switched off](docs/screenshots/dock-live.png)
 
 ### Adding a destination
 

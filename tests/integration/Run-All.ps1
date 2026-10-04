@@ -31,6 +31,7 @@ $paths = Get-BuildPaths -BuildDir $BuildDir
 $obsVersion = (Get-Item (Join-Path $ObsRoot 'bin\64bit\obs64.exe')).VersionInfo.ProductVersion
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $OutDir = (Resolve-Path $OutDir).Path
+if ($ResultsFile) { $ResultsFile = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ResultsFile) }
 
 $suites = @(
     @{ Name = 'Plugin load and unload'; Script = 'Test-PluginLoad.ps1'; Arguments = @('-ObsRoot', $ObsRoot, '-PluginRunDir', $paths.PluginRunDir, '-ResetConfig') },
@@ -67,15 +68,24 @@ $totalFailed = ($rows | Measure-Object Failed -Sum).Sum
 $totalSkipped = ($rows | Measure-Object Skipped -Sum).Sum
 $failedSuites = @($rows | Where-Object { $_.Verdict -ne 'pass' }).Count
 
-$spec = Get-Content (Join-Path $PSScriptRoot '..\..\buildspec.json') -Raw | ConvertFrom-Json
-$version = if ($spec.versionSuffix) { "$($spec.version)-$($spec.versionSuffix)" } else { $spec.version }
-$commit = (& git -C (Join-Path $PSScriptRoot '..\..') rev-parse --short HEAD 2>$null)
-$dirty = if (& git -C (Join-Path $PSScriptRoot '..\..') status --porcelain 2>$null) { ' with uncommitted changes' } else { '' }
+# The build under test names itself in the OBS log: version, number of commits and commit, and
+# ".dirty" when it was built from changed files. That is what ran, whatever the checkout says now.
+$loadLog = Join-Path $OutDir 'Test-PluginLoad.log'
+$build = ''
+if (Test-Path $loadLog) {
+    $match = [regex]::Match((Get-Content -LiteralPath $loadLog -Raw), '\[RelayDock\] Loading version (\S+)')
+    if ($match.Success) { $build = $match.Groups[1].Value }
+}
+if (-not $build) {
+    $spec = Get-Content (Join-Path $PSScriptRoot '..\..\buildspec.json') -Raw | ConvertFrom-Json
+    $build = if ($spec.versionSuffix) { "$($spec.version)-$($spec.versionSuffix)" } else { $spec.version }
+    $build += ' (the build did not log its commit)'
+}
 
 $lines = New-Object System.Collections.Generic.List[string]
 $lines.Add("# Integration test results, OBS Studio $obsVersion")
 $lines.Add('')
-$lines.Add("Run on $(Get-Date -Format 'yyyy-MM-dd') with ``tests/integration/Run-All.ps1``. RelayDock $version, commit $commit$dirty. Windows build $([Environment]::OSVersion.Version.Build).")
+$lines.Add("Run on $(Get-Date -Format 'yyyy-MM-dd') with ``tests/integration/Run-All.ps1``. RelayDock build $build. Windows build $([Environment]::OSVersion.Version.Build).")
 $lines.Add('')
 $lines.Add('| Suite | Script | Checks passed | Failed | Skipped | Time | Result |')
 $lines.Add('| --- | --- | ---: | ---: | ---: | ---: | --- |')

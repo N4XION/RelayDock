@@ -44,6 +44,8 @@ RelayDock's starting bitrates, before platform limits:
 
 All values in Kbps. These are RelayDock's own starting points, not platform rules.
 
+A bitrate is what RelayDock asks the encoder for. A live card shows what the destination sends. With ordinary pictures the two match. A hardware encoder can send more when the picture is too hard for it at that size and frame rate. [known-limitations.md](known-limitations.md) has a measured case.
+
 Presets per mode:
 
 | Encoder | Potato | Balanced | Quality |
@@ -149,4 +151,4 @@ RelayDock runs no speed test and never measures your line. While you stream, the
 
 ## What RelayDock costs when you are not streaming
 
-RelayDock reads a handful of counters once per second. The vertical canvas is not rendered unless a vertical destination streams or the layout editor is open. [performance-results.md](performance-results.md) has the measured idle cost.
+RelayDock reads a handful of counters once per second. The vertical canvas is rendered only while a vertical destination is active. The layout editor draws its own preview while it is open. [performance-results.md](performance-results.md) has the measured idle cost.

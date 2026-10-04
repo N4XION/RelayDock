@@ -28,6 +28,7 @@ Encrypted RTMPS connections use the same OBS output as plain RTMP, with TLS hand
 - A change of bitrate applies while live when OBS reports that the encoder can do that. Settings, Encoder shows it for each encoder on your PC. A change of resolution, frame rate or encoder needs a new encoder, so the destination reconnects.
 - HEVC and AV1 are offered only where both OBS's RTMP output and the platform accept them: YouTube and custom destinations. Most servers expect H.264.
 - OBS's AMD encoder can pick a faster preset than the one requested when it judges the graphics chip too slow. The OBS log shows what it used.
+- A bitrate is a target. An encoder has a lowest quality it can go to, and a picture that needs more bits than the target at that quality goes out above the target. On the development PC the AMD hardware encoder sent about 28 Mbps of full-screen random noise at 1080p and 60 FPS for a target of 6000 Kbps. It held the target with a plain still picture, and x264 held it with the noise. [performance-results.md](performance-results.md) has the numbers. A live card shows what the destination sends. If that is far above what you set, lower the size or the frame rate.
 
 ## Vertical video
 
@@ -52,6 +53,7 @@ Encrypted RTMPS connections use the same OBS output as plain RTMP, with TLS hand
 - Windows, 64-bit, only. Tested on Windows 11.
 - OBS Studio 32.0.0 or newer. Tested with 32.0.4 and 32.2.2.
 - A portable OBS does not read `C:\ProgramData`, so the installer does not serve it. Use the ZIP. See [manual-installation.md](manual-installation.md).
+- While a destination is connecting, live or waiting to reconnect, OBS greys out its video settings and the PC stays awake. Both end when the last destination stops.
 - The release files are not code-signed, so Windows SmartScreen may warn about the installer. [installation.md](installation.md) explains how to verify the download.
 
 ## Other

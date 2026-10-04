@@ -6,11 +6,13 @@ Measures what RelayDock costs on this PC and writes the numbers to a report.
 
 .DESCRIPTION
 Every number in the report is measured in a real OBS on the PC that runs this script. Nothing
-is estimated. The picture is scrolling random noise, which is hard to compress, so encoders
-work as hard as they do on a busy game.
+is estimated. The picture is scrolling random noise. No picture is harder to compress, so
+encoders work harder than they do on any game.
 
   baseline        OBS alone, idle, no RelayDock.
   idle            OBS with RelayDock loaded, nothing streaming.
+  plain           One destination with a still picture of plain colours, the easiest there is.
+                  It shows what the encoder sends when the picture is no obstacle.
   one .. four     One to four destinations with identical settings. They share one encoder.
   four-separate   Four destinations with different bitrates. Each needs its own encoder.
   mixed           Two horizontal destinations and one vertical one.
@@ -89,10 +91,11 @@ function Measure-Process($Process, [int]$Seconds) {
     return [pscustomobject]@{ Cpu = $cpu; MemoryMb = $Process.WorkingSet64 / 1MB }
 }
 
-function Add-Row([string]$Case, [string]$What, $Cpu, $Memory, $Encoders, $RenderLag, $EncodeLag, $Dropped, [string]$Bitrates, [string]$Encoder) {
+function Add-Row([string]$Case, [string]$What, $Cpu, $Memory, $Encoders, $RenderLag, $EncodeLag, $Dropped, [string]$Bitrates, [string]$Encoder,
+    [string]$Targets = '', [bool]$OverTarget = $false) {
     $rows.Add([pscustomobject]@{
             Case = $Case; What = $What; Cpu = $Cpu; MemoryMb = $Memory; Encoders = $Encoders; RenderLag = $RenderLag
-            EncodeLag = $EncodeLag; Dropped = $Dropped; Bitrates = $Bitrates; Encoder = $Encoder
+            EncodeLag = $EncodeLag; Dropped = $Dropped; Bitrates = $Bitrates; Encoder = $Encoder; Targets = $Targets; OverTarget = $OverTarget
         })
 }
 
@@ -119,11 +122,17 @@ function Invoke-Idle([string]$Name, [string]$What, [switch]$NoPlugin) {
 }
 
 # ---- Streaming cases ----------------------------------------------------------------------------
-function Invoke-Streaming([string]$Name, [string]$What, [object[]]$Setup, [string[]]$Refs) {
+function Invoke-Streaming([string]$Name, [string]$What, [object[]]$Setup, [string[]]$Refs, [switch]$PlainPicture) {
     $dir = Join-Path $OutDir $Name
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
     $steps = New-Object System.Collections.Generic.List[object]
-    $steps.Add(@{ op = 'clear' }); $steps.Add($video); $steps.Add($picture)
+    $steps.Add(@{ op = 'clear' }); $steps.Add($video)
+    if ($PlainPicture) {
+        $steps.Add(@{ op = 'add_color_source'; name = 'Plain background'; color = '#1F2A44'; width = $Width; height = $Height })
+        $steps.Add(@{ op = 'add_color_source'; name = 'Plain box'; color = '#3B6E8F'; width = [int]($Width / 2); height = [int]($Height / 2); x = 80; y = 80 })
+    } else {
+        $steps.Add($picture)
+    }
     foreach ($step in $Setup) { $steps.Add($step) }
     $steps.Add(@{ op = 'start_all' })
     foreach ($ref in $Refs) { $steps.Add(@{ op = 'wait_phase'; ref = $ref; phase = 'live'; timeout_sec = 40 }) }
@@ -143,6 +152,12 @@ function Invoke-Streaming([string]$Name, [string]$What, [object[]]$Setup, [strin
         Stop-RtmpSink -Sink $sink | Out-Null
     }
     Add-ObsRunChecks -Report $report -Run $run -Label $Name
+    # Kept next to the numbers, so a reading can be traced to what the encoder logged.
+    Set-Content -LiteralPath (Join-Path $dir 'obs-log.txt') -Value ([string]$run.Log) -Encoding UTF8
+    if (-not $script:buildVersion) {
+        $match = [regex]::Match([string]$run.Log, '\[RelayDock\] Loading version (\S+)')
+        if ($match.Success) { $script:buildVersion = $match.Groups[1].Value }
+    }
     if (-not ($run.Result -and $run.Result.snapshots.end)) { return }
 
     $a = $run.Result.snapshots.start
@@ -152,18 +167,24 @@ function Invoke-Streaming([string]$Name, [string]$What, [object[]]$Setup, [strin
     $encodeTotal = $b.obs.encode_total_frames - $a.obs.encode_total_frames
     $encodeLag = if ($encodeTotal -gt 0) { 100.0 * ($b.obs.encode_skipped_frames - $a.obs.encode_skipped_frames) / $encodeTotal } else { $null }
 
-    $dropped = 0; $frames = 0; $bitrates = @(); $allLive = $true; $encoderName = ''
+    $dropped = 0; $frames = 0; $bitrates = @(); $targets = @(); $allLive = $true; $encoderName = ''; $overTarget = $false
     foreach ($ref in $Refs) {
         $da = $a.destinations.$ref; $db = $b.destinations.$ref
         if ($db.phase -ne 'live' -or $db.reconnects -ne 0) { $allLive = $false }
         $dropped += $db.stats.dropped_frames - $da.stats.dropped_frames
         $frames += $db.stats.total_frames - $da.stats.total_frames
         $seconds = ($b.time_ms - $a.time_ms) / 1000.0
-        $bitrates += [int](($db.stats.total_bytes - $da.stats.total_bytes) * 8 / 1000 / $seconds)
+        $sent = [int](($db.stats.total_bytes - $da.stats.total_bytes) * 8 / 1000 / $seconds)
+        # What was asked for: video plus audio. Sent counts both, and the container around them.
+        $target = [int]$db.effective.bitrate_kbps + [int]$db.effective.audio_bitrate_kbps
+        $bitrates += $sent
+        $targets += $target
+        if ($sent -gt 1.5 * $target) { $overTarget = $true }
         $encoderName = $db.effective.encoder
     }
     $droppedPercent = if ($frames -gt 0) { 100.0 * $dropped / $frames } else { $null }
-    Add-Row $Name $What $b.obs.cpu_percent $b.obs.memory_mb $b.encoders.video_live $renderLag $encodeLag $droppedPercent ($bitrates -join ', ') $encoderName
+    Add-Row $Name $What $b.obs.cpu_percent $b.obs.memory_mb $b.encoders.video_live $renderLag $encodeLag $droppedPercent ($bitrates -join ', ') $encoderName `
+        ($targets -join ', ') $overTarget
     $report.Check("${Name}: every destination stayed live for the whole measurement", $allLive)
 }
 
@@ -180,6 +201,10 @@ $balanced = @{ op = 'set'; performance_mode = 'balanced'; optimizer = @{ mode = 
 $custom = @{ op = 'set'; performance_mode = 'custom'; optimizer = @{ mode = 'off' } }
 $names = @('a', 'b', 'c', 'd')
 $caseNames = @('one', 'two', 'three', 'four')
+if (Test-Selected 'plain') {
+    Write-Host ''; Write-Host 'plain: one destination, a still picture of plain colours'
+    Invoke-Streaming 'plain' '1 destination, plain still picture' @($balanced, (Add-Destination 'a')) @('a') -PlainPicture
+}
 for ($count = 1; $count -le 4; $count++) {
     $case = $caseNames[$count - 1]
     if (-not (Test-Selected $case)) { continue }
@@ -231,23 +256,36 @@ $lines.Add('# RelayDock performance measurements')
 $lines.Add('')
 $lines.Add("Measured on $(Get-Date -Format 'yyyy-MM-dd') with ``tests/integration/Test-Performance.ps1``. Every number comes from a real run. Nothing is estimated.")
 $lines.Add('')
+if ($script:buildVersion) { $lines.Add("- RelayDock build $script:buildVersion") }
 $lines.Add("- PC: $($system.Name.Trim()), $($system.NumberOfCores) cores, $cores threads, $memoryGb GB memory")
 $lines.Add("- Graphics: $gpus")
 $lines.Add("- OBS Studio $obsVersion, canvas ${Width}x${Height} at $Fps FPS")
-$lines.Add('- Picture: scrolling random noise, which is hard to compress')
+$lines.Add('- Picture: scrolling random noise, the hardest picture there is to compress. One case uses a still picture of plain colours instead and says so.')
 $lines.Add("- Each streaming case: 10 seconds of warm-up, then $MeasureSec seconds measured")
 $lines.Add('- Streams went to a test server on the same PC')
 $lines.Add('')
-$lines.Add('| Case | OBS processor | OBS memory | Video encoders | Rendering lag | Encoder lag | Dropped frames | Bitrate sent (Kbps) | Encoder |')
-$lines.Add('| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |')
+$lines.Add('| Case | OBS processor | OBS memory | Video encoders | Rendering lag | Encoder lag | Dropped frames | Asked for (Kbps) | Sent (Kbps) | Encoder |')
+$lines.Add('| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- |')
 foreach ($row in $rows) {
-    $lines.Add(("| {0} | {1}% | {2} MB | {3} | {4} | {5} | {6} | {7} | {8} |" -f $row.What, (Format-Number $row.Cpu 1), (Format-Number $row.MemoryMb 0),
+    $lines.Add(("| {0} | {1}% | {2} MB | {3} | {4} | {5} | {6} | {7} | {8} | {9} |" -f $row.What, (Format-Number $row.Cpu 1), (Format-Number $row.MemoryMb 0),
             $row.Encoders, $(if ($null -eq $row.RenderLag) { '-' } else { (Format-Number $row.RenderLag 1) + '%' }),
             $(if ($null -eq $row.EncodeLag) { '-' } else { (Format-Number $row.EncodeLag 1) + '%' }),
-            $(if ($null -eq $row.Dropped) { '-' } else { (Format-Number $row.Dropped 1) + '%' }), $row.Bitrates, $row.Encoder))
+            $(if ($null -eq $row.Dropped) { '-' } else { (Format-Number $row.Dropped 1) + '%' }), $row.Targets, $row.Bitrates, $row.Encoder))
 }
 $lines.Add('')
-$lines.Add('OBS processor is the share of all processor threads that the OBS process used. Rendering lag, encoder lag and dropped frames are shares of the frames in the measured interval.')
+$lines.Add('OBS processor is the share of all processor threads that the OBS process used. Rendering lag, encoder lag and dropped frames are shares of the frames in the measured interval. "Asked for" is the video bitrate plus the audio bitrate of each destination.')
+
+$over = @($rows | Where-Object { $_.OverTarget })
+if ($over.Count -gt 0) {
+    $lines.Add('')
+    $lines.Add('## Cases that sent more than they were asked for')
+    $lines.Add('')
+    $lines.Add('In these cases a destination sent more than one and a half times its bitrate:')
+    $lines.Add('')
+    foreach ($row in $over) { $lines.Add("- $($row.What), encoder ``$($row.Encoder)``: asked for $($row.Targets) Kbps, sent $($row.Bitrates) Kbps") }
+    $lines.Add('')
+    $lines.Add('An encoder has a lowest quality it can go to. When a picture needs more bits than the bitrate allows even at that quality, the encoder sends more than it was asked for. Random noise at a large size and a high frame rate is such a picture. Compare these rows with the rows of the same encoder that stayed at their bitrate: the still picture, a smaller size, or a lower frame rate.')
+}
 $reportPath = Join-Path $OutDir 'performance-results.md'
 [System.IO.File]::WriteAllLines($reportPath, $lines, (New-Object System.Text.UTF8Encoding($false)))
 $rows | ConvertTo-Json -Depth 4 | Set-Content -Path (Join-Path $OutDir 'performance-results.json') -Encoding UTF8

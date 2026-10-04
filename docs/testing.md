@@ -112,7 +112,11 @@ RTMPS uses the same OBS output as RTMP, with TLS handled by OBS. The local tests
 
 ### The clipboard
 
-Copy Key needs the Windows clipboard. A sandboxed or service session has none. The interface suite detects that, skips the two clipboard checks and says so. It still checks that RelayDock reports the refusal and copies nothing. Run the suite from a normal desktop session to cover them.
+Copy Key needs the Windows clipboard. A sandboxed or service session has none. The interface suite detects that, skips the two clipboard checks and says so. It still checks that RelayDock reports the refusal and copies nothing.
+
+In the results linked above both checks ran: the key reached the clipboard, and the clipboard was empty 30 seconds later.
+
+No test looks at the Windows clipboard history (Win+V) or the cloud clipboard. RelayDock marks a copied key so that Windows keeps it out of both. A person checks that by hand. The release checklist has the step.
 
 ### The installer
 
