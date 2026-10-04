@@ -6,12 +6,15 @@ Your streams go straight from your PC to each platform. RelayDock has no server,
 
 ## Download
 
-Get the newest version from the [Releases](../../releases) page. Each release lists its files under Assets:
+The newest version is release candidate 1.0.0-rc.1:
 
-- `RelayDock-<version>-windows-x64-Setup.exe` for an OBS Studio that is installed on your PC. Close OBS, run it, start OBS and open Docks, RelayDock.
-- `RelayDock-<version>-windows-x64.zip` for a portable OBS Studio.
+- [RelayDock-1.0.0-rc.1-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/RelayDock-1.0.0-rc.1-windows-x64-Setup.exe), the installer, for an OBS Studio that is installed on your PC. Close OBS, run it, start OBS and open Docks, RelayDock.
+- [RelayDock-1.0.0-rc.1-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/RelayDock-1.0.0-rc.1-windows-x64.zip), for a portable OBS Studio.
+- [Release notes and checksums](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0-rc.1)
 
-You need Windows 11 (64-bit) and OBS Studio 32.0.0 or newer. [docs/installation.md](docs/installation.md) has the steps, and [docs/release-notes](docs/release-notes) has the notes of every release.
+You need Windows 11 (64-bit) and OBS Studio 32.0.0 or newer. Windows SmartScreen may warn about the installer, because the files are not code-signed. [docs/installation.md](docs/installation.md) explains that and has the steps.
+
+Every version is on the [Releases](../../releases) page, and [docs/release-notes](docs/release-notes) has the notes of each one.
 
 ![The RelayDock dock inside OBS Studio with three destinations live](docs/screenshots/obs-with-dock.png)
 
