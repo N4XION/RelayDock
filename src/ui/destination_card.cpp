@@ -319,9 +319,9 @@ void DestinationCard::refresh(const EffectiveDestination *planned)
 
 	name_->setFullText(qs(config->name));
 	if (provider)
-		badge_->setProvider(qs(provider->info().monogram), qs(provider->info().accentColor));
+		badge_->setProvider(provider->info());
 	else
-		badge_->setProvider(QStringLiteral("?"), QStringLiteral("#606060"));
+		badge_->setUnknown();
 	badge_->setToolTip(provider ? qs(provider->info().displayName) : qs(config->provider));
 
 	{

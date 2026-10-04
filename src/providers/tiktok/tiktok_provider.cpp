@@ -12,6 +12,9 @@ TikTokProvider::TikTokProvider()
 	info_.displayName = "TikTok";
 	info_.monogram = "TT";
 	info_.accentColor = "#FE2C55";
+	info_.logo = "tiktok";
+	info_.logoColor = "#FFFFFF";
+	info_.logoBackground = "#000000";
 	info_.userSuppliesServer = true;
 	info_.testSupport = TestSupport::Reachability;
 	info_.keyHelpUrl = "https://www.tiktok.com/creator-academy/article/live-best-practices-publishers";

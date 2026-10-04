@@ -212,7 +212,7 @@ DestinationDialog::DestinationDialog(UiHost &host, DestinationConfig config, boo
 	auto *header = new QHBoxLayout();
 	auto *badge = new ProviderBadge(this);
 	if (provider_)
-		badge->setProvider(qs(provider_->info().monogram), qs(provider_->info().accentColor));
+		badge->setProvider(provider_->info());
 	header->addWidget(badge);
 	header->addWidget(makeLabel(providerName, "rdHeading", this), 1);
 	layout->addLayout(header);

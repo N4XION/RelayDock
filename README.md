@@ -162,4 +162,4 @@ RelayDock is free software under the [GNU General Public License, version 2 or l
 
 Third-party software and its licences are listed in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md). The privacy policy is in [PRIVACY.md](PRIVACY.md).
 
-RelayDock is not affiliated with Twitch, TikTok, YouTube, Facebook or the OBS Project. Their names are trademarks of their owners. RelayDock ships no platform logos.
+RelayDock is not affiliated with Twitch, TikTok, YouTube, Facebook or the OBS Project. Their names and logos are trademarks of their owners. RelayDock shows a logo only to mark which platform a destination or a chat message belongs to. [resources/brands/NOTICE.txt](resources/brands/NOTICE.txt) says where the logo files come from, and Settings, Appearance switches the logos off.

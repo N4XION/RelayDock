@@ -62,7 +62,14 @@ struct ProviderInfo {
 	std::string id;          // Stable id, lower case, for example "twitch"
 	std::string displayName; // "Twitch"
 	std::string monogram;    // One or two letters for the badge on the card
-	std::string accentColor; // "#RRGGBB", used for the badge
+	std::string accentColor; // "#RRGGBB", behind the letters
+
+	// The platform's logo for the badge: the name of a file in resources/brands, the colour the
+	// logo is drawn in and the colour behind it, both the way the platform itself shows its
+	// logo. Without a logo the badge shows the letters. See resources/brands/NOTICE.txt.
+	std::string logo;
+	std::string logoColor;
+	std::string logoBackground;
 
 	// The user types the server URL (custom servers, and platforms that hand out a
 	// server URL together with each stream key).

@@ -41,6 +41,9 @@ TwitchProvider::TwitchProvider()
 	info_.displayName = "Twitch";
 	info_.monogram = "Tw";
 	info_.accentColor = "#9146FF";
+	info_.logo = "twitch";
+	info_.logoColor = "#FFFFFF";
+	info_.logoBackground = "#9146FF";
 	info_.testSupport = TestSupport::PrivateStream;
 	info_.keyHelpUrl = "https://help.twitch.tv/s/article/twitch-stream-key-faq";
 	info_.guide = "docs/twitch.md";

@@ -280,7 +280,7 @@ void SettingsDialog::buildPlatforms()
 
 		auto *header = new QHBoxLayout();
 		auto *badge = new ProviderBadge(panel);
-		badge->setProvider(qs(info.monogram), qs(info.accentColor));
+		badge->setProvider(info);
 		header->addWidget(badge);
 		header->addWidget(makeLabel(qs(info.displayName), "rdTitle", panel), 1);
 		auto *add = new QPushButton(uiText("Platforms.Add", "Add"), panel);

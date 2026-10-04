@@ -287,6 +287,15 @@ json describe(QWidget *root)
 		lists.push_back({{"name", list->accessibleName().toStdString()}, {"rows", rows}, {"current", list->currentRow()}});
 	}
 	out["lists"] = lists;
+
+	json badges = json::array();
+	for (ProviderBadge *badge : root->findChildren<ProviderBadge *>()) {
+		if (badge->isVisibleTo(root))
+			badges.push_back({{"provider", badge->providerId().toStdString()},
+					  {"name", badge->accessibleName().toStdString()},
+					  {"logo", badge->showsLogo()}});
+	}
+	out["badges"] = badges;
 	return out;
 }
 

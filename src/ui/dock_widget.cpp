@@ -356,25 +356,13 @@ QPixmap RelayDockWidget::providerIcon(const std::string &providerId)
 	const IProvider *provider = app_.providers().find(providerId);
 	const int px = theme_->metrics().iconPx + 4;
 	const qreal ratio = devicePixelRatioF();
-	QPixmap pixmap(static_cast<int>(px * ratio), static_cast<int>(px * ratio));
-	pixmap.setDevicePixelRatio(ratio);
-	pixmap.fill(Qt::transparent);
-	if (!provider)
-		return pixmap;
-
-	QPainter painter(&pixmap);
-	painter.setRenderHint(QPainter::Antialiasing, true);
-	const QColor color(qs(provider->info().accentColor));
-	painter.setPen(Qt::NoPen);
-	painter.setBrush(color.isValid() ? color : QColor(0x60, 0x60, 0x60));
-	painter.drawRoundedRect(QRectF(0, 0, px, px), px * 0.22, px * 0.22);
-	QFont font = this->font();
-	font.setBold(true);
-	font.setPixelSize(std::max(8, static_cast<int>(px * (provider->info().monogram.size() > 1 ? 0.42 : 0.55))));
-	painter.setFont(font);
-	painter.setPen(toQColor(readableOn(fromQColor(color.isValid() ? color : QColor(0x60, 0x60, 0x60)))));
-	painter.drawText(QRectF(0, 0, px, px), Qt::AlignCenter, qs(provider->info().monogram));
-	return pixmap;
+	if (!provider) {
+		QPixmap empty(static_cast<int>(px * ratio), static_cast<int>(px * ratio));
+		empty.setDevicePixelRatio(ratio);
+		empty.fill(Qt::transparent);
+		return empty;
+	}
+	return providerBadgePixmap(provider->info(), ProviderBadge::logosEnabled(), px, ratio, font());
 }
 
 void RelayDockWidget::buildToolbar()

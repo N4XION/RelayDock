@@ -12,6 +12,9 @@ FacebookProvider::FacebookProvider()
 	info_.displayName = "Facebook";
 	info_.monogram = "Fb";
 	info_.accentColor = "#1877F2";
+	info_.logo = "facebook";
+	info_.logoColor = "#0866FF";
+	info_.logoBackground = "#FFFFFF";
 	info_.tlsRequired = true; // Meta: live broadcasts must use RTMPS
 	info_.testSupport = TestSupport::Reachability;
 	info_.keyHelpUrl = "https://www.facebook.com/help/587160588142067";

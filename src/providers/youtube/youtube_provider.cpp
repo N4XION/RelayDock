@@ -12,6 +12,9 @@ YouTubeProvider::YouTubeProvider()
 	info_.displayName = "YouTube";
 	info_.monogram = "YT";
 	info_.accentColor = "#FF0000";
+	info_.logo = "youtube";
+	info_.logoColor = "#FF0000";
+	info_.logoBackground = "#FFFFFF";
 	info_.testSupport = TestSupport::Reachability;
 	info_.keyHelpUrl = "https://support.google.com/youtube/answer/2907883";
 	info_.guide = "docs/youtube.md";

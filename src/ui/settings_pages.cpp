@@ -273,6 +273,10 @@ void SettingsDialog::buildAppearance()
 	p.body->addWidget(reducedMotion);
 	addNote(p.body, uiText("Appearance.Potato.Note", "Potato Mode switches animations off as well."));
 
+	auto *logos = new QCheckBox(uiText("Appearance.Logos", "Show platform logos"), p.page);
+	logos->setToolTip(uiText("Appearance.Logos.Tip", "Off shows each platform's initials instead of its logo."));
+	p.body->addWidget(logos);
+
 	auto *reset = new QPushButton(uiText("Appearance.Reset", "Reset appearance"), p.page);
 	p.body->addWidget(reset, 0, Qt::AlignLeft);
 	p.body->addStretch(1);
@@ -351,6 +355,10 @@ void SettingsDialog::buildAppearance()
 		app.config().theme.reducedMotion = on;
 		commit();
 	});
+	connect(logos, &QCheckBox::toggled, this, [this, &app](bool on) {
+		app.config().theme.platformLogos = on;
+		commit();
+	});
 	connect(reset, &QPushButton::clicked, this, [this, &app] {
 		app.config().theme = ThemeConfig{};
 		commit();
@@ -383,6 +391,7 @@ void SettingsDialog::buildAppearance()
 		animations->setChecked(theme.animations);
 		reducedMotion->setChecked(theme.reducedMotion);
 		animations->setEnabled(!theme.reducedMotion);
+		logos->setChecked(theme.platformLogos);
 	});
 }
 

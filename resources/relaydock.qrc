@@ -1,5 +1,9 @@
 <RCC>
   <qresource prefix="/relaydock">
+    <file>brands/facebook.svg</file>
+    <file>brands/tiktok.svg</file>
+    <file>brands/twitch.svg</file>
+    <file>brands/youtube.svg</file>
     <file>icons/activity.svg</file>
     <file>icons/arrow-down.svg</file>
     <file>icons/arrow-up.svg</file>

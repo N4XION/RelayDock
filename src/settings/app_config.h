@@ -66,6 +66,7 @@ struct ThemeConfig {
 	Density density = Density::Comfortable;
 	bool animations = true;
 	bool reducedMotion = false;
+	bool platformLogos = true;   // Badges show the platform's logo. Off: its initials.
 
 	bool operator==(const ThemeConfig &other) const = default;
 };

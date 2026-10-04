@@ -232,6 +232,7 @@ std::string serializeConfig(const AppConfig &config)
 	theme["density"] = densityName(config.theme.density);
 	theme["animations"] = config.theme.animations;
 	theme["reduced_motion"] = config.theme.reducedMotion;
+	theme["platform_logos"] = config.theme.platformLogos;
 	root["theme"] = std::move(theme);
 
 	ordered_json layouts = ordered_json::array();
@@ -347,6 +348,7 @@ ConfigParseResult parseConfig(std::string_view jsonText)
 	readEnum<json, Density>(theme, "density", config.theme.density, densityFromName);
 	config.theme.animations = readBool(theme, "animations", config.theme.animations);
 	config.theme.reducedMotion = readBool(theme, "reduced_motion", config.theme.reducedMotion);
+	config.theme.platformLogos = readBool(theme, "platform_logos", config.theme.platformLogos);
 
 	for (const json &entry : readArray(root, "layouts")) {
 		if (!entry.is_object())

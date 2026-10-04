@@ -1,6 +1,6 @@
 # Open Source Licenses
 
-Version 1.0. Last updated 4 October 2026.
+Version 1.1. Last updated 5 October 2026.
 
 RelayDock is free software. This page lists its licence and the licences of the software it contains or builds on. The full licence texts are in the files LICENSE and THIRD_PARTY_LICENSES.md, which ship with RelayDock and are part of its source code.
 
@@ -30,6 +30,10 @@ Copyright (C) The Qt Company Ltd and other contributors. Available under the GNU
 
 Copyright (c) Lucide Icons and Contributors. ISC License. Some icons derive from Feather, Copyright (c) Cole Bemis, MIT License.
 
+### Platform logos from Simple Icons
+
+The drawings of the Twitch, TikTok, YouTube and Facebook logos come from Simple Icons, which releases its collection under CC0 1.0 Universal. The logos themselves are trademarks of their owners.
+
 ### JSON for Modern C++ (nlohmann/json)
 
 Copyright (c) Niels Lohmann. MIT License.
@@ -52,4 +56,4 @@ Copyright (C) Jordan Russell and Martijn Laan. Inno Setup License. Used to build
 
 ## Trademarks
 
-Twitch, TikTok, YouTube, Facebook and OBS Studio are trademarks of their owners. RelayDock uses the names to identify services and is not affiliated with their owners.
+Twitch, TikTok, YouTube, Facebook and OBS Studio, and their logos, are trademarks of their owners. RelayDock uses the names and the logos to identify services and is not affiliated with their owners.

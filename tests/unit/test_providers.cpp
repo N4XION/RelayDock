@@ -12,6 +12,8 @@
 #include "utils/uuid.h"
 
 #include <algorithm>
+#include <fstream>
+#include <iterator>
 #include <memory>
 #include <set>
 #include <string>
@@ -78,6 +80,14 @@ TEST_SUITE("providers.registry")
 			CHECK(info.monogram.size() <= 2);
 			CHECK(info.accentColor.size() == 7);
 			CHECK(info.accentColor[0] == '#');
+			// A logo comes with both of its colours, or there is none.
+			if (!info.logo.empty()) {
+				CHECK(info.logoColor.size() == 7);
+				CHECK(info.logoColor[0] == '#');
+				CHECK(info.logoBackground.size() == 7);
+				CHECK(info.logoBackground[0] == '#');
+				CHECK(info.logoColor != info.logoBackground);
+			}
 			CHECK_FALSE(info.guide.empty());
 			CHECK_FALSE((info.tlsRequired && info.tlsForbidden));
 			if (!info.userSuppliesServer)
@@ -85,6 +95,42 @@ TEST_SUITE("providers.registry")
 			else
 				CHECK(provider->servers().empty());
 		}
+	}
+
+	TEST_CASE("the four platforms have a logo that RelayDock can draw, and a custom server has none")
+	{
+		const auto fileText = [](const std::string &relative) {
+			std::ifstream file(std::string(RD_SOURCE_DIR) + "/" + relative, std::ios::binary);
+			return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+		};
+		const std::string resources = fileText("resources/relaydock.qrc");
+		REQUIRE_FALSE(resources.empty());
+
+		Registry r;
+		int logos = 0;
+		for (const IProvider *provider : r.registry.all()) {
+			const ProviderInfo &info = provider->info();
+			CAPTURE(info.id);
+			if (info.userSuppliesServer && info.id.rfind("custom", 0) == 0) {
+				CHECK(info.logo.empty());
+				continue;
+			}
+			REQUIRE_FALSE(info.logo.empty());
+			++logos;
+			const std::string svg = fileText("resources/brands/" + info.logo + ".svg");
+			REQUIRE_FALSE(svg.empty());
+			// The file is one drawing in one colour, which RelayDock sets when it draws.
+			CHECK(svg.find("fill=\"currentColor\"") != std::string::npos);
+			CHECK(svg.find("<path") != std::string::npos);
+			// Nothing in it can load or run anything.
+			for (const char *banned : {"<script", "href", "<image", "<foreignObject", "<style", "url("})
+				CHECK(svg.find(banned) == std::string::npos);
+			// It is part of the plugin's resources.
+			CHECK(resources.find("<file>brands/" + info.logo + ".svg</file>") != std::string::npos);
+		}
+		CHECK(logos == 4);
+		// The notice that says where the logos come from and whose they are.
+		CHECK(fileText("resources/brands/NOTICE.txt").find("trademarks of their owners") != std::string::npos);
 	}
 
 	TEST_CASE("listed servers are valid addresses with unique ids")

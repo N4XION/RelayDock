@@ -356,6 +356,14 @@ if (Test-Selected 'settings') {
     $steps.Add(@{ op = 'wait'; seconds = 1 })
     $steps.Add(@{ op = 'ui_grab'; target = 'dock'; file = 'dock-dark.png' })
     $steps.Add(@{ op = 'ui_combo'; name = 'Theme'; value = 'Follow OBS' })
+    $steps.Add(@{ op = 'wait'; seconds = 0.5 })
+    $steps.Add(@{ op = 'ui_state'; target = 'dock'; label = 'dock_logos' })
+    $steps.Add(@{ op = 'ui_check'; text = 'Show platform logos'; checked = $false })
+    $steps.Add(@{ op = 'wait'; seconds = 1 })
+    $steps.Add(@{ op = 'ui_state'; target = 'dock'; label = 'dock_initials' })
+    $steps.Add(@{ op = 'ui_grab'; target = 'dock'; file = 'dock-initials.png' })
+    $steps.Add(@{ op = 'ui_check'; text = 'Show platform logos'; checked = $true })
+    $steps.Add(@{ op = 'wait'; seconds = 0.5 })
     $steps.Add(@{ op = 'ui_open'; what = 'settings'; page = 'layout' })
     $steps.Add(@{ op = 'wait'; seconds = 0.5 })
     $steps.Add(@{ op = 'ui_combo'; name = 'Cards'; value = 'Compact' })
@@ -384,6 +392,14 @@ if (Test-Selected 'settings') {
         $report.Check('settings: Platforms lists every platform with its limits',
             ((Test-Label $ui.page_platforms '^Twitch$') -and (Test-Label $ui.page_platforms '^TikTok$') -and (Test-Label $ui.page_platforms '^YouTube$') -and
              (Test-Label $ui.page_platforms '^Facebook$') -and (Test-Label $ui.page_platforms 'Video up to 6000 Kbps')))
+        $badges = @($ui.page_platforms.badges)
+        $withLogo = @($badges | Where-Object { $_.logo } | ForEach-Object { $_.provider } | Sort-Object) -join ','
+        $report.Check('settings: Twitch, TikTok, YouTube and Facebook show their logo, and a custom server shows letters',
+            ($withLogo -eq 'facebook,tiktok,twitch,youtube' -and @($badges | Where-Object { $_.provider -like 'custom*' -and -not $_.logo }).Count -eq 2),
+            (($badges | ForEach-Object { "$($_.provider)=$($_.logo)" }) -join ', '))
+        $report.Check('settings: with Show platform logos off, every badge shows letters, and on brings the logos back',
+            (@($ui.dock_logos.badges | Where-Object { $_.logo }).Count -eq 2 -and @($ui.dock_initials.badges).Count -eq 2 -and
+             @($ui.dock_initials.badges | Where-Object { $_.logo }).Count -eq 0 -and @($ui.dock_expanded.badges | Where-Object { $_.logo }).Count -eq 2))
         $report.Check('settings: Streaming shows the encoder plan', (Test-Label $ui.page_streaming 'Enabled destinations: 2\. Video encoders: 1\.'))
         $report.Check('settings: Encoder lists the encoders of this PC', (Test-Label $ui.page_encoder '^Automatic picks '))
         $saved = @(@($ui.page_security.lists | Where-Object { $_.name -eq 'Saved keys and passwords' })[0].rows)

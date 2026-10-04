@@ -1,12 +1,12 @@
 # Third-Party Services Notice
 
-Version 1.1. Last updated 4 October 2026.
+Version 1.2. Last updated 5 October 2026.
 
 This document is a draft written by the RelayDock contributors. No lawyer has reviewed it. Have it reviewed by a qualified lawyer before you rely on it for commercial use.
 
 ## 1. RelayDock is independent
 
-RelayDock is not affiliated with, endorsed by or sponsored by Twitch, TikTok, YouTube, Google, Facebook, Meta, the OBS Project or any other company. Twitch, TikTok, YouTube, Facebook and OBS Studio are names and trademarks of their owners. RelayDock uses those names only to say which service a destination connects to. RelayDock ships no platform logos.
+RelayDock is not affiliated with, endorsed by or sponsored by Twitch, TikTok, YouTube, Google, Facebook, Meta, the OBS Project or any other company. Twitch, TikTok, YouTube, Facebook and OBS Studio are names and trademarks of their owners. RelayDock uses those names, and the logos of Twitch, TikTok, YouTube and Facebook, only to mark which service a destination or a chat message belongs to. The logos are trademarks of their owners as well. You can switch them off under Settings, Appearance.
 
 ## 2. You deal with each platform directly
 

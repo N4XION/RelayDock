@@ -58,6 +58,53 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+### Platform logos from Simple Icons
+
+https://simpleicons.org
+
+Used for the badges of Twitch, YouTube, TikTok and Facebook. The files are in `resources/brands`. Simple Icons releases its collection under CC0 1.0 Universal. The logos themselves are trademarks of their owners.
+
+```
+Platform logos
+==============
+
+The four files in this folder are the logos of Twitch, YouTube, TikTok and Facebook.
+
+Where they come from
+  Simple Icons, https://simpleicons.org, files icons/twitch.svg, icons/youtube.svg,
+  icons/tiktok.svg and icons/facebook.svg, fetched on 2026-10-05.
+  Simple Icons releases its collection under CC0 1.0 Universal.
+  RelayDock added fill="currentColor" to each file, so it can draw a logo in its platform's
+  colour. Nothing else was changed.
+
+Whose they are
+  The logos are trademarks of their owners. A licence for the drawing is not a licence for
+  the trademark.
+    Twitch and the Glitch logo      Twitch Interactive, Inc.
+    YouTube and the YouTube icon    Google LLC
+    TikTok and the TikTok logo      ByteDance Ltd. or its affiliates
+    Facebook and the "f" logo       Meta Platforms, Inc.
+
+How RelayDock uses them
+  Only to mark which platform a destination or a chat message belongs to, at the size of a
+  small badge, in the colours the owners use themselves:
+    Twitch      white on Twitch purple #9146FF
+    YouTube     red #FF0000 on white
+    TikTok      white on black
+    Facebook    blue #0866FF on white
+  RelayDock is not affiliated with, endorsed by or sponsored by any of these companies.
+
+The owners' rules
+  Twitch      https://brand.twitch.com
+  YouTube     https://brand.youtube
+  Facebook    https://www.meta.com/brand/resources/facebook/logo/
+  TikTok      TikTok's terms ask for its written permission before its logo is used.
+
+Building RelayDock without a logo
+  Delete the file here and its line in resources/relaydock.qrc. The badge then shows the
+  platform's initials, as it does for a custom server.
+```
+
 ### JSON for Modern C++ (nlohmann/json)
 
 Version 3.12.0. https://github.com/nlohmann/json
@@ -148,4 +195,4 @@ Used to build the Windows installer. The installer contains Inno Setup's setup p
 
 ## Trademarks
 
-Twitch, TikTok, YouTube, Facebook and OBS Studio are trademarks of their owners. RelayDock uses the names to say which service a destination connects to. RelayDock is not affiliated with their owners and ships none of their logos.
+Twitch, TikTok, YouTube, Facebook and OBS Studio, and their logos, are trademarks of their owners. RelayDock uses the names and the logos to mark which service a destination or a chat message belongs to. RelayDock is not affiliated with their owners.

@@ -9,9 +9,11 @@
 #include <QFile>
 #include <QFontInfo>
 #include <QHBoxLayout>
+#include <QHash>
 #include <QImageReader>
 #include <QPainter>
 #include <QPalette>
+#include <QPen>
 #include <QPushButton>
 #include <QStyle>
 #include <QStyleOption>
@@ -54,9 +56,11 @@ void Theme::refresh()
 	metrics_ = resolveThemeMetrics(theme, base);
 	const QString styleSheet = qs(buildStyleSheet(colors_, metrics_));
 
-	// The style sheet carries every colour and size, so an equal sheet means nothing changed.
-	if (styleSheet == styleSheet_)
+	// The style sheet carries every colour and size, so an equal sheet means nothing changed,
+	// unless the badges switched between logos and initials.
+	if (styleSheet == styleSheet_ && theme.platformLogos == ProviderBadge::logosEnabled())
 		return;
+	ProviderBadge::setLogosEnabled(theme.platformLogos);
 	styleSheet_ = styleSheet;
 	pixmapCache_.clear();
 	roots_.erase(std::remove_if(roots_.begin(), roots_.end(), [](const QPointer<QWidget> &root) { return root.isNull(); }),
@@ -267,17 +271,128 @@ void Banner::setAction(const QString &label)
 	action_->setVisible(!label.isEmpty());
 }
 
+namespace {
+
+bool g_logosEnabled = true;
+
+// A logo from resources/brands, drawn in one colour. An empty picture when there is no such file.
+QPixmap brandGlyph(const std::string &name, const QColor &color, int pixels)
+{
+	static QHash<QString, QPixmap> cache;
+	const QString key = QStringLiteral("%1|%2|%3").arg(QString::fromStdString(name), color.name()).arg(pixels);
+	const auto cached = cache.constFind(key);
+	if (cached != cache.constEnd())
+		return *cached;
+
+	QPixmap result;
+	QFile file(QStringLiteral(":/relaydock/brands/%1.svg").arg(QString::fromStdString(name)));
+	if (!name.empty() && file.open(QIODevice::ReadOnly)) {
+		QByteArray svg = file.readAll();
+		svg.replace("currentColor", color.name().toUtf8());
+		QBuffer buffer(&svg);
+		buffer.open(QIODevice::ReadOnly);
+		QImageReader reader(&buffer, "svg");
+		reader.setScaledSize(QSize(pixels, pixels));
+		const QImage image = reader.read();
+		if (!image.isNull())
+			result = QPixmap::fromImage(image);
+	}
+	cache.insert(key, result);
+	return result;
+}
+
+bool hasLogo(const ProviderInfo &info)
+{
+	return !info.logo.empty() && QFile::exists(QStringLiteral(":/relaydock/brands/%1.svg").arg(QString::fromStdString(info.logo)));
+}
+
+} // namespace
+
+QPixmap providerBadgePixmap(const ProviderInfo &info, bool logos, int sizePx, qreal devicePixelRatio, const QFont &baseFont)
+{
+	const int pixels = std::max(1, static_cast<int>(sizePx * devicePixelRatio + 0.5));
+	QPixmap pixmap(pixels, pixels);
+	pixmap.setDevicePixelRatio(devicePixelRatio);
+	pixmap.fill(Qt::transparent);
+
+	QPainter painter(&pixmap);
+	painter.setRenderHint(QPainter::Antialiasing, true);
+	painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+	const qreal radius = sizePx * 0.22;
+	const QRectF tile(0, 0, sizePx, sizePx);
+
+	if (logos && hasLogo(info)) {
+		const QColor background(qs(info.logoBackground));
+		const QColor ink(qs(info.logoColor));
+		painter.setPen(Qt::NoPen);
+		painter.setBrush(background.isValid() ? background : QColor(Qt::white));
+		painter.drawRoundedRect(tile, radius, radius);
+		// A thin edge keeps a white tile visible on a light window and a black one on a dark one.
+		painter.setBrush(Qt::NoBrush);
+		painter.setPen(QPen(QColor(127, 127, 127, 110), 1));
+		painter.drawRoundedRect(tile.adjusted(0.5, 0.5, -0.5, -0.5), radius, radius);
+
+		// The logo keeps a clear margin, and stays at 16 pixels or more where the badge allows.
+		int glyph = static_cast<int>(sizePx * 0.66 + 0.5);
+		glyph = std::min(std::max(glyph, 16), std::max(8, sizePx - 4));
+		const int glyphPixels = std::max(1, static_cast<int>(glyph * devicePixelRatio + 0.5));
+		const QPixmap logo = brandGlyph(info.logo, ink.isValid() ? ink : QColor(Qt::black), glyphPixels);
+		const qreal offset = (sizePx - glyph) / 2.0;
+		painter.drawPixmap(QRectF(offset, offset, glyph, glyph), logo, QRectF(0, 0, glyphPixels, glyphPixels));
+		return pixmap;
+	}
+
+	QColor color(qs(info.accentColor));
+	if (!color.isValid())
+		color = QColor(0x60, 0x60, 0x60);
+	painter.setPen(Qt::NoPen);
+	painter.setBrush(color);
+	painter.drawRoundedRect(tile, radius, radius);
+
+	const QString letters = info.monogram.empty() ? QStringLiteral("?") : qs(info.monogram);
+	QFont font = baseFont;
+	font.setBold(true);
+	font.setPixelSize(std::max(8, static_cast<int>(sizePx * (letters.size() > 1 ? 0.40 : 0.50))));
+	painter.setFont(font);
+	painter.setPen(toQColor(readableOn(fromQColor(color))));
+	painter.drawText(tile, Qt::AlignCenter, letters);
+	return pixmap;
+}
+
 ProviderBadge::ProviderBadge(QWidget *parent) : QWidget(parent)
 {
 	setFixedSize(size_, size_);
+	setUnknown();
 }
 
-void ProviderBadge::setProvider(const QString &monogram, const QString &colorHex)
+void ProviderBadge::setProvider(const ProviderInfo &info)
 {
-	monogram_ = monogram;
-	const QColor color(colorHex);
-	color_ = color.isValid() ? color : QColor(0x60, 0x60, 0x60);
+	info_ = info;
+	setAccessibleName(qs(info.displayName));
 	update();
+}
+
+void ProviderBadge::setUnknown()
+{
+	info_ = ProviderInfo{};
+	info_.monogram = "?";
+	info_.accentColor = "#606060";
+	update();
+}
+
+bool ProviderBadge::showsLogo() const
+{
+	return g_logosEnabled && hasLogo(info_);
+}
+
+void ProviderBadge::setLogosEnabled(bool enabled)
+{
+	g_logosEnabled = enabled;
+}
+
+bool ProviderBadge::logosEnabled()
+{
+	return g_logosEnabled;
 }
 
 void ProviderBadge::setBadgeSize(int px)
@@ -291,18 +406,7 @@ void ProviderBadge::setBadgeSize(int px)
 void ProviderBadge::paintEvent(QPaintEvent *)
 {
 	QPainter painter(this);
-	painter.setRenderHint(QPainter::Antialiasing, true);
-	painter.setPen(Qt::NoPen);
-	painter.setBrush(color_);
-	const qreal radius = size_ * 0.22;
-	painter.drawRoundedRect(QRectF(0, 0, size_, size_), radius, radius);
-
-	QFont font = this->font();
-	font.setBold(true);
-	font.setPixelSize(std::max(9, static_cast<int>(size_ * (monogram_.size() > 1 ? 0.40 : 0.50))));
-	painter.setFont(font);
-	painter.setPen(toQColor(readableOn(fromQColor(color_))));
-	painter.drawText(rect(), Qt::AlignCenter, monogram_);
+	painter.drawPixmap(0, 0, providerBadgePixmap(info_, g_logosEnabled, size_, devicePixelRatioF(), font()));
 }
 
 ElidedLabel::ElidedLabel(QWidget *parent) : QLabel(parent)

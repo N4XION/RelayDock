@@ -46,6 +46,18 @@ $(Read-Text 'resources/icons/LICENSE.txt')
 "@)
 
 $sections.Add(@"
+### Platform logos from Simple Icons
+
+https://simpleicons.org
+
+Used for the badges of Twitch, YouTube, TikTok and Facebook. The files are in ``resources/brands``. Simple Icons releases its collection under CC0 1.0 Universal. The logos themselves are trademarks of their owners.
+
+``````
+$(Read-Text 'resources/brands/NOTICE.txt')
+``````
+"@)
+
+$sections.Add(@"
 ### JSON for Modern C++ (nlohmann/json)
 
 Version 3.12.0. https://github.com/nlohmann/json
@@ -102,7 +114,7 @@ Used to build the Windows installer. The installer contains Inno Setup's setup p
 
 ## Trademarks
 
-Twitch, TikTok, YouTube, Facebook and OBS Studio are trademarks of their owners. RelayDock uses the names to say which service a destination connects to. RelayDock is not affiliated with their owners and ships none of their logos.
+Twitch, TikTok, YouTube, Facebook and OBS Studio, and their logos, are trademarks of their owners. RelayDock uses the names and the logos to mark which service a destination or a chat message belongs to. RelayDock is not affiliated with their owners.
 '@.Trim())
 
 $content = ($sections -join "`n`n") + "`n"

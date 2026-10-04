@@ -3,6 +3,7 @@
 #pragma once
 
 #include "core/user_message.h"
+#include "providers/provider.h"
 #include "settings/theme.h"
 #include "update/update_check.h"
 #include "utils/i18n.h"
@@ -164,15 +165,30 @@ private:
 	QString tone_ = QStringLiteral("neutral");
 };
 
-// The square badge with a platform's initials. RelayDock ships no platform logos.
+// The square badge of a platform, as a picture: its logo in the colours the platform uses, or
+// its initials when RelayDock has no logo for it or `logos` is off. resources/brands/NOTICE.txt
+// says where the logos come from and whose they are.
+QPixmap providerBadgePixmap(const ProviderInfo &info, bool logos, int sizePx, qreal devicePixelRatio, const QFont &font);
+
+// The same badge as a widget.
 class ProviderBadge : public QWidget {
 	Q_OBJECT
 
 public:
 	explicit ProviderBadge(QWidget *parent = nullptr);
 
-	void setProvider(const QString &monogram, const QString &colorHex);
+	void setProvider(const ProviderInfo &info);
+	// A destination whose platform this RelayDock does not know.
+	void setUnknown();
 	void setBadgeSize(int px);
+
+	// Whether this badge shows a logo right now.
+	bool showsLogo() const;
+	QString providerId() const { return QString::fromStdString(info_.id); }
+
+	// Whether badges show logos at all. The appearance settings decide, for every badge.
+	static void setLogosEnabled(bool enabled);
+	static bool logosEnabled();
 
 	QSize sizeHint() const override { return QSize(size_, size_); }
 
@@ -180,8 +196,7 @@ protected:
 	void paintEvent(QPaintEvent *event) override;
 
 private:
-	QString monogram_;
-	QColor color_{0x60, 0x60, 0x60};
+	ProviderInfo info_;
 	int size_ = 28;
 };
 
