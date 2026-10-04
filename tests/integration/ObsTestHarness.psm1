@@ -449,7 +449,9 @@ function Start-ObsScenario {
         [switch]$ResetConfig,
         # Test keys live in Windows Credential Manager under this prefix. Every run gets its own
         # unless a test passes one, to check that keys survive an OBS restart.
-        [string]$CredentialPrefix = "RelayDockTest-$([guid]::NewGuid().ToString())"
+        [string]$CredentialPrefix = "RelayDockTest-$([guid]::NewGuid().ToString())",
+        # Extra environment variables for the OBS process. They win over the ones set here.
+        [hashtable]$ExtraEnvironment = @{}
     )
 
     New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
@@ -465,6 +467,7 @@ function Start-ObsScenario {
         RELAYDOCK_SCENARIO_RESULT        = $resultPath
         RELAYDOCK_TEST_CREDENTIAL_PREFIX = $CredentialPrefix
     }
+    foreach ($key in $ExtraEnvironment.Keys) { $environment[$key] = $ExtraEnvironment[$key] }
     $session = Start-ObsTest -ObsRoot $ObsRoot -PluginRunDir $PluginRunDir -Environment $environment -Visible:$Visible
     $session | Add-Member -NotePropertyName ResultPath -NotePropertyValue $resultPath
     return $session
@@ -527,11 +530,12 @@ function Invoke-ObsScenario {
         [int]$TimeoutSec = 180,
         [switch]$Visible,
         [switch]$ResetConfig,
-        [string]$CredentialPrefix = "RelayDockTest-$([guid]::NewGuid().ToString())"
+        [string]$CredentialPrefix = "RelayDockTest-$([guid]::NewGuid().ToString())",
+        [hashtable]$ExtraEnvironment = @{}
     )
 
     $session = Start-ObsScenario -ObsRoot $ObsRoot -PluginRunDir $PluginRunDir -Scenario $Scenario -OutDir $OutDir `
-        -Name $Name -Visible:$Visible -ResetConfig:$ResetConfig -CredentialPrefix $CredentialPrefix
+        -Name $Name -Visible:$Visible -ResetConfig:$ResetConfig -CredentialPrefix $CredentialPrefix -ExtraEnvironment $ExtraEnvironment
     return (Complete-ObsScenario -Session $session -TimeoutSec $TimeoutSec)
 }
 

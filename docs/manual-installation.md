@@ -59,4 +59,4 @@ If the log says the plugin was built for a newer OBS, update OBS Studio. RelayDo
 
 ## Remove it
 
-Close OBS and delete the `relaydock` folder you copied. [installation.md](installation.md) lists where settings and saved keys live, if you want to remove those too.
+Close OBS and delete the `relaydock` folder you copied. The RelayDock settings name the exact files under Updates, Uninstall. [installation.md](installation.md) lists where settings and saved keys live, if you want to remove those too.

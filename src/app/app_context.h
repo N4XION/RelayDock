@@ -2,6 +2,7 @@
 // Copyright (C) 2026 RelayDock contributors
 #pragma once
 
+#include "app/uninstall_request.h"
 #include "encoders/encoder_catalog.h"
 #include "performance/effective_settings.h"
 #include "providers/provider_registry.h"
@@ -66,6 +67,11 @@ public:
 	// Notes from loading the settings: repairs, migrations, recovery from a backup.
 	const std::vector<std::string> &loadNotes() const { return loadNotes_; }
 	ConfigLoadStatus loadStatus() const { return loadStatus_; }
+
+	// ---- Uninstall ---------------------------------------------------------------------------
+	// How this RelayDock is removed: by the uninstaller the installer left, or by hand.
+	UninstallPlan uninstallPlan(bool removeData) const;
+	UninstallRequest &uninstallRequest() { return uninstallRequest_; }
 
 	// Writes the settings to disk. Logs and returns false on failure.
 	bool saveConfig();
@@ -137,6 +143,7 @@ private:
 	// Follows the destinations: awake while one is active, free to sleep when none is.
 	void setKeepAwake(bool wanted);
 	SleepInhibitor sleepInhibitor_{"RelayDock is streaming"};
+	UninstallRequest uninstallRequest_;
 	bool sleepRefusalLogged_ = false;
 
 	// A source appeared, went away or changed its name. Vertical layouts refer to sources,

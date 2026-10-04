@@ -417,6 +417,10 @@ if (Test-Selected 'settings') {
         $report.Check('settings: Updates offers a check on request, and the check at every start is on unless switched off',
             ($null -ne (Get-Button $ui.page_updates 'Check for updates') -and $null -ne $onStart -and $onStart.checked -and
              (Test-Label $ui.page_updates 'never downloads or installs anything') -and (Test-Label $ui.page_updates 'On unless you switch it off')))
+        # The test build runs from the build folder. No installer put it there.
+        $report.Check('settings: Updates says how to remove a RelayDock that was copied by hand, and offers no uninstaller for it',
+            ((Test-Label $ui.page_updates '^Uninstall$') -and (Test-Label $ui.page_updates 'copied here by hand') -and
+             (Test-Label $ui.page_updates 'relaydock\.dll$') -and $null -eq (Get-Button $ui.page_updates 'Uninstall RelayDock...')))
         $report.Check('settings: choosing Potato on the Performance page slows measuring to every two seconds',
             ($run.Result.snapshots.potato.performance.tick_interval_ms -eq 2000))
         $report.Check('settings: an upload speed that is too low shows as exceeded',

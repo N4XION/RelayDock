@@ -990,6 +990,16 @@ json ScenarioRunner::snapshot()
 
 	out["keeps_awake"] = app_.keepsAwake();
 
+	{
+		const UninstallPlan plan = app_.uninstallPlan(false);
+		out["uninstall"] = {{"kind", plan.kind == UninstallPlan::Kind::Installer ? "installer" : "by_hand"},
+				    {"program", plan.program},
+				    {"arguments", plan.arguments},
+				    {"paths", plan.paths},
+				    {"pending", app_.uninstallRequest().pending()},
+				    {"request_file", app_.uninstallRequest().requestFile()}};
+	}
+
 	out["encoders"] = {{"video_live", app_.outputs().encoderPool().liveVideoEncoders()},
 			   {"audio_live", app_.outputs().encoderPool().liveAudioEncoders()}};
 

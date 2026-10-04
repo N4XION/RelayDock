@@ -24,6 +24,7 @@ set(
   unit/test_settings.cpp
   unit/test_sleep_inhibitor.cpp
   unit/test_stream_url.cpp
+  unit/test_uninstall.cpp
   unit/test_utils.cpp
   unit/test_vertical_layout.cpp
   security/test_credentials.cpp

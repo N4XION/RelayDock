@@ -14,8 +14,13 @@ Everything runs silently and without administrator rights, into a scratch folder
   - an uninstall that keeps settings and saved keys
   - an uninstall that removes them (/REMOVEDATA=1)
 
-The test never touches a real RelayDock. It stops at once when RelayDock is installed on this
-PC. The part that removes settings and keys is skipped when this PC has RelayDock settings or
+Also covered: the uninstall that RelayDock starts itself (/WAITFOROBS=1). It waits while OBS is
+open, removes RelayDock once OBS has closed, and removes nothing when RelayDock has deleted its
+request file, whether OBS still runs at that moment or has closed right after.
+
+The test never touches a real RelayDock. With the release Setup it stops at once when RelayDock
+is installed on this PC. With -TestBuild and a test build of Setup (scripts\package.ps1
+-TestInstallerDir), which Windows knows under another identity, it also runs on such a PC. The part that removes settings and keys is skipped when this PC has RelayDock settings or
 saved keys, because that part would delete them. It works on a folder and a credential it makes
 up itself.
 
@@ -37,7 +42,9 @@ param(
     # The ZIP of the same release. The installed files must match its files.
     [string]$ZipPath = '',
     [string]$OutDir = '',
-    [switch]$DefaultFolder
+    [switch]$DefaultFolder,
+    # The Setup is a test build with its own identity in Windows.
+    [switch]$TestBuild
 )
 
 $ErrorActionPreference = 'Stop'
@@ -51,9 +58,18 @@ $OutDir = (Resolve-Path $OutDir).Path
 
 $report = New-TestReport -Title "Installer $(Split-Path -Leaf $SetupPath)"
 
+# A test build of Setup says so in its file description. Check before anything runs: a release
+# Setup started the way this test starts a test build would install for real.
+$isTestBuild = (Get-Item -LiteralPath $SetupPath).VersionInfo.FileDescription -match 'test build'
+if ($TestBuild -and -not $isTestBuild) { throw "-TestBuild was given, and $SetupPath is not a test build of Setup." }
+if ($isTestBuild -and -not $TestBuild) { throw "$SetupPath is a test build of Setup. Run this test with -TestBuild." }
+if ($TestBuild -and $DefaultFolder) { throw 'A test build of Setup never installs into the folder OBS reads. Leave -DefaultFolder out.' }
+
+$appId = if ($TestBuild) { '{6D1F3C52-8B0A-4E7D-A3C9-52E0B7F41D69}' } else { '{6D1F3C52-8B0A-4E7D-A3C9-52E0B7F41D68}' }
+$displayName = if ($TestBuild) { 'RelayDock test install (OBS Studio plugin)' } else { 'RelayDock (OBS Studio plugin)' }
 $uninstallKeys = @(
-    'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{6D1F3C52-8B0A-4E7D-A3C9-52E0B7F41D68}_is1',
-    'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{6D1F3C52-8B0A-4E7D-A3C9-52E0B7F41D68}_is1')
+    "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\${appId}_is1",
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\${appId}_is1")
 $userKey = $uninstallKeys[0]
 $realFolder = Join-Path $env:ProgramData 'obs-studio\plugins\relaydock'
 $settingsFolder = Join-Path $env:APPDATA 'obs-studio\plugin_config\relaydock'
@@ -71,10 +87,18 @@ if (Test-Path $userKey) {
     }
 }
 
-# ---- Never on a PC that has RelayDock -----------------------------------------------------------
-if (@($uninstallKeys | Where-Object { Test-Path $_ }).Count -gt 0 -or (Test-Path $realFolder)) {
-    throw 'RelayDock is installed on this PC. This test installs and removes RelayDock, so it does not run here.'
+# ---- Never on a PC that has RelayDock, unless Setup is a test build ------------------------------
+if (@($uninstallKeys | Where-Object { Test-Path $_ }).Count -gt 0) {
+    throw 'Windows lists an install with the identity this Setup uses. This test installs and removes it, so it does not run here.'
 }
+if (-not $TestBuild -and (Test-Path $realFolder)) {
+    throw 'RelayDock is installed on this PC. This test installs and removes RelayDock, so it does not run here. Use a test build of Setup and -TestBuild.'
+}
+# What a real RelayDock on this PC looks like before the test, to show that the test left it alone.
+$realDll = Join-Path $realFolder 'bin\64bit\relaydock.dll'
+$realBefore = if (Test-Path $realDll) { "$((Get-FileHash -LiteralPath $realDll -Algorithm SHA256).Hash) $((Get-Item $realDll).LastWriteTimeUtc.Ticks)" } else { '' }
+$realKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{6D1F3C52-8B0A-4E7D-A3C9-52E0B7F41D68}_is1'
+$realEntryBefore = if ($TestBuild -and (Test-Path $realKey)) { [string](Get-ItemProperty $realKey).DisplayVersion } else { '' }
 Get-ChildItem -LiteralPath $OutDir | Remove-Item -Recurse -Force
 
 function Invoke-Program([string]$File, [string[]]$Arguments, [string]$LogName) {
@@ -116,11 +140,22 @@ $report.Check('install: Windows lists RelayDock under Installed apps, for this u
 if (Test-Path $userKey) {
     $entry = Get-ItemProperty $userKey
     $report.Check('install: the entry names RelayDock, its version and its folder',
-        ($entry.DisplayName -eq 'RelayDock (OBS Studio plugin)' -and [string]$entry.DisplayVersion -ne '' -and
+        ($entry.DisplayName -eq $displayName -and [string]$entry.DisplayVersion -ne '' -and
          ([string]$entry.InstallLocation).TrimEnd('\') -eq $target),
         "$($entry.DisplayName) $($entry.DisplayVersion)")
 }
-$report.Check('install: nothing went into the folder OBS reads, because the test named another one', (-not (Test-Path $realFolder)))
+if ($TestBuild) {
+    $realNow = if (Test-Path $realDll) { "$((Get-FileHash -LiteralPath $realDll -Algorithm SHA256).Hash) $((Get-Item $realDll).LastWriteTimeUtc.Ticks)" } else { '' }
+    $report.Check('install: the folder OBS reads is as it was, because the test named another one', ($realNow -eq $realBefore))
+
+    # A test build without /DIR must refuse, before it does anything.
+    $run = Invoke-Program $SetupPath @('/CURRENTUSER', "/OBSDIR=`"$ObsRoot`"") 'test-build-no-dir.log'
+    $realNow = if (Test-Path $realDll) { "$((Get-FileHash -LiteralPath $realDll -Algorithm SHA256).Hash) $((Get-Item $realDll).LastWriteTimeUtc.Ticks)" } else { '' }
+    $report.Check('test-build: without /DIR a test build of Setup refuses to run and changes nothing',
+        ($run.ExitCode -ne 0 -and $realNow -eq $realBefore), "exit code $($run.ExitCode)")
+} else {
+    $report.Check('install: nothing went into the folder OBS reads, because the test named another one', (-not (Test-Path $realFolder)))
+}
 
 if ($ZipPath) {
     $unzipped = Join-Path $OutDir 'zip'
@@ -157,6 +192,75 @@ try {
     $stopped = Stop-ObsTest -Session $session
 }
 $report.Check('obs-running: OBS itself was not disturbed and closed cleanly', $stopped.Clean, "exit code $($stopped.ExitCode)")
+
+# ---- The uninstall RelayDock starts itself ------------------------------------------------------
+# RelayDock makes a request file and the uninstaller waits for OBS to close. Deleting the file is
+# how the user changes their mind. The test stands in for RelayDock: it makes the file and starts
+# the uninstaller the same way.
+Write-Host ''
+Write-Host 'wait: the uninstaller that RelayDock starts waits for OBS to close'
+$uninstaller = Join-Path $target 'unins000.exe'
+$request = Join-Path $OutDir 'uninstall.request'
+function Start-WaitingUninstall([string]$LogName) {
+    $log = Join-Path $OutDir $LogName
+    Set-Content -LiteralPath $request -Value 'made by Test-Installer.ps1'
+    Start-Process -FilePath $uninstaller -ArgumentList @('/WAITFOROBS=1', '/SILENT', '/REMOVEDATA=0', "/REQUESTFILE=`"$request`"",
+        '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=`"$log`"")
+}
+function Get-LogText([string]$LogName) {
+    $log = Join-Path $OutDir $LogName
+    if (Test-Path $log) { return (Get-Content -LiteralPath $log -Raw) }
+    return ''
+}
+# The uninstaller hands over to a copy of itself in the temp folder, which carries the same
+# command line. These are the copies of this test's uninstaller that are still waiting.
+function Get-WaitingUninstall {
+    return @(Get-CimInstance Win32_Process | Where-Object {
+            $_.CommandLine -and $_.CommandLine.Contains('/WAITFOROBS=1') -and $_.CommandLine.Contains($uninstaller) })
+}
+$session = Start-ObsTest -ObsRoot $ObsRoot -NoPlugin
+try {
+    [void](Wait-ObsLogLine -Session $session -Pattern '==== Startup complete' -TimeoutSec 90)
+
+    # The user changes their mind while OBS still runs.
+    Start-WaitingUninstall 'wait-cancelled.log'
+    Start-Sleep -Seconds 4
+    $report.Check('wait: with OBS open, the uninstaller waits and removes nothing',
+        ((Get-WaitingUninstall).Count -ge 1 -and (Test-Path $dll) -and (Test-Path $userKey)))
+    Remove-Item -LiteralPath $request -Force
+    $ended = Wait-Until { (Get-WaitingUninstall).Count -eq 0 } 20
+    $report.Check('wait: when RelayDock withdraws the request while OBS still runs, the uninstaller ends and removes nothing',
+        ($ended -and (Test-Path $dll) -and (Test-Path $userKey) -and (Get-LogText 'wait-cancelled.log') -match 'cancelled from RelayDock'))
+
+    # The user changes their mind and closes OBS in the same moment.
+    Start-WaitingUninstall 'wait-cancelled-at-close.log'
+    Start-Sleep -Seconds 3
+    Remove-Item -LiteralPath $request -Force
+} finally {
+    $stopped = Stop-ObsTest -Session $session
+}
+$ended = Wait-Until { (Get-WaitingUninstall).Count -eq 0 } 30
+$report.Check('wait: a request withdrawn in the moment OBS closes removes nothing either',
+    ($ended -and (Test-Path $dll) -and (Test-Path $userKey) -and (Get-LogText 'wait-cancelled-at-close.log') -match 'cancelled from RelayDock'))
+$report.Check('wait: OBS closed cleanly with the uninstaller waiting on it', $stopped.Clean, "exit code $($stopped.ExitCode)")
+
+# The user goes through with it.
+$session = Start-ObsTest -ObsRoot $ObsRoot -NoPlugin
+try {
+    [void](Wait-ObsLogLine -Session $session -Pattern '==== Startup complete' -TimeoutSec 90)
+    Start-WaitingUninstall 'wait-removed.log'
+    Start-Sleep -Seconds 4
+    $report.Check('wait: a new request waits again while OBS is open', ((Get-WaitingUninstall).Count -ge 1 -and (Test-Path $dll)))
+} finally {
+    $stopped = Stop-ObsTest -Session $session
+}
+$gone = Wait-Until { -not (Test-Path $target) -and -not (Test-Path $userKey) } 60
+$report.Check('wait: once OBS has closed, RelayDock is removed without another question, and the request file is gone',
+    ($gone -and -not (Test-Path $request)))
+
+# Back in place for the cases below.
+$run = Invoke-Program $SetupPath $installArguments 'install-after-wait.log'
+$report.Check('wait: RelayDock installs again afterwards', ($run.ExitCode -eq 0 -and (Test-Path $dll)), "exit code $($run.ExitCode)")
 
 # ---- No OBS on the PC ---------------------------------------------------------------------------
 Write-Host ''
@@ -263,6 +367,13 @@ if ($DefaultFolder) {
     }
 }
 
-$left = @($uninstallKeys | Where-Object { Test-Path $_ }).Count + [int](Test-Path $realFolder) + [int](Test-Path $target)
+$left = @($uninstallKeys | Where-Object { Test-Path $_ }).Count + [int](Test-Path $target)
+if (-not $TestBuild) { $left += [int](Test-Path $realFolder) }
 $report.Check('nothing of the test install is left on this PC', ($left -eq 0))
+if ($TestBuild) {
+    $realNow = if (Test-Path $realDll) { "$((Get-FileHash -LiteralPath $realDll -Algorithm SHA256).Hash) $((Get-Item $realDll).LastWriteTimeUtc.Ticks)" } else { '' }
+    $realEntryNow = if (Test-Path $realKey) { [string](Get-ItemProperty $realKey).DisplayVersion } else { '' }
+    $report.Check('a RelayDock that is installed for real on this PC is exactly as it was: its file and its entry under Installed apps',
+        ($realNow -eq $realBefore -and $realEntryNow -eq $realEntryBefore), "entry $realEntryBefore")
+}
 exit $report.Finish()

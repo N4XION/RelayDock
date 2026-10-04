@@ -27,6 +27,11 @@ Package what the preset's build folder already holds.
 .PARAMETER RequireInstaller
 Fail when Inno Setup is missing instead of skipping the installer. CI sets it.
 
+.PARAMETER TestInstallerDir
+Also build a test build of the installer into this folder, for tests\integration\Test-Installer.ps1
+-TestBuild. A test build has its own identity in Windows and refuses to run without /DIR, so the
+test can run on a PC that has RelayDock installed. It is never a release file.
+
 .EXAMPLE
 .\scripts\package.ps1
 #>
@@ -34,7 +39,8 @@ param(
     [string]$Preset = 'windows-x64',
     [string]$OutDir = '',
     [switch]$SkipBuild,
-    [switch]$RequireInstaller
+    [switch]$RequireInstaller,
+    [string]$TestInstallerDir = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -186,6 +192,21 @@ if ($iscc) {
         "/DObsMinimumVersion=$($spec.obs.minimumVersion)",
         (Join-Path $repo 'installer\relaydock.iss'))
     Write-Host "  $baseName-Setup.exe"
+
+    if ($TestInstallerDir) {
+        New-Item -ItemType Directory -Force -Path $TestInstallerDir | Out-Null
+        Invoke-Checked $iscc @(
+            '/Qp',
+            '/DTestInstall=1',
+            "/DAppVersion=$version",
+            "/DAppVersionNumeric=$($spec.version)",
+            "/DStageDir=$(Join-Path $stage 'relaydock')",
+            "/DOutputDir=$((Resolve-Path $TestInstallerDir).Path)",
+            "/DOutputBaseName=$baseName-Setup-test",
+            "/DObsMinimumVersion=$($spec.obs.minimumVersion)",
+            (Join-Path $repo 'installer\relaydock.iss'))
+        Write-Host "  $baseName-Setup-test.exe, a test build, in $TestInstallerDir"
+    }
 } elseif ($RequireInstaller) {
     throw 'Inno Setup 6 was not found, and -RequireInstaller is set.'
 } else {

@@ -15,7 +15,7 @@ You need Windows 11 (64-bit) and OBS Studio 32.0.0 or newer.
 
 To update, do the same with the newer installer. It replaces the old version, and your destinations, settings and stream keys stay.
 
-You do not pick a folder. The installer puts RelayDock into `C:\ProgramData\obs-studio\plugins\relaydock`, the folder where OBS Studio looks for plugins. To remove it, open Windows Settings, Apps, Installed apps and uninstall RelayDock.
+You do not pick a folder. The installer puts RelayDock into `C:\ProgramData\obs-studio\plugins\relaydock`, the folder where OBS Studio looks for plugins. To remove it, open the RelayDock settings, choose Updates and then Uninstall RelayDock. Windows Settings, Apps, Installed apps works too.
 
 For a portable OBS Studio, download [RelayDock-1.0.0-rc.2-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.2/RelayDock-1.0.0-rc.2-windows-x64.zip) and follow [docs/manual-installation.md](docs/manual-installation.md).
 

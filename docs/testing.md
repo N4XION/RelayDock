@@ -79,7 +79,8 @@ The suites above use a test build, which contains the scenario runner. A release
 | --- | --- |
 | `Test-PluginLoad.ps1` with the release build | The release DLL loads and unloads cleanly in OBS. |
 | `Test-ZipInstall.ps1` | The ZIP has the layout the manual guide shows. Copied into a portable OBS by the guide's steps, RelayDock loads from the OBS folder, finds its text and closes cleanly. With the files removed, OBS starts without it. |
-| `Test-Installer.ps1` | The installer runs without administrator rights and puts the same files as the ZIP into the plugin folder. It installs over an existing version, refuses while OBS runs, and warns when it finds no OBS. The uninstaller removes the plugin, keeps settings and keys by default, and removes them on request, leaving other credentials alone. |
+| `Test-Installer.ps1` | The installer runs without administrator rights and puts the same files as the ZIP into the plugin folder. It installs over an existing version, refuses while OBS runs, and warns when it finds no OBS. The uninstaller removes the plugin, keeps settings and keys by default, and removes them on request, leaving other credentials alone. Started the way RelayDock starts it, the uninstaller waits for OBS to close, and removes nothing once the request is withdrawn, also when that happens in the moment OBS closes. |
+| `Test-Uninstall.ps1` | The uninstall from inside RelayDock. RelayDock, loaded from an installed folder, finds its own uninstaller. Settings, Updates asks first and says what stays. After Yes the uninstaller waits. Keep RelayDock takes the request back, and closing OBS then removes nothing. Asked again, the uninstaller removes the plugin and its entry under Installed apps once OBS has closed. |
 
 ## Results
 
@@ -120,6 +121,8 @@ In the results linked above both checks ran: the key reached the clipboard, and 
 No test looks at the Windows clipboard history (Win+V) or the cloud clipboard. RelayDock marks a copied key so that Windows keeps it out of both. A person checks that by hand. The release checklist has the step.
 
 ### The installer
+
+`Test-Installer.ps1` and `Test-Uninstall.ps1` are not part of `Run-All.ps1`, because they need an installer. With the release installer, `Test-Installer.ps1` refuses to run on a PC that has RelayDock installed. `scripts\package.ps1 -TestInstallerDir <folder>` builds a test build of the installer for such a PC. Windows knows it under another identity, it refuses to run without `/DIR`, and both tests check at the end that the real install is exactly as it was. Pass `-TestBuild` to `Test-Installer.ps1` with it.
 
 `Test-Installer.ps1` installs into a scratch folder, and with `-DefaultFolder` into the folder OBS reads. It never starts an installed OBS Studio, because that would use a real user's OBS settings. So one step stays with a person: run the installer, start OBS, and see RelayDock under Docks. The release checklist has it.
 

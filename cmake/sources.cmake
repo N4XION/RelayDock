@@ -118,6 +118,8 @@ set(
   src/utils/strings.h
   src/utils/system_info.cpp
   src/utils/system_info.h
+  src/utils/uninstall.cpp
+  src/utils/uninstall.h
   src/utils/uuid.cpp
   src/utils/uuid.h
 )
@@ -133,6 +135,8 @@ set(
   src/app/diagnostics_service.h
   src/app/performance_monitor.cpp
   src/app/performance_monitor.h
+  src/app/uninstall_request.cpp
+  src/app/uninstall_request.h
   src/encoders/encoder_catalog.cpp
   src/encoders/encoder_catalog.h
   src/encoders/encoder_pool.cpp

@@ -53,6 +53,8 @@ private:
 	void commit();
 	QLabel *addNote(QVBoxLayout *layout, const QString &text);
 	QLabel *addHeading(QVBoxLayout *layout, const QString &text);
+	// The part of the Updates page that removes RelayDock. Returns what keeps it up to date.
+	std::function<void()> addUninstallSection(PageBuilder &p);
 
 	void buildGeneral();
 	void buildPlatforms();

@@ -220,6 +220,22 @@ void AppContext::setKeepAwake(bool wanted)
 		logInfo("No destination is active. Windows may sleep again.");
 }
 
+UninstallPlan AppContext::uninstallPlan(bool removeData) const
+{
+	// Where OBS loaded relaydock.dll from.
+	const char *binary = obs_get_module_binary_path(obs_current_module());
+#ifdef RELAYDOCK_TEST_HOOKS
+	// A test installs a test build of Setup, and nobody is there to press OK on the message
+	// that says the uninstall is done.
+	UninstallPlan plan = planUninstall(binary ? binary : "", readInstalledCopies(true), removeData);
+	if (plan.kind == UninstallPlan::Kind::Installer)
+		plan.arguments += " /SUPPRESSMSGBOXES";
+	return plan;
+#else
+	return planUninstall(binary ? binary : "", readInstalledCopies(false), removeData);
+#endif
+}
+
 bool AppContext::saveConfig()
 {
 	if (!store_)

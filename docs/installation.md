@@ -80,11 +80,26 @@ RelayDock never updates itself. It downloads nothing and installs nothing. A plu
 
 ## Uninstall
 
-Close OBS. Open Windows Settings, Apps, Installed apps, find RelayDock and choose Uninstall.
+There are two ways. Both remove the plugin files and keep your destinations, settings and saved stream keys, unless you say otherwise. A later install then picks them up.
 
-The uninstaller removes the plugin files. It asks whether to remove your RelayDock settings and saved stream keys too. Without that step they stay, so a later install picks them up.
+### From RelayDock
 
-From a script, `unins000.exe /VERYSILENT` in the plugin folder uninstalls and keeps settings and keys. Add `/REMOVEDATA=1` to remove them too.
+1. In OBS, open the RelayDock settings and choose Updates.
+2. Under Uninstall, tick "Also remove my destinations, settings and saved stream keys" if you want those gone too.
+3. Choose Uninstall RelayDock and confirm.
+4. Close OBS Studio.
+
+OBS holds the plugin open while it runs, so the uninstaller starts at step 3 and waits. It removes RelayDock when OBS has closed, and then says so. Until you close OBS, Keep RelayDock on the same page takes the request back.
+
+A RelayDock that you copied from the ZIP has no uninstaller. The Updates page then names the files to delete.
+
+### From Windows
+
+Close OBS. Open Windows Settings, Apps, Installed apps, find RelayDock and choose Uninstall. The uninstaller asks whether to remove your RelayDock settings and saved stream keys too.
+
+### From a script
+
+`unins000.exe /VERYSILENT` in the plugin folder uninstalls and keeps settings and keys. Add `/REMOVEDATA=1` to remove them too.
 
 To remove them by hand:
 

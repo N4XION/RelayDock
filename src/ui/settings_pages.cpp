@@ -799,8 +799,9 @@ void SettingsDialog::buildUpdates()
 		// A build without a project page has nothing to ask.
 		addNote(p.body, uiText("Updates.NotConfigured",
 				       "This build has no project page configured, so it has no update check. Get new versions from the place you got this one."));
+		const std::function<void()> refreshUninstall = addUninstallSection(p);
 		p.body->addStretch(1);
-		addPage("updates", uiText("Settings.Updates", "Updates"), "download", p.page, nullptr);
+		addPage("updates", uiText("Settings.Updates", "Updates"), "download", p.page, refreshUninstall);
 		return;
 	}
 
@@ -815,6 +816,7 @@ void SettingsDialog::buildUpdates()
 	p.body->addWidget(onStart);
 	addNote(p.body, uiText("Updates.OnStart.Note",
 			       "On unless you switch it off. With it on, RelayDock asks GitHub once each time OBS starts and tells you when a newer version exists."));
+	const std::function<void()> refreshUninstall = addUninstallSection(p);
 	p.body->addStretch(1);
 
 	updateChecker_ = new UpdateChecker(this);
@@ -846,8 +848,83 @@ void SettingsDialog::buildUpdates()
 		commit();
 	});
 
-	addPage("updates", uiText("Settings.Updates", "Updates"), "download", p.page,
-		[=, &app] { onStart->setChecked(app.config().general.checkUpdatesOnStart); });
+	addPage("updates", uiText("Settings.Updates", "Updates"), "download", p.page, [=, &app] {
+		onStart->setChecked(app.config().general.checkUpdatesOnStart);
+		if (refreshUninstall)
+			refreshUninstall();
+	});
+}
+
+std::function<void()> SettingsDialog::addUninstallSection(PageBuilder &p)
+{
+	AppContext &app = host_.app();
+	addHeading(p.body, uiText("Uninstall.Heading", "Uninstall"));
+	const UninstallPlan plan = app.uninstallPlan(false);
+
+	if (plan.kind == UninstallPlan::Kind::ByHand) {
+		// No installer put this RelayDock here, so there is no uninstaller to run.
+		addNote(p.body, uiText("Uninstall.ByHand",
+				       "This RelayDock was copied here by hand, so it has no uninstaller. To remove it, close OBS Studio and delete:"));
+		for (const std::string &path : plan.paths) {
+			QLabel *label = makeLabel(qs(path), nullptr, p.page);
+			label->setWordWrap(true);
+			label->setTextInteractionFlags(Qt::TextSelectableByMouse);
+			p.body->addWidget(label);
+		}
+		addNote(p.body, uiText("Uninstall.ByHand.Data",
+				       "Your destinations and settings are in the settings folder, which the Advanced page opens. Saved stream keys are in Windows Credential Manager, under names that start with RelayDock."));
+		return {};
+	}
+
+	addNote(p.body, uiText("Uninstall.Note",
+			       "Removes RelayDock from this PC. OBS Studio holds the plugin open while it runs, so the uninstaller starts now and removes RelayDock when you close OBS Studio."));
+	auto *removeData = new QCheckBox(uiText("Uninstall.RemoveData", "Also remove my destinations, settings and saved stream keys"), p.page);
+	p.body->addWidget(removeData);
+	auto *uninstall = new QPushButton(uiText("Uninstall.Button", "Uninstall RelayDock..."), p.page);
+	p.body->addWidget(uninstall, 0, Qt::AlignLeft);
+	auto *state = new Banner(host_.theme(), p.page);
+	state->hide();
+	p.body->addWidget(state);
+
+	const auto refresh = [=, &app] {
+		const bool waiting = app.uninstallRequest().pending();
+		uninstall->setEnabled(!waiting);
+		removeData->setEnabled(!waiting);
+		if (waiting) {
+			state->setMessage("warning", uiText("Uninstall.Pending", "RelayDock is removed when you close OBS Studio."));
+			state->setAction(uiText("Uninstall.Keep", "Keep RelayDock"));
+			state->show();
+		}
+	};
+
+	connect(uninstall, &QPushButton::clicked, this, [=, this, &app] {
+		const bool all = removeData->isChecked();
+		QMessageBox box(QMessageBox::Question, uiText("Uninstall.Confirm.Title", "Uninstall RelayDock"),
+				uiText("Uninstall.Confirm", "Remove RelayDock from this PC?"), QMessageBox::Yes | QMessageBox::Cancel, this);
+		box.setInformativeText(all ? uiText("Uninstall.Confirm.All",
+						    "RelayDock is removed as soon as you close OBS Studio. Your destinations, settings and saved stream keys are removed too.")
+					   : uiText("Uninstall.Confirm.Keep",
+						    "RelayDock is removed as soon as you close OBS Studio. Your destinations, settings and saved stream keys stay for a later install."));
+		box.setDefaultButton(QMessageBox::Cancel);
+		if (box.exec() != QMessageBox::Yes)
+			return;
+
+		std::string error;
+		if (!app.uninstallRequest().start(app.uninstallPlan(all), error)) {
+			state->setMessage("error", qs(error));
+			state->setAction(QString());
+			state->show();
+			return;
+		}
+		refresh();
+	});
+	connect(state, &Banner::actionClicked, this, [=, &app] {
+		app.uninstallRequest().cancel();
+		state->setMessage("ok", uiText("Uninstall.Kept", "The uninstall is cancelled. RelayDock stays."));
+		state->setAction(QString());
+		refresh();
+	});
+	return refresh;
 }
 
 // ---- Advanced --------------------------------------------------------------------------------------
