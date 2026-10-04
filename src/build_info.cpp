@@ -25,6 +25,7 @@ const BuildInfo &buildInfo()
 		RD_GEN_OBS_MINIMUM_VERSION,
 		RD_GEN_OBS_TESTED_VERSIONS,
 		RD_GEN_REPOSITORY,
+		RD_GEN_TWITCH_CLIENT_ID,
 		RD_GEN_AUTHOR,
 #if defined(_M_X64) || defined(__x86_64__)
 		"x64",

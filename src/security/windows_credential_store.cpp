@@ -72,9 +72,21 @@ CredentialResult WindowsCredentialStore::write(const CredentialId &id, const Sec
 
 	std::wstring target = toWide(credentialTargetName(prefix_, id));
 	std::wstring userName = L"RelayDock";
-	std::wstring comment = id.kind == CredentialKind::StreamKey
-				       ? L"Stream key saved by the RelayDock plugin for OBS Studio"
-				       : L"RTMP password saved by the RelayDock plugin for OBS Studio";
+	std::wstring comment = L"Saved by the RelayDock plugin for OBS Studio";
+	switch (id.kind) {
+	case CredentialKind::StreamKey:
+		comment = L"Stream key saved by the RelayDock plugin for OBS Studio";
+		break;
+	case CredentialKind::Password:
+		comment = L"RTMP password saved by the RelayDock plugin for OBS Studio";
+		break;
+	case CredentialKind::ChatSignIn:
+		comment = L"Twitch chat sign-in saved by the RelayDock plugin for OBS Studio";
+		break;
+	case CredentialKind::ApiKey:
+		comment = L"YouTube API key saved by the RelayDock plugin for OBS Studio";
+		break;
+	}
 
 	CREDENTIALW credential{};
 	credential.Type = CRED_TYPE_GENERIC;

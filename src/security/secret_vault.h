@@ -46,7 +46,8 @@ public:
 	// Removes every secret RelayDock saved. Returns how many entries were removed.
 	size_t removeAll();
 
-	// Removes saved secrets whose destination is not in the list. Returns how many.
+	// Removes saved stream keys and passwords whose destination is not in the list. Returns how
+	// many. Chat sign-ins and API keys belong to no destination and stay.
 	size_t removeOrphans(const std::vector<std::string> &knownDestinationIds);
 
 	std::vector<CredentialId> list() const;

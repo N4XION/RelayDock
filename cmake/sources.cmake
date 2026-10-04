@@ -8,6 +8,7 @@ set(
   RELAYDOCK_CORE_SOURCES
   src/build_info.cpp
   src/build_info.h
+  src/chat/chat_accounts.h
   src/chat/chat_types.cpp
   src/chat/chat_types.h
   src/chat/chat_worker.cpp
@@ -131,6 +132,8 @@ set(
   src/app/app_context.h
   src/app/background_tasks.cpp
   src/app/background_tasks.h
+  src/app/chat_hub.cpp
+  src/app/chat_hub.h
   src/app/diagnostics_service.cpp
   src/app/diagnostics_service.h
   src/app/performance_monitor.cpp

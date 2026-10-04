@@ -2,6 +2,8 @@
 // Copyright (C) 2026 RelayDock contributors
 #include "app/app_context.h"
 
+#include "app/chat_hub.h"
+
 #include "app/performance_monitor.h"
 #include "legal/legal_documents.h"
 #include "outputs/output_manager.h"
@@ -94,6 +96,7 @@ void AppContext::initialize()
 	outputs_ = std::make_unique<OutputManager>(*this);
 	connect(outputs_.get(), &OutputManager::activeChanged, this, &AppContext::setKeepAwake);
 	performance_ = std::make_unique<PerformanceMonitor>(*this);
+	chat_ = std::make_unique<ChatHub>(*this);
 
 	obs_frontend_add_save_callback(onSceneCollectionSaveLoad, this);
 
@@ -110,6 +113,8 @@ void AppContext::onObsFinishedLoading()
 	collectionChanging_ = false;
 	vertical_->rebind();
 	performance_->start();
+	// Chat reads from the first moment, when a sign-in or a key is saved.
+	chat_->apply();
 }
 
 void AppContext::onSourceListChanged(void *data, calldata_t *)
@@ -188,6 +193,8 @@ void AppContext::shutdown()
 	sourceRenameSignal_.Disconnect();
 	videoResetSignal_.Disconnect();
 
+	if (chat_)
+		chat_->shutdown();
 	if (performance_)
 		performance_->shutdown();
 	// Outputs first: they hold encoders that read the vertical canvas.

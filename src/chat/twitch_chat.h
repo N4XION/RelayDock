@@ -36,6 +36,11 @@ struct TwitchChatConfig {
 	long long keepaliveGraceMs = 10000;
 };
 
+// What to tell the user while Twitch chat cannot be read for lack of an application id or of a
+// sign-in.
+UserMessage twitchNoClientIdMessage();
+UserMessage twitchSignInNeededMessage();
+
 // Signs the user in to Twitch with a code: RelayDock shows the code, the user confirms it on
 // twitch.tv in a browser, and Twitch hands RelayDock the sign-in. RelayDock never sees the
 // user's Twitch password.

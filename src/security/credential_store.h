@@ -10,15 +10,25 @@
 
 namespace rd {
 
-enum class CredentialKind { StreamKey, Password };
+// StreamKey and Password belong to a destination. ChatSignIn is the token that renews the
+// Twitch sign-in, and ApiKey is the user's own key for the YouTube Data API. Those two belong
+// to a chat account, which has a fixed id of its own (chat/chat_accounts.h).
+enum class CredentialKind { StreamKey, Password, ChatSignIn, ApiKey };
 
-// "stream-key" or "password". Part of the stored entry name, so do not change the text.
+// Whether a secret of this kind belongs to a destination.
+inline bool belongsToDestination(CredentialKind kind)
+{
+	return kind == CredentialKind::StreamKey || kind == CredentialKind::Password;
+}
+
+// "stream-key", "password", "chat-sign-in" or "api-key". Part of the stored entry name, so do
+// not change the text.
 const char *credentialKindName(CredentialKind kind);
 bool credentialKindFromName(std::string_view name, CredentialKind &out);
 
-// Identifies one secret: which destination it belongs to and what it is.
+// Identifies one secret: which destination or chat account it belongs to and what it is.
 struct CredentialId {
-	std::string destinationId; // UUID of the destination
+	std::string destinationId; // UUID of the destination, or the fixed id of a chat account
 	CredentialKind kind = CredentialKind::StreamKey;
 
 	bool operator==(const CredentialId &other) const = default;

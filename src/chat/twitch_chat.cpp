@@ -32,22 +32,6 @@ void keepOutOfLogs(const twitch::Tokens &tokens)
 	globalRedactor().addSecret(tokens.refreshToken);
 }
 
-UserMessage noClientId()
-{
-	UserMessage message;
-	message.what = loc("Chat.Twitch.NoClientId", "This RelayDock has no Twitch application id, so it cannot sign in to Twitch.");
-	message.action = loc("Chat.Twitch.NoClientId.Action", "Enter one under Settings, Chat. The chat guide shows how to get one.");
-	return message;
-}
-
-UserMessage signInNeeded()
-{
-	UserMessage message;
-	message.what = loc("Chat.Twitch.SignInNeeded", "Twitch chat needs a sign-in.");
-	message.action = loc("Chat.Twitch.SignInNeeded.Action", "Open Settings, Chat and choose Sign in with Twitch.");
-	return message;
-}
-
 UserMessage signInAgain(const std::string &what, const std::string &detail)
 {
 	UserMessage message;
@@ -69,6 +53,22 @@ UserMessage notConnected(const std::string &detail, long long waitMs)
 }
 
 } // namespace
+
+UserMessage twitchNoClientIdMessage()
+{
+	UserMessage message;
+	message.what = loc("Chat.Twitch.NoClientId", "This RelayDock has no Twitch application id, so it cannot sign in to Twitch.");
+	message.action = loc("Chat.Twitch.NoClientId.Action", "Enter one under Settings, Chat. The chat guide shows how to get one.");
+	return message;
+}
+
+UserMessage twitchSignInNeededMessage()
+{
+	UserMessage message;
+	message.what = loc("Chat.Twitch.SignInNeeded", "Twitch chat needs a sign-in.");
+	message.action = loc("Chat.Twitch.SignInNeeded.Action", "Open Settings, Chat and choose Sign in with Twitch.");
+	return message;
+}
 
 // ---- TwitchSignIn -----------------------------------------------------------------------------
 
@@ -117,7 +117,7 @@ void TwitchSignIn::run()
 	const std::string tryAgain = loc("Chat.Twitch.SignIn.TryAgain", "Start the sign-in again in a moment.");
 
 	if (!twitch::validClientId(config_.clientId)) {
-		const UserMessage message = noClientId();
+		const UserMessage message = twitchNoClientIdMessage();
 		fail(message.what, {}, message.action);
 		return;
 	}
@@ -239,7 +239,7 @@ bool TwitchChat::ensureToken(bool &retry, std::string &problem)
 
 	const std::string refresh = store_.load ? store_.load() : std::string();
 	if (refresh.empty()) {
-		report(ChatState::NotSetUp, signInNeeded());
+		report(ChatState::NotSetUp, twitchSignInNeededMessage());
 		return false;
 	}
 	globalRedactor().addSecret(refresh);
@@ -408,7 +408,7 @@ TwitchChat::SessionEnd TwitchChat::readSession(const std::string &url, bool move
 void TwitchChat::run()
 {
 	if (!twitch::validClientId(config_.clientId)) {
-		report(ChatState::NotSetUp, noClientId());
+		report(ChatState::NotSetUp, twitchNoClientIdMessage());
 		return;
 	}
 

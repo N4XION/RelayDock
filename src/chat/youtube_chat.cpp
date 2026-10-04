@@ -32,6 +32,16 @@ UserMessage retrying(youtube::ApiResult result, const std::string &detail, long 
 
 } // namespace
 
+UserMessage youtubeNoKeyMessage()
+{
+	return notSetUp(loc("Chat.YouTube.NoKey", "YouTube chat needs an API key of your own."));
+}
+
+UserMessage youtubeNoVideoMessage()
+{
+	return notSetUp(loc("Chat.YouTube.NoVideo", "YouTube chat needs the link to your stream."));
+}
+
 YouTubeChat::YouTubeChat(Callbacks callbacks) : ChatWorker(std::move(callbacks)) {}
 
 YouTubeChat::~YouTubeChat()
@@ -49,11 +59,11 @@ void YouTubeChat::start(YouTubeChatConfig config)
 void YouTubeChat::run()
 {
 	if (!youtube::plausibleApiKey(config_.apiKey)) {
-		report(ChatState::NotSetUp, notSetUp(loc("Chat.YouTube.NoKey", "YouTube chat needs an API key of your own.")));
+		report(ChatState::NotSetUp, youtubeNoKeyMessage());
 		return;
 	}
 	if (config_.videoId.empty()) {
-		report(ChatState::NotSetUp, notSetUp(loc("Chat.YouTube.NoVideo", "YouTube chat needs the link to your stream.")));
+		report(ChatState::NotSetUp, youtubeNoVideoMessage());
 		return;
 	}
 	// The key never reaches a log line or a diagnostics report.

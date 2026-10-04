@@ -61,6 +61,7 @@ TEST_SUITE("build_info")
 
 		const rd::BuildInfo &info = rd::buildInfo();
 		CHECK(std::string(info.repository) == spec.value("repository", std::string("missing")));
+		CHECK(std::string(info.twitchClientId) == spec.value("twitchClientId", std::string()));
 		CHECK(std::string(info.versionNumeric) == spec.value("version", std::string("missing")));
 		CHECK(std::string(info.obsMinimumVersion) == spec["obs"].value("minimumVersion", std::string("missing")));
 

@@ -94,6 +94,9 @@ size_t SecretVault::removeOrphans(const std::vector<std::string> &knownDestinati
 {
 	size_t removed = 0;
 	for (const CredentialId &id : list()) {
+		// A chat sign-in or an API key belongs to no destination, so it is never left over.
+		if (!belongsToDestination(id.kind))
+			continue;
 		const bool known = std::find(knownDestinationIds.begin(), knownDestinationIds.end(),
 					     id.destinationId) != knownDestinationIds.end();
 		if (!known && remove(id).ok())

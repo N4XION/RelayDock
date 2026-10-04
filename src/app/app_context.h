@@ -24,6 +24,7 @@
 
 namespace rd {
 
+class ChatHub;
 class OutputManager;
 class PerformanceMonitor;
 class VerticalCanvasManager;
@@ -61,6 +62,7 @@ public:
 	OutputManager &outputs() { return *outputs_; }
 	VerticalCanvasManager &vertical() { return *vertical_; }
 	PerformanceMonitor &performance() { return *performance_; }
+	ChatHub &chat() { return *chat_; }
 	const IClock &clock() const { return clock_; }
 	const ConfigStore &configStore() const { return *store_; }
 
@@ -135,6 +137,7 @@ private:
 	std::unique_ptr<OutputManager> outputs_;
 	std::unique_ptr<VerticalCanvasManager> vertical_;
 	std::unique_ptr<PerformanceMonitor> performance_;
+	std::unique_ptr<ChatHub> chat_;
 	std::map<std::string, Adjustment> adjustments_;
 	std::vector<std::string> loadNotes_;
 	ConfigLoadStatus loadStatus_ = ConfigLoadStatus::CreatedDefault;

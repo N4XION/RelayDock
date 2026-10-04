@@ -53,6 +53,10 @@ string(JSON _author GET ${buildspec} author)
 string(JSON _version GET ${buildspec} version)
 string(JSON _version_suffix GET ${buildspec} versionSuffix)
 string(JSON _repository GET ${buildspec} repository)
+string(JSON _twitch_client_id ERROR_VARIABLE _twitch_client_id_error GET ${buildspec} twitchClientId)
+if(_twitch_client_id_error)
+  set(_twitch_client_id "")
+endif()
 string(JSON _obs_minimum GET ${buildspec} obs minimumVersion)
 string(JSON _obs_tested GET ${buildspec} obs testedVersions)
 
@@ -71,6 +75,11 @@ set(PLUGIN_OBS_TESTED_VERSIONS "${_obs_tested}")
 # after buildspec.json had gained one. The unset removes that old entry.
 unset(RELAYDOCK_REPOSITORY CACHE)
 set(RELAYDOCK_REPOSITORY "${_repository}")
+
+# The id of the Twitch application that RelayDock signs users in with. It is a public name, not
+# a secret: Twitch gives a public client no secret at all. A build without one still reads
+# Twitch chat when the user enters an application id of their own under Settings, Chat.
+set(RELAYDOCK_TWITCH_CLIENT_ID "${_twitch_client_id}")
 
 if(PLUGIN_VERSION_SUFFIX STREQUAL "")
   set(PLUGIN_VERSION_FULL "${PLUGIN_VERSION}")

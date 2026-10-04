@@ -205,9 +205,9 @@ std::string cleanChatText(std::string_view text, size_t maxBytes)
 
 ChatTimeline::ChatTimeline(size_t capacity) : capacity_(capacity > 0 ? capacity : 1) {}
 
-size_t ChatTimeline::add(const std::vector<ChatEvent> &events)
+size_t ChatTimeline::add(const std::vector<ChatEvent> &events, std::vector<ChatEvent> *added)
 {
-	size_t added = 0;
+	size_t count = 0;
 	for (const ChatEvent &event : events) {
 		if (!event.id.empty()) {
 			std::pair<int, std::string> key{static_cast<int>(event.platform), event.id};
@@ -220,12 +220,14 @@ size_t ChatTimeline::add(const std::vector<ChatEvent> &events)
 			}
 		}
 		events_.push_back(event);
+		if (added)
+			added->push_back(event);
 		++total_;
-		++added;
+		++count;
 	}
 	while (events_.size() > capacity_)
 		events_.pop_front();
-	return added;
+	return count;
 }
 
 void ChatTimeline::clear()

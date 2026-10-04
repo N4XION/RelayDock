@@ -22,6 +22,7 @@ struct BuildInfo {
 	const char *obsMinimumVersion;  // Oldest OBS Studio version this build loads in.
 	const char *obsTestedVersions;  // OBS Studio versions this release was tested with.
 	const char *repository;         // "owner/name" on GitHub. Empty when not configured.
+	const char *twitchClientId;     // Id of the Twitch application for chat sign-in. Public. May be empty.
 	const char *author;
 	const char *architecture;       // "x64"
 };

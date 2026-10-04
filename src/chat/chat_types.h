@@ -79,8 +79,8 @@ class ChatTimeline {
 public:
 	explicit ChatTimeline(size_t capacity = 500);
 
-	// Adds events. Returns how many were new.
-	size_t add(const std::vector<ChatEvent> &events);
+	// Adds events. Returns how many were new, and puts those into `added` when it is given.
+	size_t add(const std::vector<ChatEvent> &events, std::vector<ChatEvent> *added = nullptr);
 	void clear();
 
 	const std::deque<ChatEvent> &events() const { return events_; }

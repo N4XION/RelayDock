@@ -418,6 +418,23 @@ std::vector<std::string> sanitizeConfig(AppConfig &config)
 		vertical = VerticalCanvasConfig{};
 	}
 
+	// Chat
+	ChatConfig &chat = config.chat;
+	clampField(chat.youtubePollSeconds, kChatPollSecondsMin, kChatPollSecondsMax, "The pause between YouTube chat requests", notes);
+	// An application id is letters and digits. Anything else is not sent anywhere.
+	const bool clientIdValid = chat.twitchClientId.size() <= 64 &&
+				   std::all_of(chat.twitchClientId.begin(), chat.twitchClientId.end(), [](char c) {
+					   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+				   });
+	if (!clientIdValid) {
+		chat.twitchClientId.clear();
+		notes.push_back("The Twitch application id was not valid and was removed.");
+	}
+	if (chat.youtubeVideo.size() > 300)
+		chat.youtubeVideo.clear();
+	if (chat.twitchLogin.size() > 64)
+		chat.twitchLogin.clear();
+
 	config.schemaVersion = kConfigSchemaVersion;
 	return notes;
 }

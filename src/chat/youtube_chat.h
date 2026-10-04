@@ -26,6 +26,10 @@ struct YouTubeChatConfig {
 	long long retryMaxMs = 60000;
 };
 
+// What to tell the user while YouTube chat cannot be read for lack of a key or of a stream.
+UserMessage youtubeNoKeyMessage();
+UserMessage youtubeNoVideoMessage();
+
 // Reads the chat of one YouTube live stream by asking for new messages again and again:
 // comments, Super Chats, Super Stickers, new members and gifts.
 class YouTubeChat : public ChatWorker {

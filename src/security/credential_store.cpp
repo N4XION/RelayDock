@@ -13,6 +13,10 @@ const char *credentialKindName(CredentialKind kind)
 		return "stream-key";
 	case CredentialKind::Password:
 		return "password";
+	case CredentialKind::ChatSignIn:
+		return "chat-sign-in";
+	case CredentialKind::ApiKey:
+		return "api-key";
 	}
 	return "stream-key";
 }
@@ -25,6 +29,14 @@ bool credentialKindFromName(std::string_view name, CredentialKind &out)
 	}
 	if (name == "password") {
 		out = CredentialKind::Password;
+		return true;
+	}
+	if (name == "chat-sign-in") {
+		out = CredentialKind::ChatSignIn;
+		return true;
+	}
+	if (name == "api-key") {
+		out = CredentialKind::ApiKey;
 		return true;
 	}
 	return false;

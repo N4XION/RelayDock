@@ -276,6 +276,16 @@ std::string serializeConfig(const AppConfig &config)
 	vertical["height"] = config.verticalCanvas.height;
 	root["vertical_canvas"] = std::move(vertical);
 
+	ordered_json chat;
+	chat["twitch_enabled"] = config.chat.twitchEnabled;
+	chat["twitch_client_id"] = config.chat.twitchClientId;
+	chat["twitch_login"] = config.chat.twitchLogin;
+	chat["youtube_enabled"] = config.chat.youtubeEnabled;
+	chat["youtube_video"] = config.chat.youtubeVideo;
+	chat["youtube_poll_seconds"] = config.chat.youtubePollSeconds;
+	chat["show_time"] = config.chat.showTime;
+	root["chat"] = std::move(chat);
+
 	return root.dump(2) + "\n";
 }
 
@@ -396,6 +406,15 @@ ConfigParseResult parseConfig(std::string_view jsonText)
 	const json &vertical = readObject(root, "vertical_canvas");
 	config.verticalCanvas.width = readInt(vertical, "width", config.verticalCanvas.width);
 	config.verticalCanvas.height = readInt(vertical, "height", config.verticalCanvas.height);
+
+	const json &chat = readObject(root, "chat");
+	config.chat.twitchEnabled = readBool(chat, "twitch_enabled", config.chat.twitchEnabled);
+	config.chat.twitchClientId = readString(chat, "twitch_client_id");
+	config.chat.twitchLogin = readString(chat, "twitch_login");
+	config.chat.youtubeEnabled = readBool(chat, "youtube_enabled", config.chat.youtubeEnabled);
+	config.chat.youtubeVideo = readString(chat, "youtube_video");
+	config.chat.youtubePollSeconds = readInt(chat, "youtube_poll_seconds", config.chat.youtubePollSeconds);
+	config.chat.showTime = readBool(chat, "show_time", config.chat.showTime);
 
 	for (std::string &note : sanitizeConfig(config))
 		result.notes.push_back(std::move(note));

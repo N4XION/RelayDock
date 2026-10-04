@@ -128,6 +128,23 @@ struct GeneralConfig {
 	bool operator==(const GeneralConfig &other) const = default;
 };
 
+// Live chat. What is saved here is no secret: the Twitch sign-in and the YouTube key are in
+// the credential store.
+struct ChatConfig {
+	bool twitchEnabled = true;   // Read Twitch chat whenever a sign-in is saved
+	std::string twitchClientId;  // A Twitch application id of the user's own. Empty: the build's.
+	std::string twitchLogin;     // Whose sign-in is saved, to show it
+	bool youtubeEnabled = false; // Read YouTube chat. Connect switches it on, Disconnect off.
+	std::string youtubeVideo;    // The link to the stream, or its video id, as the user entered it
+	int youtubePollSeconds = 5;  // Shortest pause between two requests to YouTube
+	bool showTime = true;        // Show the time in front of every line
+
+	bool operator==(const ChatConfig &other) const = default;
+};
+
+inline constexpr int kChatPollSecondsMin = 3;
+inline constexpr int kChatPollSecondsMax = 60;
+
 // Size of the vertical canvas. Destinations with Vertical orientation scale from it.
 struct VerticalCanvasConfig {
 	int width = 1080;
@@ -149,6 +166,7 @@ struct AppConfig {
 	std::vector<LegalAcceptance> legal;
 	GeneralConfig general;
 	VerticalCanvasConfig verticalCanvas;
+	ChatConfig chat;
 
 	bool operator==(const AppConfig &other) const = default;
 
