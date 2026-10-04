@@ -56,6 +56,8 @@ RelayDock builds against OBS 32.0.4 on purpose. OBS loads a plugin when the plug
 
 If your checkout is inside OneDrive or a similar folder, put the build elsewhere. Create `CMakeUserPresets.json` (Git ignores it) with a preset that inherits `windows-x64` and sets `binaryDir` and the cache variable `RELAYDOCK_DEPS_DIR` to folders outside the synced tree.
 
+Do not put `binaryDir` under your `AppData` folder. MSBuild leaves files there out of its input tracking, unless they are inside the folder of the project it builds. The unit test program has its project in a subfolder. So after a change to the core library, MSBuild does not link the test program again, and the tests run old code without a warning. A folder such as `C:\Users\you\RelayDockDev\build` works.
+
 ## Run the unit tests
 
 The core of RelayDock needs neither OBS nor Qt. Build and test it by itself in under a minute:
