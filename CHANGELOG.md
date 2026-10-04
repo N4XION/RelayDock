@@ -49,6 +49,7 @@ The first release candidate. Everything listed here is built and covered by auto
 - Themes: Follow OBS, Light, Dark and Custom, with accent colour, background image, opacity, corner radius, text size and spacing.
 - Saved dock layouts.
 - A diagnostics report you can save or copy.
+- A check for updates on request. It asks GitHub for the newest release and shows a link. It never downloads or installs anything.
 
 ### Known limitations
 

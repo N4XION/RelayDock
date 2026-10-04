@@ -215,6 +215,80 @@ bool parseLatestRelease(const std::string &json, ReleaseInfo &out, std::string &
 	return true;
 }
 
+namespace {
+
+// Fills a ReleaseInfo from one release object of the GitHub API. Returns false when the object
+// names no tag.
+bool readRelease(const nlohmann::json &object, ReleaseInfo &release)
+{
+	const auto tag = object.find("tag_name");
+	if (tag == object.end() || !tag->is_string() || tag->get<std::string>().empty())
+		return false;
+	release.tag = tag->get<std::string>();
+	if (const auto name = object.find("name"); name != object.end() && name->is_string())
+		release.name = name->get<std::string>();
+	if (const auto url = object.find("html_url"); url != object.end() && url->is_string())
+		release.url = url->get<std::string>();
+	if (const auto pre = object.find("prerelease"); pre != object.end() && pre->is_boolean())
+		release.prerelease = pre->get<bool>();
+
+	// Only a link to github.com is ever shown or opened.
+	if (release.url.rfind("https://github.com/", 0) != 0)
+		release.url.clear();
+	return true;
+}
+
+} // namespace
+
+bool parseReleaseList(const std::string &json, std::vector<ReleaseInfo> &out, std::string &error)
+{
+	out.clear();
+	const nlohmann::json root = nlohmann::json::parse(json, nullptr, false);
+	if (root.is_discarded()) {
+		error = "The answer from GitHub was not valid JSON.";
+		return false;
+	}
+	if (!root.is_array()) {
+		// GitHub answers errors with {"message": "..."}.
+		const auto message = root.find("message");
+		error = message != root.end() && message->is_string()
+				? "GitHub answered: " + message->get<std::string>().substr(0, 200)
+				: std::string("The answer from GitHub is not a list of releases.");
+		return false;
+	}
+
+	for (const nlohmann::json &entry : root) {
+		if (!entry.is_object())
+			continue;
+		if (const auto draft = entry.find("draft"); draft != entry.end() && draft->is_boolean() && draft->get<bool>())
+			continue;
+		ReleaseInfo release;
+		if (readRelease(entry, release))
+			out.push_back(std::move(release));
+	}
+	return true;
+}
+
+bool newestRelease(const std::vector<ReleaseInfo> &releases, bool includePrereleases, ReleaseInfo &out)
+{
+	bool found = false;
+	SemVer best;
+	for (const ReleaseInfo &release : releases) {
+		SemVer version;
+		if (!parseSemVer(release.tag, version))
+			continue;
+		// The tag decides, not the flag on GitHub: 1.0.0-rc.1 is a candidate whatever the flag says.
+		if (!includePrereleases && (release.prerelease || !version.prerelease.empty()))
+			continue;
+		if (!found || compareSemVer(version, best) > 0) {
+			best = version;
+			out = release;
+			found = true;
+		}
+	}
+	return found;
+}
+
 UpdateResult evaluateRelease(const std::string &currentVersion, const ReleaseInfo &release)
 {
 	UpdateResult result;
@@ -355,8 +429,15 @@ UpdateResult checkForUpdate(const std::string &repositoryUrl, const std::string 
 					  ? std::format("RelayDock/{}.{}.{}", current.major, current.minor, current.patch)
 					  : std::string("RelayDock");
 
-	const HttpResponse response = httpsGet("api.github.com", std::format("/repos/{}/{}/releases/latest", owner, name), agent,
-					       10000, 512 * 1024, cancel);
+	// "latest" on GitHub means the newest finished release. A release candidate asks for the
+	// list instead, which includes candidates.
+	const bool candidate = !current.prerelease.empty();
+	const std::string path = candidate ? std::format("/repos/{}/{}/releases?per_page=10", owner, name)
+					   : std::format("/repos/{}/{}/releases/latest", owner, name);
+	// The list carries the notes and the files of every release in it, so it gets more room.
+	const size_t maxBytes = candidate ? 2 * 1024 * 1024 : 512 * 1024;
+
+	const HttpResponse response = httpsGet("api.github.com", path, agent, 10000, maxBytes, cancel);
 	if (cancel.load() || response.error == "cancelled") {
 		result.status = UpdateStatus::Cancelled;
 		return result;
@@ -366,8 +447,8 @@ UpdateResult checkForUpdate(const std::string &repositoryUrl, const std::string 
 		result.error = response.error;
 		return result;
 	}
-	if (response.status == 404) {
-		// The project exists but has published no release yet.
+	if (response.status == 404 && !candidate) {
+		// The project exists but has published no finished release yet.
 		result.status = UpdateStatus::UpToDate;
 		return result;
 	}
@@ -379,6 +460,21 @@ UpdateResult checkForUpdate(const std::string &repositoryUrl, const std::string 
 
 	ReleaseInfo release;
 	std::string error;
+	if (candidate) {
+		std::vector<ReleaseInfo> releases;
+		if (!parseReleaseList(response.body, releases, error)) {
+			result.status = UpdateStatus::Failed;
+			result.error = error;
+			return result;
+		}
+		if (!newestRelease(releases, true, release)) {
+			// Nothing is published yet.
+			result.status = UpdateStatus::UpToDate;
+			return result;
+		}
+		return evaluateRelease(currentVersion, release);
+	}
+
 	if (!parseLatestRelease(response.body, release, error)) {
 		result.status = UpdateStatus::Failed;
 		result.error = error;

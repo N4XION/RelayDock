@@ -7,6 +7,7 @@
 #include <atomic>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace rd {
 
@@ -54,6 +55,14 @@ bool parseGitHubRepository(const std::string &url, std::string &owner, std::stri
 // Reads the answer of GET /repos/{owner}/{name}/releases/latest.
 bool parseLatestRelease(const std::string &json, ReleaseInfo &out, std::string &error);
 
+// Reads the answer of GET /repos/{owner}/{name}/releases, which is a list and includes release
+// candidates. Drafts and entries without a tag are left out. An empty list is a valid answer.
+bool parseReleaseList(const std::string &json, std::vector<ReleaseInfo> &out, std::string &error);
+
+// The release with the highest version number. Returns false when the list holds no release
+// whose tag is a version, or only release candidates while `includePrereleases` is false.
+bool newestRelease(const std::vector<ReleaseInfo> &releases, bool includePrereleases, ReleaseInfo &out);
+
 enum class UpdateStatus {
 	NotConfigured,   // This build has no repository
 	UpToDate,
@@ -89,6 +98,9 @@ HttpResponse httpsGet(const std::string &host, const std::string &path, const st
 		      int timeoutMs, size_t maxBytes, const std::atomic<bool> &cancel);
 
 // The whole check. `repositoryUrl` is the project page, `currentVersion` the running version.
+//
+// A finished release is only told about finished releases. A release candidate is also told
+// about newer release candidates, because whoever tests one wants the next one.
 UpdateResult checkForUpdate(const std::string &repositoryUrl, const std::string &currentVersion,
 			    const std::atomic<bool> &cancel);
 

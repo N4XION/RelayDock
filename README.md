@@ -4,6 +4,15 @@ A free and open-source OBS Studio multistream plugin that lets you stream to Twi
 
 Your streams go straight from your PC to each platform. RelayDock has no server, no account, no subscription and no telemetry.
 
+## Download
+
+Get the newest version from the [Releases](../../releases) page. Each release lists its files under Assets:
+
+- `RelayDock-<version>-windows-x64-Setup.exe` for an OBS Studio that is installed on your PC. Close OBS, run it, start OBS and open Docks, RelayDock.
+- `RelayDock-<version>-windows-x64.zip` for a portable OBS Studio.
+
+You need Windows 11 (64-bit) and OBS Studio 32.0.0 or newer. [docs/installation.md](docs/installation.md) has the steps, and [docs/release-notes](docs/release-notes) has the notes of every release.
+
 ![The RelayDock dock inside OBS Studio with three destinations live](docs/screenshots/obs-with-dock.png)
 
 ## Status
@@ -13,7 +22,7 @@ This is release candidate 1.0.0-rc.1.
 - Built and tested on Windows 11 with OBS Studio 32.0.4 and 32.2.2.
 - Every feature below is covered by automated tests that stream to a test server on the same PC.
 - No real platform has received a stream from this version in the project's own testing yet. That needs real accounts.
-- The ZIP install is tested. The installer has not been built or run yet.
+- The installer and the ZIP install are tested. Nobody has started an installed OBS Studio with RelayDock put there by the installer yet.
 - [docs/testing.md](docs/testing.md) lists what is verified, and [docs/release-checklist.md](docs/release-checklist.md) lists what is still open before 1.0.0.
 
 If you try it with a real platform, a [platform test report](../../issues/new/choose) helps the next person.

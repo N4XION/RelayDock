@@ -9,8 +9,6 @@ RelayDock is free. It needs no account.
 
 ## Install with the installer
 
-For release candidate 1.0.0-rc.1: nobody has built or run the installer yet. The steps below describe what its script does. The ZIP install is tested. [release-checklist.md](release-checklist.md) shows the current state.
-
 1. Close OBS Studio.
 2. Download `RelayDock-<version>-windows-x64-Setup.exe` from the Releases page of this repository.
 3. Check the file. See "Check your download" below.
@@ -25,6 +23,10 @@ C:\ProgramData\obs-studio\plugins\relaydock
 ```
 
 It asks for administrator rights only when Windows does not let your account write to that folder. It changes nothing else: no registry settings for OBS, no start-up entries, no services, no files in the OBS program folder.
+
+The installer refuses to copy files while OBS Studio runs, and it warns when it finds no OBS Studio or one that is too old.
+
+To install without any question, for example from a script, run it with `/VERYSILENT`.
 
 ## Install from the ZIP
 
@@ -73,6 +75,8 @@ RelayDock never updates itself. Settings, Updates has a Check for updates button
 Close OBS. Open Windows Settings, Apps, Installed apps, find RelayDock and choose Uninstall.
 
 The uninstaller removes the plugin files. It asks whether to remove your RelayDock settings and saved stream keys too. Without that step they stay, so a later install picks them up.
+
+From a script, `unins000.exe /VERYSILENT` in the plugin folder uninstalls and keeps settings and keys. Add `/REMOVEDATA=1` to remove them too.
 
 To remove them by hand:
 

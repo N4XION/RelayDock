@@ -258,6 +258,71 @@ TEST_SUITE("update.check")
 		CHECK_FALSE(parseLatestRelease("", release, error));
 	}
 
+	TEST_CASE("a list of releases is read, drafts are left out, and odd answers fail cleanly")
+	{
+		std::vector<ReleaseInfo> releases;
+		std::string error;
+		REQUIRE(parseReleaseList(
+			R"([{"tag_name":"v1.0.0-rc.2","name":"Second candidate","html_url":"https://github.com/o/n/releases/tag/v1.0.0-rc.2","prerelease":true},
+			    {"tag_name":"v1.0.0-rc.1","html_url":"https://evil.example/x","prerelease":true},
+			    {"tag_name":"v9.9.9","draft":true},
+			    {"name":"no tag"}, 7, "text"])",
+			releases, error));
+		REQUIRE(releases.size() == 2);
+		CHECK(releases[0].tag == "v1.0.0-rc.2");
+		CHECK(releases[0].name == "Second candidate");
+		CHECK(releases[0].prerelease);
+		CHECK(releases[0].url == "https://github.com/o/n/releases/tag/v1.0.0-rc.2");
+		CHECK(releases[1].tag == "v1.0.0-rc.1");
+		CHECK(releases[1].url.empty()); // Not a github.com link, so it is dropped
+
+		// A project without releases answers with an empty list. That is not an error.
+		REQUIRE(parseReleaseList("[]", releases, error));
+		CHECK(releases.empty());
+
+		CHECK_FALSE(parseReleaseList(R"({"message":"Not Found"})", releases, error));
+		CHECK(error.find("Not Found") != std::string::npos);
+		CHECK_FALSE(parseReleaseList("<html>", releases, error));
+		CHECK_FALSE(parseReleaseList("", releases, error));
+		CHECK_FALSE(parseReleaseList("42", releases, error));
+	}
+
+	TEST_CASE("the newest release is the one with the highest version")
+	{
+		const std::vector<ReleaseInfo> releases = {
+			{"v1.0.0-rc.1", "", "", true}, {"v1.0.0-rc.3", "", "", true}, {"v1.0.0-rc.2", "", "", true},
+			{"v0.9.0", "", "", false},     {"nightly", "", "", false},
+		};
+		ReleaseInfo newest;
+		REQUIRE(newestRelease(releases, true, newest));
+		CHECK(newest.tag == "v1.0.0-rc.3");
+
+		// Without candidates, only finished releases count.
+		REQUIRE(newestRelease(releases, false, newest));
+		CHECK(newest.tag == "v0.9.0");
+
+		// A finished release outranks its own candidates.
+		std::vector<ReleaseInfo> withFinal = releases;
+		withFinal.push_back({"v1.0.0", "", "", false});
+		REQUIRE(newestRelease(withFinal, true, newest));
+		CHECK(newest.tag == "v1.0.0");
+
+		// A candidate by its tag counts as one, whatever the flag says.
+		CHECK_FALSE(newestRelease({{"v2.0.0-rc.1", "", "", false}}, false, newest));
+		CHECK_FALSE(newestRelease({}, true, newest));
+		CHECK_FALSE(newestRelease({{"nightly", "", "", false}}, true, newest));
+	}
+
+	TEST_CASE("a release candidate hears about the next candidate and about the finished release")
+	{
+		const ReleaseInfo next{"v1.0.0-rc.2", "", "", true};
+		CHECK(evaluateRelease("1.0.0-rc.1", next).status == UpdateStatus::UpdateAvailable);
+		CHECK(evaluateRelease("1.0.0-rc.2", next).status == UpdateStatus::UpToDate);
+		CHECK(evaluateRelease("1.0.0-rc.1", ReleaseInfo{"v1.0.0", "", "", false}).status == UpdateStatus::UpdateAvailable);
+		// A finished release is newer than every candidate with its number.
+		CHECK(evaluateRelease("1.0.0", next).status == UpdateStatus::UpToDate);
+	}
+
 	TEST_CASE("a release is compared with the running version")
 	{
 		ReleaseInfo release;
@@ -308,6 +373,22 @@ TEST_SUITE("update.check")
 		CHECK(result.status == UpdateStatus::UpdateAvailable);
 		CHECK_FALSE(result.release.tag.empty());
 		CHECK(contains(result.release.url, "https://github.com/obsproject/obs-studio/releases/"));
+	}
+
+	// The same for a release candidate, which asks for the list of releases instead.
+	//   relaydock-tests --no-skip -tc="live: a release candidate asks GitHub for the list"
+	TEST_CASE("live: a release candidate asks GitHub for the list" * doctest::skip())
+	{
+		const std::atomic<bool> cancel{false};
+		const UpdateResult result = checkForUpdate("https://github.com/obsproject/obs-studio", "1.0.0-rc.1", cancel);
+		CAPTURE(result.error);
+		CHECK(result.status == UpdateStatus::UpdateAvailable);
+		CHECK(contains(result.release.url, "https://github.com/obsproject/obs-studio/releases/"));
+
+		// A project page that does not exist is an error, not "up to date".
+		const UpdateResult missing =
+			checkForUpdate("https://github.com/obsproject/this-project-does-not-exist-relaydock-test", "1.0.0-rc.1", cancel);
+		CHECK(missing.status == UpdateStatus::Failed);
 	}
 }
 

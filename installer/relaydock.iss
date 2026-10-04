@@ -13,6 +13,13 @@
 ;   - On uninstall, removes the plugin files. It removes settings and saved stream keys only
 ;     when the user says so.
 ;
+; Command line switches of its own, next to the ones every Inno Setup installer has:
+;   /OBSDIR="folder"   Setup: look for OBS Studio in this folder instead of asking the registry.
+;                      It only decides which warning Setup shows. The plugin folder stays the same.
+;   /REMOVEDATA=1      Uninstall: also remove settings and saved stream keys, without asking.
+;
+; tests\integration\Test-Installer.ps1 runs Setup and the uninstaller and checks what they did.
+;
 ; scripts\package.ps1 passes the values below on the ISCC command line.
 
 #ifndef AppVersion
@@ -105,7 +112,9 @@ end;
 
 function ObsInstallDir(): String;
 begin
-  Result := '';
+  Result := ExpandConstant('{param:OBSDIR|}');
+  if Result <> '' then
+    Exit;
   if not RegQueryStringValue(HKLM64, ObsRegKey, '', Result) then
     RegQueryStringValue(HKLM32, ObsRegKey, '', Result);
 end;
@@ -180,27 +189,35 @@ begin
   ObsDir := ObsInstallDir();
   if (ObsDir = '') or not FileExists(ObsDir + '\bin\64bit\obs64.exe') then
   begin
+    Log('RelayDock Setup: no OBS Studio found.');
     if SuppressibleMsgBox(CustomMessage('ObsMissing'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2, IDYES) <> IDYES then
     begin
       Result := False;
       Exit;
     end;
   end
-  else if GetVersionNumbersString(ObsDir + '\bin\64bit\obs64.exe', ObsVersion) and
-          not VersionAtLeast(ObsVersion, '{#ObsMinimumVersion}') then
+  else
   begin
-    if SuppressibleMsgBox(FmtMessage(CustomMessage('ObsTooOld'), [ObsVersion]), mbConfirmation,
-                          MB_YESNO or MB_DEFBUTTON2, IDYES) <> IDYES then
+    if not GetVersionNumbersString(ObsDir + '\bin\64bit\obs64.exe', ObsVersion) then
+      ObsVersion := '';
+    Log('RelayDock Setup: found OBS Studio ' + ObsVersion + ' in ' + ObsDir);
+    if (ObsVersion <> '') and not VersionAtLeast(ObsVersion, '{#ObsMinimumVersion}') then
     begin
-      Result := False;
-      Exit;
+      if SuppressibleMsgBox(FmtMessage(CustomMessage('ObsTooOld'), [ObsVersion]), mbConfirmation,
+                            MB_YESNO or MB_DEFBUTTON2, IDYES) <> IDYES then
+      begin
+        Result := False;
+        Exit;
+      end;
     end;
   end;
 
   // Administrator rights only when the folder really needs them.
   Target := ExpandConstant('{param:DIR|' + PluginDir('') + '}');
+  Log('RelayDock Setup: plugin folder ' + Target);
   if not CanWriteTo(Target) then
   begin
+    Log('RelayDock Setup: this account cannot write to the plugin folder.');
     if IsAdmin then
       Exit; // Already elevated. Let the file copy report the real error.
     SuppressibleMsgBox(FmtMessage(CustomMessage('NeedAdmin'), [Target]), mbInformation, MB_OK, IDOK);
@@ -270,13 +287,23 @@ begin
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  RemoveData: Boolean;
 begin
   if CurUninstallStep <> usPostUninstall then
     Exit;
-  // Keeping the data is the default, also for a silent uninstall.
-  if SuppressibleMsgBox(CustomMessage('RemoveData'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2, IDNO) = IDYES then
+  // Keeping the data is the default, also for a silent uninstall. /REMOVEDATA=1 removes it
+  // without asking.
+  if ExpandConstant('{param:REMOVEDATA|0}') = '1' then
+    RemoveData := True
+  else
+    RemoveData := SuppressibleMsgBox(CustomMessage('RemoveData'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2, IDNO) = IDYES;
+  if RemoveData then
   begin
+    Log('RelayDock uninstall: removing settings and saved stream keys.');
     DelTree(ExpandConstant('{userappdata}\obs-studio\plugin_config\relaydock'), True, True, True);
     RemoveSavedKeys();
-  end;
+  end
+  else
+    Log('RelayDock uninstall: settings and saved stream keys stay.');
 end;

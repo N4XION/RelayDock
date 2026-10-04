@@ -390,7 +390,11 @@ if (Test-Selected 'settings') {
         $report.Check('settings: no page shows a stream key', ($leaks -eq 0))
         $report.Check('settings: About shows the version and the six legal documents',
             ((Test-Label $ui.page_about '^Version 1\.0\.0') -and @($ui.page_about.buttons | Where-Object { $_.text -eq 'View' }).Count -eq 6))
-        $report.Check('settings: Updates says plainly that this build has no update check', (Test-Label $ui.page_updates 'no project page configured'))
+        # Opening the page must not contact GitHub. The check runs on request only.
+        $onStart = Get-Check $ui.page_updates 'Check when OBS starts'
+        $report.Check('settings: Updates offers a check on request, and the check at every start is off',
+            ($null -ne (Get-Button $ui.page_updates 'Check for updates') -and $null -ne $onStart -and -not $onStart.checked -and
+             (Test-Label $ui.page_updates 'never downloads or installs anything')))
         $report.Check('settings: choosing Potato on the Performance page slows measuring to every two seconds',
             ($run.Result.snapshots.potato.performance.tick_interval_ms -eq 2000))
         $report.Check('settings: an upload speed that is too low shows as exceeded',

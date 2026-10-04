@@ -44,15 +44,17 @@ Pass one name to `-Only` per run.
 | `Test-Endurance.ps1` | A long stream with a measurement every minute. |
 | `Run-All.ps1` | The first six, with a results table. |
 | `Test-ZipInstall.ps1` | The release ZIP, copied into a portable OBS by the steps of `docs/manual-installation.md`, then removed again. |
+| `Test-Installer.ps1` | The installer and its uninstaller, silently and without administrator rights. It stops at once on a PC that has RelayDock installed. |
 
 `Test-Ui.ps1` shows the OBS window, because a hidden window has no layout to check. The other suites keep OBS in the system tray.
 
-`Test-ZipInstall.ps1` and `Test-PluginLoad.ps1` need no test hooks. Run both against the release build before a release:
+`Test-ZipInstall.ps1`, `Test-Installer.ps1` and `Test-PluginLoad.ps1` need no test hooks. Run them against the release build before a release:
 
 ```powershell
 .\scripts\package.ps1
 .\tests\integration\Test-PluginLoad.ps1 -ObsRoot C:\obs-test -PluginRunDir build_x64\rundir\RelWithDebInfo
 .\tests\integration\Test-ZipInstall.ps1 -ObsRoot C:\obs-test -ZipPath (Get-Item release\RelayDock-*-windows-x64.zip)
+.\tests\integration\Test-Installer.ps1 -ObsRoot C:\obs-test -SetupPath (Get-Item release\RelayDock-*-Setup.exe) -ZipPath (Get-Item release\RelayDock-*-windows-x64.zip)
 ```
 
 ## How a test works

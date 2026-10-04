@@ -21,7 +21,7 @@ jobs:
     name: Repository checks
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: No secrets in the repository
         shell: pwsh
         run: ./scripts/scan-secrets.ps1
@@ -39,7 +39,7 @@ jobs:
     name: Unit and security tests
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # The build number is the number of commits
       - name: Configure
@@ -54,11 +54,11 @@ jobs:
     runs-on: windows-2022
     needs: [checks, core]
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Restore OBS sources and dependencies
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .deps
           key: deps-${{ runner.os }}-${{ hashFiles('buildspec.json', 'cmake/**') }}
@@ -78,7 +78,7 @@ jobs:
         shell: pwsh
         run: ./scripts/package.ps1 -Preset windows-ci-x64 -SkipBuild -RequireInstaller
       - name: Upload release files
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: relaydock-${{ github.sha }}
           path: release/

@@ -79,6 +79,7 @@ The suites above use a test build, which contains the scenario runner. A release
 | --- | --- |
 | `Test-PluginLoad.ps1` with the release build | The release DLL loads and unloads cleanly in OBS. |
 | `Test-ZipInstall.ps1` | The ZIP has the layout the manual guide shows. Copied into a portable OBS by the guide's steps, RelayDock loads from the OBS folder, finds its text and closes cleanly. With the files removed, OBS starts without it. |
+| `Test-Installer.ps1` | The installer runs without administrator rights and puts the same files as the ZIP into the plugin folder. It installs over an existing version, refuses while OBS runs, and warns when it finds no OBS. The uninstaller removes the plugin, keeps settings and keys by default, and removes them on request, leaving other credentials alone. |
 
 ## Results
 
@@ -120,7 +121,7 @@ No test looks at the Windows clipboard history (Win+V) or the cloud clipboard. R
 
 ### The installer
 
-The release workflow builds the installer with Inno Setup. Nobody has built or run the installer yet. Installing, upgrading and uninstalling on a clean PC is a manual step in the release checklist.
+`Test-Installer.ps1` installs into a scratch folder, and with `-DefaultFolder` into the folder OBS reads. It never starts an installed OBS Studio, because that would use a real user's OBS settings. So one step stays with a person: run the installer, start OBS, and see RelayDock under Docks. The release checklist has it.
 
 ### Other PCs
 

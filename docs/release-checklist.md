@@ -66,15 +66,19 @@ Record each run with the platform test report issue template, and update the tab
 
 ## 6. Installer
 
-On a PC or virtual machine that has OBS Studio installed and never had RelayDock.
+`tests/integration/Test-Installer.ps1 -DefaultFolder` covers these on a PC that never had RelayDock:
 
-- [ ] The installer starts without asking for administrator rights
+- [ ] The installer runs without asking for administrator rights
 - [ ] It refuses to continue while OBS runs
-- [ ] RelayDock appears under Docks in OBS
+- [ ] Installing over an existing version works
+- [ ] Uninstall removes the plugin folder and keeps settings and keys
+- [ ] Uninstall with "also remove settings and keys" removes `plugin_config\relaydock` and the `RelayDock:` credentials, and no other credential
+- [ ] Without OBS, the installer says so
+
+These need a person, on a PC that has OBS Studio installed:
+
+- [ ] After the installer ran, RelayDock appears under Docks in OBS
 - [ ] Installing a newer version over it keeps destinations and keys
-- [ ] Uninstall removes the plugin folder
-- [ ] Uninstall with "also remove settings and keys" removes `plugin_config\relaydock` and the `RelayDock:` credentials
-- [ ] On a PC without OBS, the installer says so
 - [ ] The ZIP install works in a portable OBS, following [manual-installation.md](manual-installation.md) (`tests/integration/Test-ZipInstall.ps1`)
 - [ ] The release build loads and unloads cleanly (`tests/integration/Test-PluginLoad.ps1` with the release build)
 - [ ] What Windows SmartScreen shows is noted in the release notes
@@ -98,12 +102,15 @@ On a PC or virtual machine that has OBS Studio installed and never had RelayDock
 
 ## 9. Publish
 
+The release workflow publishes by itself, so finish the gates above before you tag.
+
 1. Set `version` and `versionSuffix` in `buildspec.json`.
-2. Commit, then tag the commit `v<version>`.
-3. Push the tag. GitHub Actions builds the files and creates a draft release.
-4. Download the files from the draft and check their hashes against `SHA256SUMS.txt`.
-5. Write the release notes from `CHANGELOG.md`. Name every open gate. Name the compiler version from the build log (the line "The CXX compiler identification is MSVC ..."), so others can reproduce the build.
-6. Publish the draft.
+2. Write `docs/release-notes/<version>.md` from `CHANGELOG.md`. Name every open gate in it.
+3. Read the release page before it exists: `scripts/publish-release.ps1 -Tag v<version> -Repository <owner>/RelayDock -DryRun`.
+4. Commit, push, and wait for the build of that commit to pass.
+5. Tag the commit `v<version>` and push the tag.
+6. GitHub Actions builds the files, checks that the build is reproducible, and publishes the release: the notes, the files, their hashes, the commit and the compiler version. A version with a suffix, such as `1.0.0-rc.1`, becomes a pre-release.
+7. Download the files from the release and run `Test-ZipInstall.ps1` and `Test-Installer.ps1` on them.
 
 ## Version numbers
 
@@ -119,6 +126,8 @@ Checked on 4 October 2026. "Open" means not done yet. Nothing on this list is as
 
 The integration, performance and endurance tests ran on build `1.0.0-rc.1+9.54512d94d`. The commits after it changed documents, test scripts and result files, and no file under `src`. The release build checks ran on build `1.0.0-rc.1+10.378f8dc6e`.
 
+Those two ids are from before the first push to GitHub. That push corrected the commit author and replaced a Windows user name in one test line, which gave every commit a new id. Build `9.54512d94d` is commit `8efd158aa`, and build `10.378f8dc6e` is commit `4409f26ca`. Apart from that one line in `tests/security/test_diagnostics_leaks.cpp`, their files are the same.
+
 | Gate | Status | Evidence, or what is missing |
 | --- | --- | --- |
 | 1. Automated checks | Passed on the development PC. Open in CI. | The four scripts pass, and so do 302 unit and security test cases. GitHub Actions has not run, because the repository is not on GitHub yet. |
@@ -132,16 +141,16 @@ The integration, performance and endurance tests ran on build `1.0.0-rc.1+9.5451
 | 4. Endurance, 6 hours | Open | The run had not finished when this was written. |
 | 5. Platforms | Open | Nobody has streamed to Twitch, YouTube, Facebook or TikTok with this version. It needs a person with accounts. |
 | 5. Custom RTMPS against a real server | Open | Local tests use plain RTMP. |
-| 6. Installer | Open | `installer/relaydock.iss` is written. Nobody has compiled or run it: Inno Setup is not on the development PC, and CI has not run. |
+| 6. Installer | Built. Installing is open. | `scripts/package.ps1` built it with Inno Setup 6.7.3. Started while OBS was running, it refused, installed nothing and left no uninstall entry. Nobody has installed, upgraded or uninstalled with it yet. |
 | 6. ZIP install in a portable OBS | Passed | `tests/integration/Test-ZipInstall.ps1`, 18 checks, OBS 32.2.2. |
 | 6. The release build loads and unloads | Passed | `tests/integration/Test-PluginLoad.ps1` with the release build, 13 checks, OBS 32.2.2. |
 | 7. Keys in the OBS log and the diagnostics report | Passed, automated | Every integration suite searches the OBS log for its test keys. The security tests plant a key in every field of the report. A person has not read a report after a real stream yet. |
 | 7. Copy Key and the clipboard history | Open | The automated checks cover the clipboard. Nobody has looked at Win+V after a copy yet. |
-| 7. Private vulnerability reporting | Open | It is a repository setting on GitHub. |
+| 7. Private vulnerability reporting | Open | GitHub offers the setting for public repositories. The repository is private. |
 | 7. The release DLL contains no path from the build PC | Passed | `scripts/package.ps1` checks it and refuses to package otherwise. |
 | 8. Platform limits | Checked 2026-10-04 | [research/platform-requirements.md](research/platform-requirements.md) |
 | 8. Screenshots | Made from the running plugin | `docs/screenshots`, by `tests/integration/Capture-Screenshots.ps1`, on build `54512d94d`. |
 | 8. Legal documents | Not reviewed by a lawyer | Each document says so in its first paragraph. |
-| 9. Publish | Open | No GitHub owner is chosen and nothing is pushed. `repository` in `buildspec.json` is empty, so this build has no update check. |
+| 9. Publish | Open | The source is at github.com/N4XION/RelayDock, in a private repository. No release is published. `repository` in `buildspec.json` is empty, so this build has no update check. |
 
 Hardware that has not been tested: NVIDIA and Intel graphics, and Windows 10. See [testing.md](testing.md).
