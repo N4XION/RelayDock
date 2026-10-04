@@ -1,6 +1,6 @@
 # Release checklist
 
-A release is published when every gate on this page is met, or when the release notes say plainly which gate is open and why. A release candidate may have open gates. A final release may not.
+A release is published when every gate on this page is met, or when the release notes say plainly which gate is open and why. Version 1.0.0 was published with open gates, on the decision of the project owner. Its release notes and the table at the end of this page list them.
 
 The status of the current version is at the end of this page.
 

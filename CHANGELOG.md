@@ -10,9 +10,11 @@ A version with a suffix, such as `1.0.0-rc.1`, is a pre-release.
 
 Each version has a heading with its release date. `scripts/update-versions.ps1` builds `docs/versions.md` from this file: the table of versions, their files and their changes.
 
-## 1.0.0-rc.3 (2026-10-05)
+## 1.0.0 (2026-10-05)
 
-The third release candidate. It adds a chat dock for Twitch and YouTube, the logo of each platform, and an uninstall from inside RelayDock.
+The first version without the release candidate label. It adds a chat dock for Twitch and YouTube, the logo of each platform, and an uninstall from inside RelayDock.
+
+The project owner decided to publish it as 1.0.0 while some release checks are still open. The release notes list them.
 
 ### Added
 

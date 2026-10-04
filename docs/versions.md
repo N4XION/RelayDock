@@ -6,7 +6,7 @@ Every RelayDock version, its files and what changed in it. The newest is at the 
 
 | Version | Released | Kind | Installer | ZIP for a portable OBS | More |
 | --- | --- | --- | --- | --- | --- |
-| 1.0.0-rc.3 | 2026-10-05 | Release candidate | [RelayDock-1.0.0-rc.3-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.3/RelayDock-1.0.0-rc.3-windows-x64-Setup.exe) | [RelayDock-1.0.0-rc.3-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.3/RelayDock-1.0.0-rc.3-windows-x64.zip) | [What changed](#version-100-rc3), [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0-rc.3) |
+| 1.0.0 | 2026-10-05 | Release | [RelayDock-1.0.0-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0/RelayDock-1.0.0-windows-x64-Setup.exe) | [RelayDock-1.0.0-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0/RelayDock-1.0.0-windows-x64.zip) | [What changed](#version-100), [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0) |
 | 1.0.0-rc.2 | 2026-10-04 | Release candidate | [RelayDock-1.0.0-rc.2-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.2/RelayDock-1.0.0-rc.2-windows-x64-Setup.exe) | [RelayDock-1.0.0-rc.2-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.2/RelayDock-1.0.0-rc.2-windows-x64.zip) | [What changed](#version-100-rc2), [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0-rc.2) |
 | 1.0.0-rc.1 | 2026-10-04 | Release candidate | [RelayDock-1.0.0-rc.1-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/RelayDock-1.0.0-rc.1-windows-x64-Setup.exe) | [RelayDock-1.0.0-rc.1-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/RelayDock-1.0.0-rc.1-windows-x64.zip) | [What changed](#version-100-rc1), [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0-rc.1) |
 
@@ -24,18 +24,20 @@ The installer replaces the old version. Your destinations, settings and stream k
 
 RelayDock looks for a newer version each time OBS starts and tells you when there is one. Settings, Updates has a Check for updates button and the switch for the check at start-up. RelayDock never downloads or installs anything by itself.
 
-## Version 1.0.0-rc.3
+## Version 1.0.0
 
-Released 2026-10-05. Release candidate.
+Released 2026-10-05. Release.
 
 Files:
 
-- [RelayDock-1.0.0-rc.3-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.3/RelayDock-1.0.0-rc.3-windows-x64-Setup.exe)
-- [RelayDock-1.0.0-rc.3-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.3/RelayDock-1.0.0-rc.3-windows-x64.zip)
-- [SHA256SUMS.txt](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.3/SHA256SUMS.txt)
-- [THIRD_PARTY_LICENSES.txt](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.3/THIRD_PARTY_LICENSES.txt)
+- [RelayDock-1.0.0-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0/RelayDock-1.0.0-windows-x64-Setup.exe)
+- [RelayDock-1.0.0-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0/RelayDock-1.0.0-windows-x64.zip)
+- [SHA256SUMS.txt](https://github.com/N4XION/RelayDock/releases/download/v1.0.0/SHA256SUMS.txt)
+- [THIRD_PARTY_LICENSES.txt](https://github.com/N4XION/RelayDock/releases/download/v1.0.0/THIRD_PARTY_LICENSES.txt)
 
-The third release candidate. It adds a chat dock for Twitch and YouTube, the logo of each platform, and an uninstall from inside RelayDock.
+The first version without the release candidate label. It adds a chat dock for Twitch and YouTube, the logo of each platform, and an uninstall from inside RelayDock.
+
+The project owner decided to publish it as 1.0.0 while some release checks are still open. The release notes list them.
 
 ### Added
 
