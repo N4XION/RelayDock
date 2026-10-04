@@ -31,6 +31,10 @@
 #include <cstring>
 #include <vector>
 
+#include <windows.h>
+
+#include <psapi.h>
+
 namespace rd {
 
 namespace {
@@ -866,6 +870,21 @@ ScenarioRunner::StepResult ScenarioRunner::pollStep(const json &step, std::strin
 	return StepResult::Failed;
 }
 
+namespace {
+
+// Memory the process has allocated for itself, in MB. Unlike the working set, Windows does not
+// shrink this number when OBS sits minimised, so it is the one to watch for a leak.
+double privateMemoryMb()
+{
+	PROCESS_MEMORY_COUNTERS_EX counters{};
+	counters.cb = sizeof(counters);
+	if (!GetProcessMemoryInfo(GetCurrentProcess(), reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&counters), sizeof(counters)))
+		return 0.0;
+	return static_cast<double>(counters.PrivateUsage) / (1024.0 * 1024.0);
+}
+
+} // namespace
+
 json ScenarioRunner::snapshot()
 {
 	json out;
@@ -979,6 +998,7 @@ json ScenarioRunner::snapshot()
 		{"active_fps", obs_get_active_fps()},
 		{"average_frame_time_ms", obs_get_average_frame_time_ns() / 1000000.0},
 		{"memory_mb", os_get_proc_resident_size() / (1024.0 * 1024.0)},
+		{"private_mb", privateMemoryMb()},
 		{"cpu_percent", cpu_ ? os_cpu_usage_info_query(cpu_) : 0.0},
 		{"live_destinations", app_.outputs().liveCount()},
 		{"total_bitrate_kbps", app_.outputs().totalBitrateKbps()},

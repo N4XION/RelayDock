@@ -118,12 +118,18 @@ if ($run.Result -and $run.Result.snapshots.stopped) {
     $report.Check('the two horizontal destinations shared one encoder throughout',
         ($last.destinations.a.video_encoder -eq $last.destinations.b.video_encoder -and $last.encoders.video_live -eq 2))
 
-    # Memory. The first minutes include start-up allocations, so compare from minute 5.
-    $memory = @($shots | ForEach-Object { [double]$_.obs.memory_mb })
+    # Memory. A leak shows in what OBS has allocated ("private" memory), so that is what the
+    # check compares. The first minutes include start-up allocations, so compare from minute 5.
+    #
+    # The working set, which is the part Windows keeps in RAM right now, is reported too but
+    # not checked: Windows trims it while OBS sits in the tray and gives it back later. In one
+    # run it read 136 MB at minute 5 and a steady 176 MB from minute 7 to the end.
+    $memory = @($shots | ForEach-Object { [double]$_.obs.private_mb })
+    $working = @($shots | ForEach-Object { [double]$_.obs.memory_mb })
     $from = [math]::Min(4, $memory.Count - 1)
     $growth = 100.0 * ($memory[-1] - $memory[$from]) / $memory[$from]
     $peak = ($memory | Measure-Object -Maximum).Maximum
-    $report.Check("memory at the end is within $MaxMemoryGrowthPercent percent of minute $($from + 1)", ($growth -le $MaxMemoryGrowthPercent),
+    $report.Check("allocated memory at the end is within $MaxMemoryGrowthPercent percent of minute $($from + 1)", ($growth -le $MaxMemoryGrowthPercent),
         ("{0:N0} MB at minute {1}, {2:N0} MB at the end, peak {3:N0} MB, change {4:N1} percent" -f $memory[$from], ($from + 1), $memory[-1], $peak, $growth))
 
     $cpu = @($shots | ForEach-Object { [double]$_.obs.cpu_percent })
@@ -162,7 +168,8 @@ if ($run.Result -and $run.Result.snapshots.stopped) {
     $lines.Add('| --- | --- | ---: | ---: | ---: | ---: | ---: |')
     foreach ($line in $summary) { $lines.Add($line) }
     $lines.Add('')
-    $lines.Add(("- OBS memory: {0:N0} MB at minute {1}, {2:N0} MB at the end, peak {3:N0} MB ({4:N1} percent change)" -f $memory[$from], ($from + 1), $memory[-1], $peak, $growth))
+    $lines.Add(("- Memory OBS allocated: {0:N0} MB at minute {1}, {2:N0} MB at the end, peak {3:N0} MB ({4:N1} percent change)" -f $memory[$from], ($from + 1), $memory[-1], $peak, $growth))
+    $lines.Add(("- Memory in RAM (working set, which Windows trims and restores): between {0:N0} and {1:N0} MB, {2:N0} MB at the end" -f ($working | Measure-Object -Minimum).Minimum, ($working | Measure-Object -Maximum).Maximum, $working[-1]))
     $lines.Add(("- OBS processor use: {0:N1} percent on average ({1:N1} in the first half, {2:N1} in the second)" -f $cpuAverage, $cpuFirst, $cpuSecond))
     $lines.Add(("- Rendering lag {0:N2} percent, encoder lag {1:N2} percent of all frames" -f $renderLag, $encodeLag))
     $lines.Add("- Longest stall of the OBS interface: $gap ms")

@@ -140,8 +140,8 @@ The id `54512d94d` is from before the first push to GitHub. That push corrected 
 | 2. Clipboard checks | Passed | Both ran: the key reached the clipboard and was gone 30 seconds later. |
 | 3. Performance | Measured | [performance-results.md](performance-results.md), on build `9.54512d94d`. There is no earlier release to compare with. |
 | 4. Endurance, 30 minutes | Passed | 28 of 28 checks, on build `9.54512d94d`. [test-results/endurance-30-min.md](test-results/endurance-30-min.md) |
-| 4. Endurance, 2 hours | Open | A first run was stopped after a few minutes, because the installer cannot be tested while OBS is open. The run started again after the release and had not finished when this was written. |
-| 4. Endurance, 6 hours | Open | It follows the 2 hour run. |
+| 4. Endurance, 2 hours | Open | Two runs were stopped before their end, because the installer refuses to run while any OBS is open: one after a few minutes, one after 118 of 120 minutes. The second one recorded 118 measurements, one per minute: three destinations live, 212,672 frames each, none dropped, no reconnect, one session each at the server, and OBS memory in RAM steady between 174 and 178 MB from minute 7 on. It did not finish, so it does not count. |
+| 4. Endurance, 6 hours | Open | It follows a finished 2 hour run. |
 | 5. Platforms | Open | Nobody has streamed to Twitch, YouTube, Facebook or TikTok with this version. It needs a person with accounts. |
 | 5. Custom RTMPS against a real server | Open | Local tests use plain RTMP. |
 | 6. Installer | Passed. One step with a person is open. | `tests/integration/Test-Installer.ps1 -DefaultFolder`, 27 checks: install, install over an existing one, refusal while OBS runs, no OBS found, uninstall, uninstall with settings and keys, and an install into `C:\ProgramData\obs-studio\plugins\relaydock`, all without administrator rights. The installer downloaded from the release page passed the same 27 checks. Nobody has started an installed OBS Studio with RelayDock put there by the installer. |
