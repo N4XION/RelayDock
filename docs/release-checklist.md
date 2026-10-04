@@ -129,24 +129,24 @@ A document version in `src/legal/legal_documents.cpp` changes whenever a legal t
 
 RelayDock is built against the oldest supported OBS version. Raising `obs.minimumVersion` in `buildspec.json` is a MINOR change at least, and the release notes must say so.
 
-## Status of 1.0.0
+## Status of 1.1.0
 
 Checked on 5 October 2026. "Open" means not done yet. Nothing on this list is assumed.
 
-The project owner decided to publish this version as 1.0.0, without the release candidate label, while the gates marked Open below are open.
+The project owner decided to publish this version, like 1.0.0, while the gates marked Open below are open.
 
-The unit tests, the integration suites and the release build checks ran on build `1.0.0+31.e3f7225be`. GitHub Actions built the release from the next commit, `fca89f1cf`, as build `1.0.0+32.fca89f1cf`. That commit added result files, screenshots, this table, the final release notes and three sentences in the README and the known limitations. It changed nothing that is built, apart from the build number and the commit id that every build carries.
+The unit tests, the integration suites and the release build checks ran on build `1.1.0+36.89739be7c`. GitHub Actions builds the release from the next commit. That commit adds result files, screenshots, this table and the final release notes, and corrects one check of the interface test. It changes nothing that is built, apart from the build number and the commit id that every build carries.
 
-The screenshots are from that build too. The performance measurements and the 30 minute endurance run are from build `1.0.0-rc.1+9.54512d94d`. Since that build, these parts changed: the update check and its window, the standard vertical layout, one step of the settings migration, the project page setting, the installer script, the legal texts, and everything this version adds, which is the chat readers with their network code, the platform logos and the uninstall from inside RelayDock. The code that connects, encodes and sends did not change.
+The screenshots are from that build too. The performance measurements and the 30 minute endurance run are from build `1.0.0-rc.1+9.54512d94d`. Since that build, these parts changed: the update check and its window, the standard vertical layout, one step of the settings migration, the project page setting, the installer script, the legal texts, and everything 1.0.0 and this version add: the chat readers with their network code, the platform logos, the uninstall from inside RelayDock, and Update now. The code that connects, encodes and sends did not change.
 
 The id `54512d94d` is from before the first push to GitHub. That push corrected the commit author and replaced a Windows user name in one test line, which gave every commit a new id. Build `9.54512d94d` has the files of commit `8efd158aa`, apart from that one line in `tests/security/test_diagnostics_leaks.cpp`.
 
 | Gate | Status | Evidence, or what is missing |
 | --- | --- | --- |
-| 1. Automated checks | Passed, on the development PC and on GitHub Actions | The five scripts, the unit and security tests (428 test cases), the plugin build, the installer and the package. GitHub Actions passed on the pushed commit, and the release workflow passed for the tag `v1.0.0`. The Actions tab of the repository shows every run. |
-| 1. Two builds give the same DLL | Passed | `scripts/check-reproducible.ps1` on the development PC: two builds in one folder matched byte for byte. The release workflow ran the same check on GitHub and passed. |
+| 1. Automated checks | Passed on the development PC | The five scripts, the unit and security tests (455 test cases), the plugin build, the installer and the package. GitHub Actions runs them on the pushed commit, and again before it publishes the tag. The Actions tab of the repository shows every run. |
+| 1. Two builds give the same DLL | Open for this version | The release workflow runs `scripts/check-reproducible.ps1` on GitHub and does not publish when the two builds differ. |
 | 2. Integration tests, OBS 32.0.4 | Passed | 538 checks, none failed, none skipped. [test-results/integration-obs-32.0.4.md](test-results/integration-obs-32.0.4.md) |
-| 2. Integration tests, OBS 32.2.2 | Passed | 538 checks, none failed, none skipped. [test-results/integration-obs-32.2.2.md](test-results/integration-obs-32.2.2.md) |
+| 2. Integration tests, OBS 32.2.2 | Passed | 538 checks, none failed, none skipped. A first run failed one check of the interface suite: the check still expected version 1.0.0 on the About page, which correctly showed 1.1.0. The check now reads the version from `buildspec.json`, and the whole run was repeated. [test-results/integration-obs-32.2.2.md](test-results/integration-obs-32.2.2.md) |
 | 2. Clipboard checks | Passed | Both ran on both OBS versions: the key reached the clipboard and was gone 30 seconds later. |
 | 3. Performance | Measured | [performance-results.md](performance-results.md), on build `9.54512d94d`. There is no earlier release to compare with. |
 | 4. Endurance, 30 minutes | Passed | 28 of 28 checks, on build `9.54512d94d`. [test-results/endurance-30-min.md](test-results/endurance-30-min.md) |
@@ -155,11 +155,13 @@ The id `54512d94d` is from before the first push to GitHub. That push corrected 
 | 5. TikTok | Partly | The project owner reported a stream to TikTok LIVE with 1.0.0-rc.1 on 4 October 2026, with a picture of it in the TikTok app. Sound, the numbers TikTok reports, stopping and reconnecting were not checked. |
 | 5. Twitch, YouTube, Facebook | Open | Nobody has streamed to them with RelayDock in the project's own testing. It needs a person with accounts. |
 | 5. Custom RTMPS against a real server | Open | Local tests use plain RTMP. |
+| 5. Update now against the real GitHub | Partly | The first step ran against the real GitHub on 5 October 2026: RelayDock asked for the newest release, fetched the checksum list of 1.0.0 through the redirect to GitHub's file servers, and found the checksum GitHub lists for the installer. A whole update from the real GitHub has not been done. The first one is the update from this version to the next. |
 | 5. Chat with the real Twitch and YouTube | Open | The chat readers are tested against stand-ins on the development PC. Nobody has signed in to Twitch or used a YouTube API key with RelayDock yet. |
-| 6. Installer | Passed before the rename. Not run on this build. | `tests/integration/Test-Installer.ps1 -TestBuild` passed 33 checks on 5 October 2026 with a test build of the installer, shortly before commit `69f74e4f4` recorded the installer script. That script has not changed since. The test was not repeated on the 1.0.0 build: an OBS Studio was open on the development PC, and the installer refuses to run then. |
-| 6. Uninstall from inside RelayDock | Passed before the rename. Not run on this build. | `tests/integration/Test-Uninstall.ps1` passed 23 checks on 5 October 2026, on build `1.0.0-rc.2+24.c00cc4a5f.dirty`, the working copy that became commit `69f74e4f4`. The uninstall code and its part of the settings window have not changed since. Not repeated on the 1.0.0 build, for the same reason as the installer test. |
+| 6. Installer | Passed | `tests/integration/Test-Installer.ps1 -TestBuild`, 33 checks, with a test build of the installer made from this build. Two more checks were skipped: they remove settings and saved keys, and the test leaves those alone on a PC that has RelayDock settings. They last passed on 5 October 2026, before the development PC had any. The release installer differs from a test build in its identity in Windows, in its folder, and in counting every OBS Studio as running. It also offers to start OBS Studio after an update. That offer has not been tested. |
+| 6. Uninstall from inside RelayDock | Passed | `tests/integration/Test-Uninstall.ps1`, 23 checks, OBS 32.2.2. |
+| 6. Update now | Passed | `tests/integration/Test-Update.ps1`, 49 checks, on OBS 32.0.4 and on OBS 32.2.2, with two test builds of the installer and a stand-in for the release pages. `tests/unit/test_update_download.cpp` has 27 test cases for the download and its checks. |
 | 6. A person's install | Done | The project owner installed 1.0.0-rc.1 with the wizard, and on 5 October 2026 ran the 1.0.0-rc.2 installer over it. After that the OBS log showed RelayDock 1.0.0-rc.2 loading with the settings carried over, and the entry under Installed apps named 1.0.0-rc.2. An earlier version of this table said that entry went missing after the first install. That was an error of observation: the development tools run inside an app package that has its own copy of the registry, and they had looked at that copy. Read from outside the package, the entry is there. |
-| 6. ZIP install in a portable OBS | Passed | `tests/integration/Test-ZipInstall.ps1`, 18 checks, on OBS 32.0.4 and 32.2.2, with the ZIP that `scripts/package.ps1` made on the development PC from build `31.e3f7225be`. GitHub Actions builds the published ZIP from the next commit. |
+| 6. ZIP install in a portable OBS | Passed | `tests/integration/Test-ZipInstall.ps1`, 18 checks, on OBS 32.0.4 and 32.2.2, with the ZIP that `scripts/package.ps1` made on the development PC from build `36.89739be7c`. GitHub Actions builds the published ZIP from the next commit. |
 | 6. The release build loads and unloads | Passed | `tests/integration/Test-PluginLoad.ps1` with the release build, 13 checks, OBS 32.2.2. |
 | 6. Windows SmartScreen | Open | Nobody has written down what SmartScreen showed when the installer was opened from a browser download. |
 | 7. Keys in the OBS log and the diagnostics report | Passed, automated | Every integration suite searches the OBS log for its test keys, and the chat suite for its test sign-in and API key. The security tests plant a key in every field of the report. A person has not read a report after a real stream yet. |
@@ -167,8 +169,8 @@ The id `54512d94d` is from before the first push to GitHub. That push corrected 
 | 7. Private vulnerability reporting | Done | Switched on in the repository settings. |
 | 7. The release DLL contains no path from the build PC | Passed | `scripts/package.ps1` checks it and refuses to package otherwise. |
 | 8. Platform limits | Checked 2026-10-04 | [research/platform-requirements.md](research/platform-requirements.md) |
-| 8. Screenshots | Made from the running plugin | `docs/screenshots`, by `tests/integration/Capture-Screenshots.ps1` and, for the two chat pictures, by `tests/integration/Test-Chat.ps1`, on build `31.e3f7225be`, OBS 32.2.2. |
-| 8. Legal documents | Not reviewed by a lawyer | Each document says so in its first paragraph. Since this release the Privacy Policy and the Third-Party Services Notice are at version 1.2, and the Security and Credentials Notice and the Open Source Licenses page at 1.1. |
-| 9. Publish | Published | On 4 October 2026 at 20:39 UTC, which was 5 October in New Zealand, by the release workflow: github.com/N4XION/RelayDock/releases/tag/v1.0.0. GitHub lists it as the latest release. The checksums GitHub computed for the three files on that page match the list in the release notes. The files were not downloaded again for a test. The update check of this version answers "RelayDock 1.0.0 is the newest release". |
+| 8. Screenshots | Made from the running plugin | `docs/screenshots`, by `tests/integration/Capture-Screenshots.ps1`, and by `Test-Chat.ps1` and `Test-Update.ps1` for the two chat pictures and the picture of the update window, on build `36.89739be7c`, OBS 32.2.2. |
+| 8. Legal documents | Not reviewed by a lawyer | Each document says so in its first paragraph. Since this release the Privacy Policy and the Third-Party Services Notice are at version 1.3, and the Security and Credentials Notice at 1.2. |
+| 9. Publish | Open | The tag `v1.1.0` follows this commit. The release workflow then builds and publishes the files. |
 
 Hardware that has not been tested on the development PC: NVIDIA and Intel graphics, and Windows 10. See [testing.md](testing.md).

@@ -78,6 +78,10 @@ For a RelayDock that the installer put on your PC, that window offers Update now
 
 Nothing is installed while OBS runs. Until you close OBS, Cancel update takes it back, in that window or under Settings, Updates. Your destinations, settings and saved stream keys stay.
 
+![The window that announces a newer version, with the Update now button](screenshots/update-now.png)
+
+The version number in the picture is made up by a test.
+
 RelayDock keeps a downloaded installer only when it is the file the release holds: it has the size GitHub lists, and its SHA-256 checksum is the one `SHA256SUMS.txt` of that release names. A file that does not match is deleted and never started. [security.md](security.md) says what this check proves and what it does not.
 
 ### Update by hand

@@ -50,6 +50,8 @@ New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $OutDir = (Resolve-Path $OutDir).Path
 $server = "rtmp://127.0.0.1:$Port/live"
 $report = New-TestReport -Title "Interface on OBS $obsVersion"
+# The version the build under test carries, as buildspec.json names it.
+$buildVersion = [string](Get-Content (Join-Path $PSScriptRoot '..\..\buildspec.json') -Raw | ConvertFrom-Json).version
 $video = @{ op = 'obs_video'; base_width = 1280; base_height = 720; output_width = 1280; output_height = 720; fps = '30' }
 $titles = @('Terms of Use', 'Privacy Policy', 'Security and Credentials Notice', 'Third-Party Services Notice',
     'Streaming Disclaimer', 'Open Source Licenses')
@@ -412,7 +414,8 @@ if (Test-Selected 'settings') {
         }
         $report.Check('settings: no page shows a stream key', ($leaks -eq 0))
         $report.Check('settings: About shows the version and the six legal documents',
-            ((Test-Label $ui.page_about '^Version 1\.0\.0') -and @($ui.page_about.buttons | Where-Object { $_.text -eq 'View' }).Count -eq 6))
+            ((Test-Label $ui.page_about ('^Version ' + [regex]::Escape($buildVersion))) -and @($ui.page_about.buttons | Where-Object { $_.text -eq 'View' }).Count -eq 6),
+            "expected version $buildVersion")
         $onStart = Get-Check $ui.page_updates 'Check when OBS starts'
         $report.Check('settings: Updates offers a check on request, and the check at every start is on unless switched off',
             ($null -ne (Get-Button $ui.page_updates 'Check for updates') -and $null -ne $onStart -and $onStart.checked -and
