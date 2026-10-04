@@ -8,7 +8,7 @@ Your streams go straight from your PC to each platform. RelayDock has no server,
 
 You need Windows 10 or 11 (64-bit) and OBS Studio 32.0.0 or newer. All tests ran on Windows 11.
 
-1. Download the installer: [RelayDock-1.0.0-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0/RelayDock-1.0.0-windows-x64-Setup.exe)
+1. Download the installer: [RelayDock-1.1.0-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.1.0/RelayDock-1.1.0-windows-x64-Setup.exe)
 2. Close OBS Studio.
 3. Open the downloaded file and follow its steps. If Windows shows "Windows protected your PC", choose More info, then Run anyway. Windows shows that because the file is not code-signed.
 4. Start OBS Studio, open the Docks menu and choose RelayDock.
@@ -17,20 +17,20 @@ To update, choose Update now when RelayDock tells you about a newer version. It 
 
 You do not pick a folder. The installer puts RelayDock into `C:\ProgramData\obs-studio\plugins\relaydock`, the folder where OBS Studio looks for plugins. To remove it, open the RelayDock settings, choose Updates and then Uninstall RelayDock. Windows Settings, Apps, Installed apps works too.
 
-For a portable OBS Studio, download [RelayDock-1.0.0-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0/RelayDock-1.0.0-windows-x64.zip) and follow [docs/manual-installation.md](docs/manual-installation.md).
+For a portable OBS Studio, download [RelayDock-1.1.0-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.1.0/RelayDock-1.1.0-windows-x64.zip) and follow [docs/manual-installation.md](docs/manual-installation.md).
 
-This is version 1.0.0. Its [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0) has the notes and the checksums, and [docs/installation.md](docs/installation.md) shows how to check your download, update and uninstall. [docs/versions.md](docs/versions.md) lists every version with its files and what changed.
+This is version 1.1.0. Its [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.1.0) has the notes and the checksums, and [docs/installation.md](docs/installation.md) shows how to check your download, update and uninstall. [docs/versions.md](docs/versions.md) lists every version with its files and what changed.
 
 ![The RelayDock dock inside OBS Studio with three destinations live](docs/screenshots/obs-with-dock.png)
 
 ## Status
 
-This is version 1.0.0. The project owner decided to publish it while some release checks are still open.
+This is version 1.1.0. The project owner decided to publish it while some release checks are still open.
 
 - Built and tested on Windows 11 with OBS Studio 32.0.4 and 32.2.2.
 - Every feature below is covered by automated tests on one PC. Streams go to a test server on that PC, and chat comes from stand-ins for Twitch and YouTube.
 - TikTok accepted a stream from 1.0.0-rc.1. Twitch, YouTube and Facebook have not received a stream in the project's own testing yet. That needs real accounts.
-- The ZIP install is tested for this version. The installer and the uninstall from inside RelayDock were tested on the build before the version was renamed to 1.0.0. The installer script and the uninstall code did not change in between.
+- The installer, the uninstall from inside RelayDock, Update now and the ZIP install are tested for this version, with test builds of the installer. Update now has not updated a real install from the real GitHub yet. The first such update is the one from this version to the next.
 - [docs/testing.md](docs/testing.md) lists what is verified, and [docs/release-checklist.md](docs/release-checklist.md) lists what is still open.
 
 If you try it with a real platform, a [platform test report](../../issues/new/choose) helps the next person.

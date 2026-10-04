@@ -135,7 +135,7 @@ Checked on 5 October 2026. "Open" means not done yet. Nothing on this list is as
 
 The project owner decided to publish this version, like 1.0.0, while the gates marked Open below are open.
 
-The unit tests, the integration suites and the release build checks ran on build `1.1.0+36.89739be7c`. GitHub Actions builds the release from the next commit. That commit adds result files, screenshots, this table and the final release notes, and corrects one check of the interface test. It changes nothing that is built, apart from the build number and the commit id that every build carries.
+The unit tests, the integration suites and the release build checks ran on build `1.1.0+36.89739be7c`. GitHub Actions built the release from the next commit, `373eaf0b8`, as build `1.1.0+37.373eaf0b8`. That commit added result files, screenshots, this table and the final release notes, and corrected one check of the interface test. It changed nothing that is built, apart from the build number and the commit id that every build carries.
 
 The screenshots are from that build too. The performance measurements and the 30 minute endurance run are from build `1.0.0-rc.1+9.54512d94d`. Since that build, these parts changed: the update check and its window, the standard vertical layout, one step of the settings migration, the project page setting, the installer script, the legal texts, and everything 1.0.0 and this version add: the chat readers with their network code, the platform logos, the uninstall from inside RelayDock, and Update now. The code that connects, encodes and sends did not change.
 
@@ -143,8 +143,8 @@ The id `54512d94d` is from before the first push to GitHub. That push corrected 
 
 | Gate | Status | Evidence, or what is missing |
 | --- | --- | --- |
-| 1. Automated checks | Passed on the development PC | The five scripts, the unit and security tests (455 test cases), the plugin build, the installer and the package. GitHub Actions runs them on the pushed commit, and again before it publishes the tag. The Actions tab of the repository shows every run. |
-| 1. Two builds give the same DLL | Open for this version | The release workflow runs `scripts/check-reproducible.ps1` on GitHub and does not publish when the two builds differ. |
+| 1. Automated checks | Passed, on the development PC and on GitHub Actions | The five scripts, the unit and security tests (455 test cases), the plugin build, the installer and the package. GitHub Actions passed on the pushed commit, and the release workflow passed for the tag `v1.1.0`. The Actions tab of the repository shows every run. |
+| 1. Two builds give the same DLL | Passed | `scripts/check-reproducible.ps1` on the development PC: two builds in one folder matched byte for byte. The release workflow ran the same check on GitHub and passed. |
 | 2. Integration tests, OBS 32.0.4 | Passed | 538 checks, none failed, none skipped. [test-results/integration-obs-32.0.4.md](test-results/integration-obs-32.0.4.md) |
 | 2. Integration tests, OBS 32.2.2 | Passed | 538 checks, none failed, none skipped. A first run failed one check of the interface suite: the check still expected version 1.0.0 on the About page, which correctly showed 1.1.0. The check now reads the version from `buildspec.json`, and the whole run was repeated. [test-results/integration-obs-32.2.2.md](test-results/integration-obs-32.2.2.md) |
 | 2. Clipboard checks | Passed | Both ran on both OBS versions: the key reached the clipboard and was gone 30 seconds later. |
@@ -171,6 +171,6 @@ The id `54512d94d` is from before the first push to GitHub. That push corrected 
 | 8. Platform limits | Checked 2026-10-04 | [research/platform-requirements.md](research/platform-requirements.md) |
 | 8. Screenshots | Made from the running plugin | `docs/screenshots`, by `tests/integration/Capture-Screenshots.ps1`, and by `Test-Chat.ps1` and `Test-Update.ps1` for the two chat pictures and the picture of the update window, on build `36.89739be7c`, OBS 32.2.2. |
 | 8. Legal documents | Not reviewed by a lawyer | Each document says so in its first paragraph. Since this release the Privacy Policy and the Third-Party Services Notice are at version 1.3, and the Security and Credentials Notice at 1.2. |
-| 9. Publish | Open | The tag `v1.1.0` follows this commit. The release workflow then builds and publishes the files. |
+| 9. Publish | Published | On 4 October 2026 at 22:23 UTC, which was 5 October in New Zealand, by the release workflow: github.com/N4XION/RelayDock/releases/tag/v1.1.0. GitHub lists it as the latest release. The checksums GitHub computed for the three files on that page match the list in the release notes. The files were not downloaded again for a test. The update check of this version answers "RelayDock 1.1.0 is the newest release", and the first step of Update now, run against this release, found the checksum GitHub lists for its installer. |
 
 Hardware that has not been tested on the development PC: NVIDIA and Intel graphics, and Windows 10. See [testing.md](testing.md).
