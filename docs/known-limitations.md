@@ -74,6 +74,7 @@ Encrypted RTMPS connections use the same OBS output as plain RTMP, with TLS hand
 ## Other
 
 - The interface is in English. The locale system is in place, and translations are welcome.
+- The logos of the platforms are trademarks of their owners. TikTok's terms ask for its written permission before its logo is used, and the project has not obtained one. Settings, Appearance switches the logos off, and the badges then show letters.
 - RelayDock never updates itself. It tells you when a newer release exists and opens the installer's download in your browser. You close OBS and run it.
 - GitHub answers 60 update checks an hour for one internet address. On a shared address, such as a VPN, that amount can be used up by others. The check then says so, and works again within the hour.
 - RelayDock does not record. Use OBS for recording.

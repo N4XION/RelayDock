@@ -122,10 +122,10 @@ RelayDock adds work only for what you stream. Destinations with identical settin
 
 ## Security and privacy
 
-- Stream keys and RTMP passwords are saved in Windows Credential Manager, encrypted by Windows for your account.
+- Stream keys and RTMP passwords are saved in Windows Credential Manager, encrypted by Windows for your account. So are the Twitch chat sign-in and your YouTube API key, when you set up chat.
 - The settings file has no field that can hold a key.
 - Keys are removed from every log line and from the diagnostics report.
-- RelayDock opens network connections only for your streams, for Test connection, and for the update check. The check runs once when OBS starts, unless you switch that off, and when you ask for it.
+- RelayDock opens network connections only for your streams, for Test connection, for the update check, and for chat once you set it up. The check runs once when OBS starts, unless you switch that off, and when you ask for it.
 
 [docs/security.md](docs/security.md) describes the design and what it cannot protect against. Report security problems privately, as [SECURITY.md](SECURITY.md) explains.
 
