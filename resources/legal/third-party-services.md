@@ -1,6 +1,6 @@
 # Third-Party Services Notice
 
-Version 1.2. Last updated 5 October 2026.
+Version 1.3. Last updated 5 October 2026.
 
 This document is a draft written by the RelayDock contributors. No lawyer has reviewed it. Have it reviewed by a qualified lawyer before you rely on it for commercial use.
 
@@ -40,7 +40,7 @@ Custom RTMP and Custom RTMPS destinations connect to a server you name. You are 
 
 ## 7. GitHub
 
-RelayDock's source code, releases and issue tracker are hosted on GitHub. RelayDock contacts GitHub for the update check: each time OBS Studio starts, unless you switch that off under Settings, Updates, and when you click Check for updates. GitHub's terms and privacy statement apply to that contact and to your use of the project pages.
+RelayDock's source code, releases and issue tracker are hosted on GitHub. RelayDock contacts GitHub for the update check: each time OBS Studio starts, unless you switch that off under Settings, Updates, and when you click Check for updates. When you choose Update now, RelayDock also downloads the installer of the newer version from GitHub. GitHub's terms and privacy statement apply to these contacts and to your use of the project pages.
 
 ## 8. Software RelayDock builds on
 

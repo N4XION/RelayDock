@@ -68,10 +68,29 @@ RelayDock opens network connections in these cases, each started by you:
 3. The update check, once each time OBS starts unless you switch that off under Settings, Updates, and when you choose Check for updates. One HTTPS request to `api.github.com` for the newest release. It carries the RelayDock version number and nothing about you. A build with no project page configured has no update check at all.
 4. Twitch chat, after you signed in under Settings, Chat. HTTPS requests to `id.twitch.tv` and `api.twitch.tv` and one WebSocket to `eventsub.wss.twitch.tv`. RelayDock holds a permission to read chat and nothing else. It has no client secret, because Twitch gives a program on a PC none.
 5. YouTube chat, after you saved an API key of your own and connected a stream. HTTPS requests to `www.googleapis.com`, with the key in a header, never in the address.
+6. Update now, when you choose it in the window that announces a newer version. HTTPS requests to `github.com` for the installer of that release and its checksum list. GitHub hands a download on to its file servers, whose names end in `githubusercontent.com`. RelayDock follows to those and to no other server.
 
 Every one of these requests can be cancelled within about a tenth of a second, so closing OBS never waits for a server.
 
 RelayDock has no analytics, no telemetry, no crash upload and no account.
+
+## Update now
+
+Update now downloads a program and starts it. Code like that deserves a second look, so this is all it does.
+
+It runs only when you choose Update now. RelayDock then:
+
+1. Takes the addresses of the installer and of `SHA256SUMS.txt` from GitHub's list of the files of the release. Both must lie under the release pages of the RelayDock project on `github.com`, and the installer must have the name that a RelayDock installer of that version has.
+2. Downloads the checksum list and then the installer, over HTTPS with the certificate checks of Windows. It follows a redirect only to `github.com` or to a server whose name ends in `githubusercontent.com`.
+3. Compares. The installer must have the size GitHub lists and the SHA-256 checksum the list names. When GitHub lists a checksum of its own, that one must agree as well.
+4. Saves the installer into a new folder in your temporary folder, reads it back, checks it again, and holds the file open so that no other program can change it before it starts.
+5. Starts it. The installer waits until OBS has closed. It gives up when you choose Cancel update.
+
+A file that fails any of these steps is deleted and never started. The code is in `src/update/update_download.cpp` and `src/app/update_install.cpp`. `tests/unit/test_update_download.cpp` and `tests/integration/Test-Update.ps1` test it, among other things with an installer in which one byte was changed.
+
+What the check proves: the installer is the file the release holds, complete and unchanged on its way to you.
+
+What it does not prove: who published the release. The release files carry no code signature. Someone who takes over the project's account on GitHub can publish an installer together with a checksum list that matches it. That is just as true when you download the installer in your browser. One thing differs: your browser marks a download as coming from the internet, so Windows SmartScreen asks before it runs. A file that RelayDock downloads carries no such mark, and Windows does not ask.
 
 ## What RelayDock cannot protect against
 
@@ -87,7 +106,7 @@ If a key may have leaked, reset it on the platform. Every platform lets you issu
 
 - GitHub Actions builds the release from the tagged source. The steps are in `.github/workflows`.
 - The build downloads OBS Studio's sources and dependencies pinned by SHA-256 hash in `buildspec.json`.
-- RelayDock contains no packer, no obfuscation, no self-updater and no code that downloads or runs other code.
+- RelayDock contains no packer and no obfuscation. One part of it downloads a program and starts it: Update now, which runs only when you choose it. The next section describes all of it.
 - Every release file has its SHA-256 hash in `SHA256SUMS.txt`.
 - The build is reproducible. Two builds of one commit in one folder give the same `relaydock.dll`, byte for byte. A build in another folder differs only in the time stamp fields and in the identifier of the debug file. `scripts/check-reproducible.ps1` checks both, and [building-from-source.md](building-from-source.md) shows how to compare your own build with a release.
 - The files are not code-signed. Code-signing certificates that Windows trusts cost money. [installation.md](installation.md) explains the SmartScreen message and how to verify a download.

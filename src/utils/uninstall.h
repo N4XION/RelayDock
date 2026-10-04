@@ -31,6 +31,7 @@ struct UninstallPlan {
 
 	Kind kind = Kind::ByHand;
 	std::string program;            // Installer: the uninstall program
+	std::string folder;             // Installer: the folder RelayDock was installed into
 	// Installer: its command line. The request file is added when the uninstall starts.
 	std::string arguments;
 	std::vector<std::string> paths; // ByHand: the files and folders to delete, after OBS closed

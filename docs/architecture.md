@@ -104,6 +104,7 @@ Layouts refer to sources of the scene collection, so they are saved inside the c
 | Stop workers | `obs_output_stop` and `obs_output_force_stop` calls. Joined at shutdown. |
 | `SystemSampler` | Processor and graphics load. |
 | Background tasks | Test connection and the update check. Cancellable. |
+| Update now | One thread while an installer downloads. It ends within about a tenth of a second when asked. |
 | Chat readers | One thread for Twitch chat, one for YouTube chat, one for a Twitch sign-in. Each ends within about a tenth of a second when asked. They hand events to the interface thread. |
 
 Each class says which thread owns it in a comment at its declaration.
@@ -116,6 +117,10 @@ Each class says which thread owns it in a comment at its declaration.
 
 Chat is text from strangers. `cleanChatText` removes control characters and characters that reverse the reading direction, and the dock escapes every character before it draws.
 
+## Update now
+
+`src/update/update_download` downloads the installer of a newer release and decides whether to keep it. It has no OBS and no Qt in it, so the tests cover every way a download can go wrong. `UpdateInstall` in `src/app` runs it on a thread, starts the installer and owns the request file that lets the user cancel. The installer, `installer/relaydock.iss`, waits until OBS has closed. [security.md](security.md) lists the checks.
+
 ## Add a platform
 
 A platform is a class derived from `ProviderBase` that fills in data: name, servers, limits, setup notes. `CONTRIBUTING.md` has the steps. No other code lists platforms.
@@ -127,7 +132,7 @@ src/                 The plugin and the core library
 tests/unit           Unit tests of the core
 tests/security       Security tests of the core
 tests/integration    Scripts that drive a real OBS
-tests/tools          The RTMP test server, and stand-ins for Twitch and YouTube
+tests/tools          The RTMP test server, and stand-ins for Twitch, YouTube and the release pages
 tests/support        A small web server for the tests
 resources/           Icons and legal documents, compiled into the DLL
 data/locale          Interface strings for OBS's locale system

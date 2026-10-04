@@ -13,7 +13,7 @@ You need Windows 10 or 11 (64-bit) and OBS Studio 32.0.0 or newer. All tests ran
 3. Open the downloaded file and follow its steps. If Windows shows "Windows protected your PC", choose More info, then Run anyway. Windows shows that because the file is not code-signed.
 4. Start OBS Studio, open the Docks menu and choose RelayDock.
 
-To update, do the same with the newer installer. It replaces the old version, and your destinations, settings and stream keys stay.
+To update, choose Update now when RelayDock tells you about a newer version. It downloads the installer, checks it and installs it when you close OBS Studio. Your destinations, settings and stream keys stay. Running the newer installer yourself works too.
 
 You do not pick a folder. The installer puts RelayDock into `C:\ProgramData\obs-studio\plugins\relaydock`, the folder where OBS Studio looks for plugins. To remove it, open the RelayDock settings, choose Updates and then Uninstall RelayDock. Windows Settings, Apps, Installed apps works too.
 
@@ -123,7 +123,7 @@ RelayDock adds work only for what you stream. Destinations with identical settin
 - Stream keys and RTMP passwords are saved in Windows Credential Manager, encrypted by Windows for your account. So are the Twitch chat sign-in and your YouTube API key, when you set up chat.
 - The settings file has no field that can hold a key.
 - Keys are removed from every log line and from the diagnostics report.
-- RelayDock opens network connections only for your streams, for Test connection, for the update check, and for chat once you set it up. The check runs once when OBS starts, unless you switch that off, and when you ask for it.
+- RelayDock opens network connections only for your streams, for Test connection, for the update check, for chat once you set it up, and for Update now when you choose it. The check runs once when OBS starts, unless you switch that off, and when you ask for it.
 
 [docs/security.md](docs/security.md) describes the design and what it cannot protect against. Report security problems privately, as [SECURITY.md](SECURITY.md) explains.
 

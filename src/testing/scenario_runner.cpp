@@ -7,6 +7,7 @@
 #include "chat/chat_accounts.h"
 #include "app/diagnostics_service.h"
 #include "app/performance_monitor.h"
+#include "app/update_install.h"
 #include "build_info.h"
 #include "legal/legal_documents.h"
 #include "utils/clock.h"
@@ -59,6 +60,21 @@ double number(const json &object, const char *key, double fallback)
 {
 	const auto it = object.find(key);
 	return it != object.end() && it->is_number() ? it->get<double>() : fallback;
+}
+
+const char *updateStateId(UpdateInstall::State state)
+{
+	switch (state) {
+	case UpdateInstall::State::Idle:
+		return "idle";
+	case UpdateInstall::State::Downloading:
+		return "downloading";
+	case UpdateInstall::State::Waiting:
+		return "waiting";
+	case UpdateInstall::State::Failed:
+		return "failed";
+	}
+	return "idle";
 }
 
 bool flag(const json &object, const char *key, bool fallback)
@@ -829,12 +845,21 @@ ScenarioRunner::StepResult ScenarioRunner::beginStep(const json &step, std::stri
 	if (op == "quit") {
 		// "confirm" names the button to press when a question comes up while OBS closes.
 		quitConfirmButton_ = text(step, "confirm", "");
+		// "with" names a button of an open RelayDock window that closes OBS, to press it instead
+		// of closing the OBS window.
+		quitWithButton_ = text(step, "with", "");
 		finish(true, {});
 		return StepResult::Done;
 	}
 
+	if (op == "update_cancel") {
+		// What Cancel update does in the interface.
+		app_.updateInstall().cancel();
+		return StepResult::Done;
+	}
+
 	if (op == "wait" || op == "wait_phase" || op == "wait_reconnects" || op == "wait_idle" || op == "wait_suggestion" ||
-	    op == "wait_adjustment" || op == "chat_wait" || op == "chat_wait_events")
+	    op == "wait_adjustment" || op == "chat_wait" || op == "chat_wait_events" || op == "update_wait")
 		return pollStep(step, detail);
 
 	StepResult uiResult = StepResult::Done;
@@ -872,6 +897,23 @@ ScenarioRunner::StepResult ScenarioRunner::pollStep(const json &step, std::strin
 		if (elapsedSec >= timeoutSec) {
 			detail = std::string("Still '") + chatStateId(status.state) + "' at the timeout, wanted '" + wanted + "'. " +
 				 status.message.text();
+			return StepResult::Failed;
+		}
+		return StepResult::Waiting;
+	}
+
+	if (op == "update_wait") {
+		// Waits until Update now is in a state: idle, downloading, waiting or failed.
+		const std::string wanted = text(step, "state", "waiting");
+		const UpdateInstall &update = app_.updateInstall();
+		if (updateStateId(update.state()) == wanted) {
+			detail = "reached after " + std::to_string(static_cast<int>(elapsedSec * 1000)) + " ms";
+			return StepResult::Done;
+		}
+		// A failure is final. Waiting longer for another state would only hide it.
+		if (elapsedSec >= timeoutSec || update.state() == UpdateInstall::State::Failed) {
+			detail = std::string("Update now is '") + updateStateId(update.state()) + "', wanted '" + wanted + "'. " +
+				 update.problem().text();
 			return StepResult::Failed;
 		}
 		return StepResult::Waiting;
@@ -1113,6 +1155,17 @@ json ScenarioRunner::snapshot()
 	}
 
 	{
+		const UpdateInstall &update = app_.updateInstall();
+		out["update"] = {{"state", updateStateId(update.state())},
+				 {"installed_by_installer", update.installedByInstaller()},
+				 {"received", update.received()},
+				 {"total", update.total()},
+				 {"problem", update.problem().text()},
+				 {"request_file", update.requestFile()},
+				 {"installer_file", update.installerFile()}};
+	}
+
+	{
 		const UninstallPlan plan = app_.uninstallPlan(false);
 		out["uninstall"] = {{"kind", plan.kind == UninstallPlan::Kind::Installer ? "installer" : "by_hand"},
 				    {"program", plan.program},
@@ -1191,8 +1244,28 @@ void ScenarioRunner::finish(bool ok, const std::string &failure)
 	if (!env("RELAYDOCK_TEST_CREDENTIAL_PREFIX").empty() && !keepCredentials_)
 		app_.vault().removeAll();
 
-	if (auto *window = static_cast<QMainWindow *>(obs_frontend_get_main_window()))
-		QMetaObject::invokeMethod(window, "close", Qt::QueuedConnection);
+	// Close OBS: with the button the scenario named, or by closing the OBS window.
+	bool closing = false;
+	if (!quitWithButton_.empty()) {
+		for (QWidget *widget : QApplication::topLevelWidgets()) {
+			if (closing || !widget->isVisible())
+				continue;
+			for (QAbstractButton *button : widget->findChildren<QAbstractButton *>()) {
+				if (!button->isVisible() || button->text().remove(QLatin1Char('&')).toStdString() != quitWithButton_)
+					continue;
+				logInfo("Scenario: closing OBS with the button \"{}\".", quitWithButton_);
+				QMetaObject::invokeMethod(button, "click", Qt::QueuedConnection);
+				closing = true;
+				break;
+			}
+		}
+		if (!closing)
+			logError("Scenario: found no button \"{}\" to close OBS with.", quitWithButton_);
+	}
+	if (!closing) {
+		if (auto *window = static_cast<QMainWindow *>(obs_frontend_get_main_window()))
+			QMetaObject::invokeMethod(window, "close", Qt::QueuedConnection);
+	}
 
 	// The scenario asked for a question to be answered on the way out. The question runs its
 	// own event loop inside the close, so a timer is the way to reach it.

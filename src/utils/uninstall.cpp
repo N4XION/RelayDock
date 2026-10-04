@@ -100,6 +100,7 @@ UninstallPlan planUninstall(const std::string &modulePath, const std::vector<Ins
 				continue;
 			plan.kind = UninstallPlan::Kind::Installer;
 			plan.program = copy.uninstaller;
+			plan.folder = copy.folder;
 			// Silent, because RelayDock has asked already. The uninstaller waits for OBS.
 			plan.arguments = std::string("/WAITFOROBS=1 /SILENT /REMOVEDATA=") + (removeData ? "1" : "0");
 			return plan;

@@ -93,6 +93,8 @@ public:
 	void showLegal(const std::string &documentId) override;
 	void runPreflight(bool startAfterwards) override;
 	void showUpdate(const ReleaseInfo &release) override;
+	// Follows Update now: says when an installer waits for OBS to close.
+	void refreshUpdateBanner();
 
 protected:
 	void paintEvent(QPaintEvent *event) override;
@@ -137,6 +139,7 @@ private:
 	Banner *updateBanner_;
 	UpdateChecker *startupCheck_ = nullptr;
 	ReleaseInfo offeredRelease_; // The newer version the banner and the update window are about
+	bool updatePending_ = false; // The banner says that an update waits for OBS to close
 	QFrame *legalPanel_;
 	QLabel *legalText_;
 

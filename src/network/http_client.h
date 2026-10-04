@@ -3,6 +3,8 @@
 #pragma once
 
 #include <atomic>
+#include <cstdint>
+#include <functional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -42,12 +44,19 @@ struct HttpRequest {
 	std::string userAgent = "RelayDock";
 	int timeoutMs = 10000;        // For each step: finding the server, connecting, sending, receiving.
 	size_t maxBytes = 512 * 1024; // A longer answer is discarded.
+	// With false, a redirect is not followed. It comes back as the answer, with its target in
+	// HttpResponse::location, so the caller decides where a request may lead.
+	bool followRedirects = true;
+	// Called on the calling thread while a successful answer arrives: the bytes so far, and the
+	// length the server announced, or 0 when it announced none.
+	std::function<void(uint64_t received, uint64_t total)> progress;
 };
 
 struct HttpResponse {
 	bool ok = false;   // The request completed and a status code arrived
 	int status = 0;    // HTTP status code
 	std::string body;
+	std::string location; // The target of a redirect that was not followed
 	std::string error; // Why it did not complete. "cancelled" after a cancel. Never holds a secret.
 
 	bool cancelled() const { return !ok && error == "cancelled"; }

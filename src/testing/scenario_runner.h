@@ -63,6 +63,8 @@ private:
 	bool waiting_ = false;
 	bool finished_ = false;
 	std::string quitConfirmButton_;
+	// The button of a RelayDock window that the scenario closes OBS with, the way a user does.
+	std::string quitWithButton_;
 	bool keepCredentials_ = false;
 	int64_t stepStartedMs_ = 0;
 	int64_t scenarioStartedMs_ = 0;

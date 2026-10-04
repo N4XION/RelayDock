@@ -48,7 +48,11 @@ $report = New-TestReport -Title "Uninstall from inside RelayDock on OBS $obsVers
 if ((Get-Item -LiteralPath $SetupPath).VersionInfo.FileDescription -notmatch 'test build') {
     throw "$SetupPath is not a test build of Setup. Build one with scripts\package.ps1 -TestInstallerDir."
 }
-if (Get-Process obs64 -ErrorAction SilentlyContinue) { throw 'Close OBS Studio first. Setup refuses to run while it is open.' }
+# A test build of Setup counts only an OBS Studio that was started with --portable, which is what
+# this test starts. The OBS Studio of the PC's owner may stay open.
+if (@(Get-CimInstance Win32_Process -Filter "Name = 'obs64.exe'" | Where-Object { $_.CommandLine -like '*--portable*' }).Count -gt 0) {
+    throw 'A portable OBS Studio is running, probably from another test. Close it first.'
+}
 
 $testKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{6D1F3C52-8B0A-4E7D-A3C9-52E0B7F41D69}_is1'
 $realKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{6D1F3C52-8B0A-4E7D-A3C9-52E0B7F41D68}_is1'

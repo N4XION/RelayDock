@@ -206,6 +206,23 @@ if ($iscc) {
             "/DObsMinimumVersion=$($spec.obs.minimumVersion)",
             (Join-Path $repo 'installer\relaydock.iss'))
         Write-Host "  $baseName-Setup-test.exe, a test build, in $TestInstallerDir"
+
+        # The same files under a higher version number, for tests\integration\Test-Update.ps1:
+        # the newer release that RelayDock downloads and installs over the test install. It has
+        # the file name a real release gives its installer, because RelayDock checks the name.
+        $updateDir = Join-Path (Resolve-Path $TestInstallerDir).Path 'update'
+        New-Item -ItemType Directory -Force -Path $updateDir | Out-Null
+        Invoke-Checked $iscc @(
+            '/Qp',
+            '/DTestInstall=1',
+            '/DAppVersion=9.9.9',
+            '/DAppVersionNumeric=9.9.9',
+            "/DStageDir=$(Join-Path $stage 'relaydock')",
+            "/DOutputDir=$updateDir",
+            '/DOutputBaseName=RelayDock-9.9.9-windows-x64-Setup',
+            "/DObsMinimumVersion=$($spec.obs.minimumVersion)",
+            (Join-Path $repo 'installer\relaydock.iss'))
+        Write-Host "  update\RelayDock-9.9.9-windows-x64-Setup.exe, a test build with a higher version number"
     }
 } elseif ($RequireInstaller) {
     throw 'Inno Setup 6 was not found, and -RequireInstaller is set.'

@@ -36,6 +36,8 @@ struct FakeResponse {
 	int status = 200;
 	std::string contentType = "application/json";
 	std::string body;
+	// Further header lines, such as {"Location", "..."} for a redirect.
+	std::vector<std::pair<std::string, std::string>> headers;
 	int delayMs = 0;        // Wait this long before answering
 	bool hang = false;      // Never answer. The connection stays open until the server stops.
 	bool webSocket = false; // Accept the WebSocket upgrade. The socket handler takes over.

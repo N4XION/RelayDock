@@ -6,6 +6,7 @@
 #include "network/http_client.h"
 
 #include <atomic>
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -17,8 +18,9 @@ namespace rd {
 //
 // It runs only when the user clicks "Check for updates", or at start-up when the user switched
 // that on. It sends no data about the user or the PC: one HTTPS request to api.github.com with
-// the RelayDock version in the User-Agent header, which GitHub requires. It never downloads or
-// installs anything. The user opens the release page in a browser.
+// the RelayDock version in the User-Agent header, which GitHub requires. The check itself never
+// downloads or installs anything. The user opens the release page in a browser, or chooses
+// Update now, which is in update_download.h.
 //
 // A build with no repository configured has no update check at all.
 
@@ -51,6 +53,13 @@ struct ReleaseInfo {
 	// Direct link to the installer of this release on github.com. Empty when the release has
 	// no file whose name ends in "-Setup.exe".
 	std::string installerUrl;
+	// What GitHub lists about that file, for Update now. The size is 0 and the checksum empty
+	// when GitHub did not list them.
+	std::string installerName;   // "RelayDock-1.0.1-windows-x64-Setup.exe"
+	uint64_t installerSize = 0;  // Bytes
+	std::string installerSha256; // 64 hex digits, lower case
+	// Direct link to SHA256SUMS.txt of this release on github.com. Empty when it has none.
+	std::string checksumsUrl;
 };
 
 // Splits "https://github.com/owner/name" into its parts. Only github.com addresses are accepted.

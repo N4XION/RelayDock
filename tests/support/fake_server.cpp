@@ -91,6 +91,12 @@ const char *reason(int status)
 		return "Accepted";
 	case 204:
 		return "No Content";
+	case 301:
+		return "Moved Permanently";
+	case 302:
+		return "Found";
+	case 307:
+		return "Temporary Redirect";
 	case 400:
 		return "Bad Request";
 	case 401:
@@ -492,9 +498,12 @@ void FakeServer::serve(uintptr_t handle)
 		return;
 	}
 
-	const std::string head = std::format("HTTP/1.1 {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+	std::string extra;
+	for (const auto &[name, value] : response.headers)
+		extra += name + ": " + value + "\r\n";
+	const std::string head = std::format("HTTP/1.1 {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n{}Connection: close\r\n\r\n",
 					     response.status, reason(response.status), response.contentType,
-					     response.body.size());
+					     response.body.size(), extra);
 	if (sendAll(client, head.data(), head.size()) && sendAll(client, response.body.data(), response.body.size()))
 		finish();
 	else

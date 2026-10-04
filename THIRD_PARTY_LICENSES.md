@@ -99,6 +99,7 @@ The owners' rules
   YouTube     https://brand.youtube
   Facebook    https://www.meta.com/brand/resources/facebook/logo/
   TikTok      TikTok's terms ask for its written permission before its logo is used.
+              The RelayDock project has not obtained one.
 
 Building RelayDock without a logo
   Delete the file here and its line in resources/relaydock.qrc. The badge then shows the

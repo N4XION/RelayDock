@@ -208,8 +208,12 @@ bool readRelease(const nlohmann::json &object, ReleaseInfo &release)
 	if (release.url.rfind("https://github.com/", 0) != 0)
 		release.url.clear();
 
-	// The installer among the files of the release.
+	// The installer and the checksum list among the files of the release.
 	release.installerUrl.clear();
+	release.installerName.clear();
+	release.installerSize = 0;
+	release.installerSha256.clear();
+	release.checksumsUrl.clear();
 	if (const auto assets = object.find("assets"); assets != object.end() && assets->is_array()) {
 		for (const nlohmann::json &asset : *assets) {
 			if (!asset.is_object())
@@ -223,10 +227,28 @@ bool readRelease(const nlohmann::json &object, ReleaseInfo &release)
 			const std::string suffix = "-Setup.exe";
 			const bool isInstaller = file.size() > suffix.size() &&
 						 file.compare(file.size() - suffix.size(), suffix.size(), suffix) == 0;
-			if (isInstaller && address.rfind("https://github.com/", 0) == 0 &&
-			    address.find("/releases/download/") != std::string::npos) {
-				release.installerUrl = address;
-				break;
+			const bool onGitHub = address.rfind("https://github.com/", 0) == 0 &&
+					      address.find("/releases/download/") != std::string::npos;
+			if (!onGitHub)
+				continue;
+			if (file == "SHA256SUMS.txt" && release.checksumsUrl.empty()) {
+				release.checksumsUrl = address;
+				continue;
+			}
+			if (!isInstaller || !release.installerUrl.empty())
+				continue;
+			release.installerUrl = address;
+			release.installerName = file;
+			if (const auto size = asset.find("size"); size != asset.end() && size->is_number_unsigned())
+				release.installerSize = size->get<uint64_t>();
+			// GitHub lists "sha256:" and 64 hex digits for files uploaded since 2025.
+			if (const auto digest = asset.find("digest"); digest != asset.end() && digest->is_string()) {
+				const std::string text = toLower(digest->get<std::string>());
+				const std::string prefix = "sha256:";
+				const bool hex = text.size() == prefix.size() + 64 && text.rfind(prefix, 0) == 0 &&
+						 text.find_first_not_of("0123456789abcdef", prefix.size()) == std::string::npos;
+				if (hex)
+					release.installerSha256 = text.substr(prefix.size());
 			}
 		}
 	}
@@ -339,7 +361,7 @@ UserMessage describeUpdate(const UpdateResult &result, const std::string &curren
 	case UpdateStatus::UpdateAvailable:
 		message.what = locf("Update.Available", "RelayDock {0} is available. You run {1}.", result.release.tag, currentVersion);
 		message.action = loc("Update.Available.Action",
-				     "Open the release page to read what changed and download it. RelayDock never installs updates by itself.");
+				     "Choose How to update to see your options. RelayDock installs nothing by itself.");
 		break;
 	case UpdateStatus::Failed:
 		if (result.rateLimited) {

@@ -1,6 +1,6 @@
 # Security and Credentials Notice
 
-Version 1.1. Last updated 5 October 2026.
+Version 1.2. Last updated 5 October 2026.
 
 This document is a draft written by the RelayDock contributors. No lawyer has reviewed it. Have it reviewed by a qualified lawyer before you rely on it for commercial use.
 
@@ -48,10 +48,16 @@ RelayDock shows a saved key as dots and never displays it. Copying a key is some
 
 Copy Key places the key on the Windows clipboard. RelayDock asks Windows not to keep it in clipboard history or sync it to other devices, and it clears the clipboard after 30 seconds if the key is still there. Other programs can read the clipboard while the key is on it.
 
-## 7. What RelayDock cannot promise
+## 7. Updates
+
+RelayDock installs a newer version only when you choose Update now, or when you run an installer yourself. It never does so by itself.
+
+The release files carry no code signature. With Update now, RelayDock checks the downloaded installer against the list of checksums of the same release, and does not start a file that does not match. That shows the installer is complete and was not changed on its way to you. It does not show who published the release. Windows SmartScreen asks before it runs an installer that your browser downloaded. It does not ask for an installer that RelayDock downloaded.
+
+## 8. What RelayDock cannot promise
 
 The contributors work to keep RelayDock secure. They do not claim it is free of vulnerabilities. If a key may have been exposed, reset it on the platform straight away. Every platform lets you issue a new key.
 
-## 8. Reporting a security problem
+## 9. Reporting a security problem
 
 Report security problems privately. The file SECURITY.md in the project explains how. Do not open a public issue for a vulnerability, and do not include real stream keys in any report.

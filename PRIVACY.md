@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Version 1.2. Last updated 5 October 2026.
+Version 1.3. Last updated 5 October 2026.
 
 This document is a draft written by the RelayDock contributors. No lawyer has reviewed it. Have it reviewed by a qualified lawyer before you rely on it for commercial use.
 
@@ -31,6 +31,7 @@ RelayDock keeps the following on your computer only.
 - The Twitch chat sign-in and your YouTube API key, when you set up chat. Stored in Windows Credential Manager as well. The settings file holds your Twitch name and the link to your YouTube stream, which are no secrets.
 - Chat. RelayDock keeps the newest 500 comments and events in memory while OBS Studio runs, to show them in the chat dock. It writes none of them to a file, to the log or to a diagnostic report, and they are gone when OBS Studio closes.
 - Legal acceptance records. For each document: its name, its version, the date and time you agreed, and the RelayDock version. Nothing in the record identifies you.
+- A downloaded installer, when you use Update now. It lies in your folder for temporary files until the update is done. RelayDock removes it when OBS Studio starts the next time.
 - Log lines. RelayDock writes status lines to the OBS log file. It removes stream keys and passwords from every line before writing it.
 
 ## 4. Network connections RelayDock makes
@@ -39,7 +40,8 @@ RelayDock connects to the internet only in these cases.
 
 - Streaming. When you start a destination, RelayDock connects from your computer to the server of that destination and sends your stream and your stream key to it. The connection goes straight from your computer to the platform or server you chose. It does not pass through any server run by the RelayDock contributors.
 - Test connection. When you click Test connection, RelayDock opens a network connection to the server you configured to see whether it answers, then closes it. It sends no stream and no stream key.
-- Update check. Each time OBS Studio starts, and when you click Check for updates, RelayDock asks GitHub for the newest RelayDock release. GitHub receives your IP address and the RelayDock version, as it does for any web request. RelayDock sends nothing else. When a newer version exists, RelayDock tells you and offers a link to it. It downloads nothing and installs nothing by itself. You can switch the check at start-up off under Settings, Updates. Builds without a configured project page have no update check.
+- Update check. Each time OBS Studio starts, and when you click Check for updates, RelayDock asks GitHub for the newest RelayDock release. GitHub receives your IP address and the RelayDock version, as it does for any web request. RelayDock sends nothing else. When a newer version exists, RelayDock tells you. It downloads nothing and installs nothing by itself. You can switch the check at start-up off under Settings, Updates. Builds without a configured project page have no update check.
+- Update now. Only when you choose Update now in the window that announces a newer version. RelayDock downloads the installer of that version and its list of checksums from GitHub (github.com, and the file servers of GitHub, whose names end in githubusercontent.com). GitHub receives your IP address and the RelayDock version, as it does for any download. RelayDock checks the installer against the list and starts it. The installer puts the new version in place when you close OBS Studio.
 
 - Twitch chat. Only after you sign in under Settings, Chat. RelayDock connects from your computer to Twitch (id.twitch.tv, api.twitch.tv and eventsub.wss.twitch.tv) to sign in and to receive the chat of your own channel. You type your Twitch password on twitch.tv in your browser, never into RelayDock. Twitch receives your IP address and knows that RelayDock reads your chat. RelayDock asks for one permission, to read chat.
 - YouTube chat. Only after you enter an API key of your own and connect a stream under Settings, Chat. RelayDock then asks Google (www.googleapis.com) for the chat of that stream every few seconds. Google receives your IP address, your key and the id of the stream. RelayDock uses YouTube API Services for this.

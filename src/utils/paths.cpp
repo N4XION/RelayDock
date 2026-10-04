@@ -62,6 +62,13 @@ FILE *openFile(const std::filesystem::path &path, const wchar_t *wideMode, const
 
 } // namespace
 
+std::string tempFolderUtf8()
+{
+	std::error_code error;
+	const std::filesystem::path folder = std::filesystem::temp_directory_path(error);
+	return error ? std::string() : pathToUtf8(folder);
+}
+
 bool readFileToString(const std::filesystem::path &path, std::string &out, size_t maxBytes)
 {
 	out.clear();

@@ -44,7 +44,9 @@ Pass one name to `-Only` per run.
 | `Test-Endurance.ps1` | A long stream with a measurement every minute. |
 | `Run-All.ps1` | The first six, with a results table. |
 | `Test-ZipInstall.ps1` | The release ZIP, copied into a portable OBS by the steps of `docs/manual-installation.md`, then removed again. |
-| `Test-Installer.ps1` | The installer and its uninstaller, silently and without administrator rights. It stops at once on a PC that has RelayDock installed. |
+| `Test-Installer.ps1` | The installer and its uninstaller, silently and without administrator rights. With the release installer it stops at once on a PC that has RelayDock installed. Use a test build and `-TestBuild` there. |
+| `Test-Uninstall.ps1` | The uninstall from inside RelayDock, with a test build of the installer. |
+| `Test-Update.ps1` | Update now, from inside RelayDock, with two test builds of the installer and a stand-in for the release pages (`rd-release-fake`). |
 
 `Test-Ui.ps1` shows the OBS window, because a hidden window has no layout to check. The other suites keep OBS in the system tray.
 

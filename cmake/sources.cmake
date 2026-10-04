@@ -105,6 +105,8 @@ set(
   src/settings/theme.h
   src/update/update_check.cpp
   src/update/update_check.h
+  src/update/update_download.cpp
+  src/update/update_download.h
   src/utils/clock.cpp
   src/utils/clock.h
   src/utils/i18n.cpp
@@ -140,6 +142,8 @@ set(
   src/app/performance_monitor.h
   src/app/uninstall_request.cpp
   src/app/uninstall_request.h
+  src/app/update_install.cpp
+  src/app/update_install.h
   src/encoders/encoder_catalog.cpp
   src/encoders/encoder_catalog.h
   src/encoders/encoder_pool.cpp

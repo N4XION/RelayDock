@@ -66,17 +66,35 @@ Continue with [getting-started.md](getting-started.md).
 
 ## Update
 
-RelayDock looks for a newer version each time OBS starts. When there is one, a window says so and offers to download the installer in your browser.
+RelayDock looks for a newer version each time OBS starts. When there is one, a window says so.
+
+### Update now
+
+For a RelayDock that the installer put on your PC, that window offers Update now.
+
+1. Choose Update now. RelayDock downloads the installer from the release page on GitHub and checks it against the checksums of the release.
+2. Close OBS Studio, or choose Close OBS and install. The installer runs by itself.
+3. Start OBS Studio again. The installer offers to do that for you.
+
+Nothing is installed while OBS runs. Until you close OBS, Cancel update takes it back, in that window or under Settings, Updates. Your destinations, settings and saved stream keys stay.
+
+RelayDock keeps a downloaded installer only when it is the file the release holds: it has the size GitHub lists, and its SHA-256 checksum is the one `SHA256SUMS.txt` of that release names. A file that does not match is deleted and never started. [security.md](security.md) says what this check proves and what it does not.
+
+### Update by hand
+
+For a RelayDock that you copied from the ZIP, and whenever Update now did not work:
 
 1. Choose Download installer in that window, or download the installer from [versions.md](versions.md).
 2. Close OBS Studio.
 3. Open the downloaded file and follow its steps.
 
-The installer replaces the old version. Your destinations, settings and saved stream keys stay.
+The installer replaces the old version. Your destinations, settings and saved stream keys stay. For a portable OBS, copy the files of the newer ZIP over the old ones, as [manual-installation.md](manual-installation.md) describes.
+
+### The check
 
 In the window, Later asks again at the next start, and Skip this version stays quiet until a newer one exists. To look by hand, or to switch the check at start-up off, open Settings, Updates.
 
-RelayDock never updates itself. It downloads nothing and installs nothing. A plugin cannot replace its own file while OBS runs, and a program that fetches and starts other programs is what security software looks for.
+RelayDock never updates by itself. It downloads and installs only when you choose Update now. A plugin cannot replace its own file while OBS runs, which is why the installer waits until OBS has closed.
 
 ## Uninstall
 

@@ -27,6 +27,7 @@ namespace rd {
 class ChatHub;
 class OutputManager;
 class PerformanceMonitor;
+class UpdateInstall;
 class VerticalCanvasManager;
 
 // Owns everything RelayDock keeps alive while OBS runs: settings, providers, the credential
@@ -74,6 +75,10 @@ public:
 	// How this RelayDock is removed: by the uninstaller the installer left, or by hand.
 	UninstallPlan uninstallPlan(bool removeData) const;
 	UninstallRequest &uninstallRequest() { return uninstallRequest_; }
+
+	// ---- Update now ------------------------------------------------------------------------
+	// Downloads, checks and starts the installer of a newer release, when the user asks for it.
+	UpdateInstall &updateInstall() { return *updateInstall_; }
 
 	// Writes the settings to disk. Logs and returns false on failure.
 	bool saveConfig();
@@ -138,6 +143,7 @@ private:
 	std::unique_ptr<VerticalCanvasManager> vertical_;
 	std::unique_ptr<PerformanceMonitor> performance_;
 	std::unique_ptr<ChatHub> chat_;
+	std::unique_ptr<UpdateInstall> updateInstall_;
 	std::map<std::string, Adjustment> adjustments_;
 	std::vector<std::string> loadNotes_;
 	ConfigLoadStatus loadStatus_ = ConfigLoadStatus::CreatedDefault;

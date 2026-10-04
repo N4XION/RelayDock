@@ -76,6 +76,12 @@ Record each run with the platform test report issue template, and update the tab
 - [ ] Uninstall with "also remove settings and keys" removes `plugin_config\relaydock` and the `RelayDock:` credentials, and no other credential
 - [ ] Without OBS, the installer says so
 
+With a test build of the installer (`scripts/package.ps1 -TestInstallerDir`), on any PC:
+
+- [ ] `tests/integration/Test-Installer.ps1 -TestBuild` passes
+- [ ] `tests/integration/Test-Uninstall.ps1` passes: the uninstall from inside RelayDock
+- [ ] `tests/integration/Test-Update.ps1` passes: Update now refuses a changed installer, installs nothing after a cancel, and installs the newer version once OBS has closed
+
 These need a person, on a PC that has OBS Studio installed:
 
 - [ ] After the installer ran, RelayDock appears under Docks in OBS

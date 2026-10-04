@@ -14,24 +14,32 @@
 ;     when the user says so.
 ;   - RelayDock can start the uninstall itself, from Settings, Updates. OBS Studio is open at
 ;     that moment, so the uninstaller waits until it has closed.
+;   - RelayDock can start Setup itself, from its Update now window, after it downloaded and
+;     checked a newer Setup. That Setup waits in the same way, without a window.
 ;
 ; Command line switches of its own, next to the ones every Inno Setup installer has:
 ;   /OBSDIR="folder"   Setup: look for OBS Studio in this folder instead of asking the registry.
-;                      It only decides which warning Setup shows. The plugin folder stays the same.
+;                      It decides which warning Setup shows, and which OBS Studio Setup offers to
+;                      start after an update. The plugin folder stays the same.
 ;   /REMOVEDATA=1      Uninstall: also remove settings and saved stream keys, without asking.
 ;   /REMOVEDATA=0      Uninstall: keep them, without asking.
-;   /WAITFOROBS=1      Uninstall: wait for OBS Studio to close instead of refusing while it runs.
-;   /REQUESTFILE="f"   Uninstall, with /WAITFOROBS=1: RelayDock made this file when the user asked
-;                      for the uninstall, and deletes it when the user changes their mind. The
-;                      uninstaller removes RelayDock only while the file exists, and deletes it.
+;   /WAITFOROBS=1      Setup and uninstall: wait for OBS Studio to close instead of refusing while
+;                      it runs.
+;   /REQUESTFILE="f"   With /WAITFOROBS=1: RelayDock made this file when the user asked for the
+;                      update or the uninstall, and deletes it when the user changes their mind.
+;                      Setup installs, and the uninstaller removes, only while the file exists.
+;                      Whichever goes ahead deletes the file.
 ;
 ; tests\integration\Test-Installer.ps1 runs Setup and the uninstaller and checks what they did.
+; tests\integration\Test-Update.ps1 does the same for an update started from RelayDock.
 ;
 ; scripts\package.ps1 passes the values below on the ISCC command line.
 ;
 ; A test build of Setup (ISCC /DTestInstall=1) has its own identity in Windows, so a test can
 ; install and remove it on a PC where RelayDock is installed for real. It refuses to run without
-; /DIR, so it never touches the real plugin folder. It must never be released.
+; /DIR, so it never touches the real plugin folder. It counts only an OBS Studio that was started
+; with --portable, which is what the tests start, so the tests run while the OBS Studio of the
+; PC's owner is open. It never offers to start OBS Studio. It must never be released.
 
 #ifndef AppVersion
   #define AppVersion "0.0.0-dev"
@@ -56,10 +64,12 @@
   #define AppId "{{6D1F3C52-8B0A-4E7D-A3C9-52E0B7F41D69}"
   #define AppName "RelayDock test install"
   #define SetupDescription "RelayDock Setup (test build)"
+  #define ObsProcessFilter ' AND CommandLine LIKE "%--portable%"'
 #else
   #define AppId "{{6D1F3C52-8B0A-4E7D-A3C9-52E0B7F41D68}"
   #define AppName "RelayDock"
   #define SetupDescription "RelayDock Setup"
+  #define ObsProcessFilter ''
 #endif
 
 [Setup]
@@ -116,6 +126,8 @@ RemoveData=Also remove your RelayDock settings and your saved stream keys?%n%nCh
 TestNeedsDir=This is a test build of RelayDock Setup. It only runs with /DIR.
 RemovedKept=RelayDock is removed.%n%nYour destinations, settings and saved stream keys are still there for a later install.
 RemovedAll=RelayDock is removed, together with your settings and your saved stream keys.
+Updated=RelayDock {#AppVersion} is installed.%n%nStart OBS Studio to use it.
+UpdatedStartObs=RelayDock {#AppVersion} is installed.%n%nStart OBS Studio now?
 
 [Messages]
 FinishedLabelNoIcons=Setup installed RelayDock.%n%nStart OBS Studio and open Docks, RelayDock.
@@ -164,20 +176,29 @@ begin
   Result := (V[0] > M[0]) or ((V[0] = M[0]) and (V[1] >= M[1]));
 end;
 
-function ObsIsRunning(): Boolean;
+// 1: OBS Studio runs. 0: it does not. -1: Windows did not say.
+function ObsState(): Integer;
 var
   Locator, Service, Processes: Variant;
 begin
-  Result := False;
   try
     Locator := CreateOleObject('WbemScripting.SWbemLocator');
     Service := Locator.ConnectServer('.', 'root\CIMV2');
-    Processes := Service.ExecQuery('SELECT ProcessId FROM Win32_Process WHERE Name = "obs64.exe"');
-    Result := Processes.Count > 0;
+    // The filter is empty in a release build: every OBS Studio counts.
+    Processes := Service.ExecQuery('SELECT ProcessId FROM Win32_Process WHERE Name = "obs64.exe"{#ObsProcessFilter}');
+    if Processes.Count > 0 then
+      Result := 1
+    else
+      Result := 0;
   except
-    // Without WMI, Setup cannot tell. Copying then fails with a clear message if the file is in use.
-    Result := False;
+    Result := -1;
   end;
+end;
+
+function ObsIsRunning(): Boolean;
+begin
+  // Without WMI, Setup cannot tell. Copying then fails with a clear message if the file is in use.
+  Result := ObsState() = 1;
 end;
 
 // Tries to create the plugin folder and a file in it.
@@ -194,6 +215,49 @@ begin
     DeleteFile(Probe);
     Result := True;
   end;
+end;
+
+// Setup or the uninstaller was started from inside RelayDock, while OBS Studio is open: the
+// uninstall from Settings, Updates, or an update from the Update now window. RelayDock made a
+// request file, and deletes it when the user changes their mind. Returns False when the file is
+// gone: nothing is installed or removed then, whether OBS Studio still runs or not.
+function WaitForObsToClose(): Boolean;
+var
+  RequestFile: String;
+  State, Tick: Integer;
+begin
+  Result := True;
+  RequestFile := ExpandConstant('{param:REQUESTFILE|}');
+  Log('RelayDock: waiting for OBS Studio to close.');
+  // The wait can last for hours, while a stream runs. Asking Windows for its list of programs
+  // costs a little each time, so ask every two seconds and look at the request file in between.
+  // Go ahead only when Windows says that no OBS Studio runs. No answer means: keep waiting.
+  Tick := 0;
+  State := ObsState();
+  while Result and (State <> 0) do
+  begin
+    if (RequestFile <> '') and not FileExists(RequestFile) then
+      Result := False
+    else
+    begin
+      Sleep(500);
+      Tick := Tick + 1;
+      if Tick mod 4 = 0 then
+        State := ObsState();
+    end;
+  end;
+  // The answer that counts is the one after OBS Studio has closed.
+  if (RequestFile <> '') and not FileExists(RequestFile) then
+    Result := False;
+  if not Result then
+  begin
+    Log('RelayDock: cancelled from RelayDock. Nothing changes.');
+    Exit;
+  end;
+  if RequestFile <> '' then
+    DeleteFile(RequestFile);
+  // OBS Studio needs a moment to let go of the plugin file.
+  Sleep(1000);
 end;
 
 function InitializeSetup(): Boolean;
@@ -251,20 +315,50 @@ begin
   if not CanWriteTo(Target) then
   begin
     Log('RelayDock Setup: this account cannot write to the plugin folder.');
-    if IsAdmin then
-      Exit; // Already elevated. Let the file copy report the real error.
-    SuppressibleMsgBox(FmtMessage(CustomMessage('NeedAdmin'), [Target]), mbInformation, MB_OK, IDOK);
-    Params := '/ALLUSERS';
-    for I := 1 to ParamCount do
-      Params := Params + ' "' + ParamStr(I) + '"';
-    if ShellExec('runas', ExpandConstant('{srcexe}'), Params, '', SW_SHOWNORMAL, ewNoWait, ErrorCode) then
-      Result := False // The elevated copy of Setup takes over.
-    else
+    // An elevated Setup goes on and lets the file copy report the real error.
+    if not IsAdmin then
     begin
-      SuppressibleMsgBox(CustomMessage('ElevationFailed'), mbCriticalError, MB_OK, IDOK);
+      SuppressibleMsgBox(FmtMessage(CustomMessage('NeedAdmin'), [Target]), mbInformation, MB_OK, IDOK);
+      Params := '/ALLUSERS';
+      for I := 1 to ParamCount do
+        Params := Params + ' "' + ParamStr(I) + '"';
+      if not ShellExec('runas', ExpandConstant('{srcexe}'), Params, '', SW_SHOWNORMAL, ewNoWait, ErrorCode) then
+        SuppressibleMsgBox(CustomMessage('ElevationFailed'), mbCriticalError, MB_OK, IDOK);
+      // On success the elevated copy of Setup takes over, with the same switches.
       Result := False;
+      Exit;
     end;
   end;
+
+  // Started from RelayDock's Update now window. OBS Studio is open, so wait here, before any
+  // window of Setup appears, until the user closes it or takes the request back.
+  if ExpandConstant('{param:WAITFOROBS|0}') = '1' then
+    Result := WaitForObsToClose();
+end;
+
+// An update that RelayDock started runs without the pages of Setup. Say that it is done.
+procedure CurStepChanged(CurStep: TSetupStep);
+#ifndef TestInstall
+var
+  ObsDir: String;
+  ErrorCode: Integer;
+#endif
+begin
+  if (CurStep <> ssDone) or (ExpandConstant('{param:WAITFOROBS|0}') <> '1') then
+    Exit;
+  Log('RelayDock Setup: the update is done.');
+#ifndef TestInstall
+  // Offer to start OBS Studio again, but never from an elevated Setup: OBS Studio would then
+  // run with administrator rights. A silent run answers No. A test build never offers it.
+  ObsDir := ObsInstallDir();
+  if (not IsAdmin) and (ObsDir <> '') and FileExists(ObsDir + '\bin\64bit\obs64.exe') then
+  begin
+    if SuppressibleMsgBox(CustomMessage('UpdatedStartObs'), mbConfirmation, MB_YESNO, IDNO) = IDYES then
+      ShellExec('', ObsDir + '\bin\64bit\obs64.exe', '', ObsDir + '\bin\64bit', SW_SHOWNORMAL, ewNoWait, ErrorCode);
+    Exit;
+  end;
+#endif
+  SuppressibleMsgBox(CustomMessage('Updated'), mbInformation, MB_OK, IDOK);
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
@@ -304,37 +398,6 @@ begin
     end;
   end;
   DeleteFile(ListFile);
-end;
-
-// The uninstall that RelayDock starts from its own settings window. OBS Studio is open then.
-// RelayDock made a request file, and deletes it when the user changes their mind. Returns False
-// when the file is gone: nothing is removed then, whether OBS Studio still runs or not.
-function WaitForObsToClose(): Boolean;
-var
-  RequestFile: String;
-begin
-  Result := True;
-  RequestFile := ExpandConstant('{param:REQUESTFILE|}');
-  Log('RelayDock uninstall: waiting for OBS Studio to close.');
-  while Result and ObsIsRunning() do
-  begin
-    if (RequestFile <> '') and not FileExists(RequestFile) then
-      Result := False
-    else
-      Sleep(500);
-  end;
-  // The answer that counts is the one after OBS Studio has closed.
-  if (RequestFile <> '') and not FileExists(RequestFile) then
-    Result := False;
-  if not Result then
-  begin
-    Log('RelayDock uninstall: cancelled from RelayDock. Nothing is removed.');
-    Exit;
-  end;
-  if RequestFile <> '' then
-    DeleteFile(RequestFile);
-  // OBS Studio needs a moment to let go of the plugin file.
-  Sleep(1000);
 end;
 
 function InitializeUninstall(): Boolean;

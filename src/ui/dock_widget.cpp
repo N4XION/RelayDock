@@ -6,6 +6,7 @@
 #include "app/background_tasks.h"
 #include "app/diagnostics_service.h"
 #include "app/performance_monitor.h"
+#include "app/update_install.h"
 #include "build_info.h"
 #include "legal/legal_documents.h"
 #include "outputs/output_manager.h"
@@ -320,6 +321,27 @@ void RelayDockWidget::onObsFinishedLoading()
 	}
 }
 
+void RelayDockWidget::refreshUpdateBanner()
+{
+	if (closed_)
+		return;
+	const UpdateInstall &install = app_.updateInstall();
+	if (install.state() == UpdateInstall::State::Waiting) {
+		offeredRelease_ = install.release();
+		updateBanner_->setMessage("ok", uiTextF("UpdateNow.Pending", "RelayDock {0} installs when you close OBS Studio.",
+							versionOfTag(offeredRelease_.tag)));
+		updateBanner_->setAction(uiText("UpdateNow.Details", "Details"));
+		updateBanner_->show();
+		updatePending_ = true;
+	} else if (updatePending_) {
+		// Cancelled. The newer version is still there to be had.
+		updatePending_ = false;
+		updateBanner_->setMessage("neutral", uiTextF("Update.Available.Short", "RelayDock {0} is available.",
+							     versionOfTag(offeredRelease_.tag)));
+		updateBanner_->setAction(uiText("Update.Show", "How to update"));
+	}
+}
+
 void RelayDockWidget::showUpdate(const ReleaseInfo &release)
 {
 	if (closed_)
@@ -460,6 +482,7 @@ void RelayDockWidget::buildSections()
 	updateBanner_ = new Banner(*theme_, content_);
 	updateBanner_->hide();
 	connect(updateBanner_, &Banner::actionClicked, this, [this] { showUpdate(offeredRelease_); });
+	connect(&app_.updateInstall(), &UpdateInstall::changed, this, &RelayDockWidget::refreshUpdateBanner);
 	contentLayout_->addWidget(updateBanner_);
 
 	// ---- First-run review ----------------------------------------------------------------------

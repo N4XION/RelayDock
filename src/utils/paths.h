@@ -13,6 +13,9 @@ namespace rd {
 std::filesystem::path pathFromUtf8(std::string_view utf8);
 std::string pathToUtf8(const std::filesystem::path &path);
 
+// The folder Windows gives this user for temporary files, as UTF-8. Empty when it names none.
+std::string tempFolderUtf8();
+
 // Reads a whole file. Returns false when the file is missing, unreadable or larger than
 // `maxBytes`.
 bool readFileToString(const std::filesystem::path &path, std::string &out, size_t maxBytes);

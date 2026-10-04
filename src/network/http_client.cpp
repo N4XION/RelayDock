@@ -284,6 +284,16 @@ bool validHeader(const std::string &name, const std::string &value)
 	return true;
 }
 
+std::string narrowText(const std::wstring &text)
+{
+	if (text.empty())
+		return {};
+	const int length = WideCharToMultiByte(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), nullptr, 0, nullptr, nullptr);
+	std::string out(static_cast<size_t>(length), '\0');
+	WideCharToMultiByte(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), out.data(), length, nullptr, nullptr);
+	return out;
+}
+
 bool validMethod(const std::string &method)
 {
 	return method == "GET" || method == "POST" || method == "DELETE" || method == "PUT" || method == "PATCH";
@@ -371,6 +381,14 @@ HttpResponse httpRequest(const HttpRequest &request, const std::atomic<bool> &ca
 		return finish();
 	};
 
+	if (!request.followRedirects) {
+		DWORD policy = WINHTTP_OPTION_REDIRECT_POLICY_NEVER;
+		if (!WinHttpSetOption(handle, WINHTTP_OPTION_REDIRECT_POLICY, &policy, sizeof(policy))) {
+			response.error = std::format("Windows could not switch off redirects (error {}).", GetLastError());
+			return finish();
+		}
+	}
+
 	for (const auto &[name, value] : request.headers) {
 		const std::wstring line = widen(name + ": " + value + "\r\n");
 		if (!WinHttpAddRequestHeaders(handle, line.c_str(), static_cast<DWORD>(-1), WINHTTP_ADDREQ_FLAG_ADD)) {
@@ -407,6 +425,29 @@ HttpResponse httpRequest(const HttpRequest &request, const std::atomic<bool> &ca
 	}
 	response.status = static_cast<int>(status);
 
+	// A redirect that was not followed names its target.
+	if (!request.followRedirects && status >= 300 && status < 400) {
+		DWORD size = 0;
+		WinHttpQueryHeaders(handle, WINHTTP_QUERY_LOCATION, WINHTTP_HEADER_NAME_BY_INDEX, WINHTTP_NO_OUTPUT_BUFFER, &size,
+				    WINHTTP_NO_HEADER_INDEX);
+		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER && size > 0 && size <= 16 * 1024) {
+			std::wstring location(size / sizeof(wchar_t), L'\0');
+			if (WinHttpQueryHeaders(handle, WINHTTP_QUERY_LOCATION, WINHTTP_HEADER_NAME_BY_INDEX, location.data(), &size,
+						WINHTTP_NO_HEADER_INDEX)) {
+				location.resize(size / sizeof(wchar_t));
+				response.location = narrowText(location);
+			}
+		}
+	}
+
+	// The length the server announced, for the progress report. 0 when it announced none.
+	DWORD announced = 0;
+	DWORD announcedSize = sizeof(announced);
+	if (!WinHttpQueryHeaders(handle, WINHTTP_QUERY_CONTENT_LENGTH | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX,
+				 &announced, &announcedSize, WINHTTP_NO_HEADER_INDEX))
+		announced = 0;
+	const bool report = request.progress && status >= 200 && status < 300;
+
 	for (;;) {
 		if (!WinHttpReadData(handle, chunk.data(), static_cast<DWORD>(chunk.size()), nullptr))
 			return fail(StepResult::Failed, GetLastError());
@@ -422,6 +463,8 @@ HttpResponse httpRequest(const HttpRequest &request, const std::atomic<bool> &ca
 			return finish();
 		}
 		response.body.append(chunk.data(), read);
+		if (report)
+			request.progress(response.body.size(), announced);
 	}
 
 	response.ok = true;

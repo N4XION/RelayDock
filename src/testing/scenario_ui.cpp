@@ -370,6 +370,10 @@ bool ScenarioRunner::uiStep(const std::string &op, const json &step, StepResult 
 		release.tag = textOf(step, "tag");
 		release.url = textOf(step, "url");
 		release.installerUrl = textOf(step, "installer_url");
+		release.installerName = textOf(step, "installer_name");
+		release.installerSize = static_cast<uint64_t>(numberOf(step, "installer_size", 0));
+		release.installerSha256 = textOf(step, "installer_sha256");
+		release.checksumsUrl = textOf(step, "checksums_url");
 		const std::string argument = what == "edit"       ? id
 					     : what == "add"      ? textOf(step, "provider")
 					     : what == "settings" ? textOf(step, "page")

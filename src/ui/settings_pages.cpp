@@ -9,6 +9,7 @@
 #include "app/background_tasks.h"
 #include "app/diagnostics_service.h"
 #include "app/performance_monitor.h"
+#include "app/update_install.h"
 #include "build_info.h"
 #include "legal/legal_documents.h"
 #include "outputs/output_manager.h"
@@ -812,6 +813,14 @@ void SettingsDialog::buildUpdates()
 	auto *result = new Banner(host_.theme(), p.page);
 	result->hide();
 	p.body->addWidget(result);
+	// An update that was started with Update now and waits for OBS to close.
+	auto *pending = new Banner(host_.theme(), p.page);
+	pending->hide();
+	p.body->addWidget(pending);
+	UpdateInstall &install = app.updateInstall();
+	if (install.installedByInstaller())
+		addNote(p.body, uiText("Updates.Now.Note",
+				       "When a newer version exists, its window offers Update now. RelayDock then downloads the installer, checks it and installs it when you close OBS Studio. Nothing of that happens unless you choose it."));
 	auto *onStart = new QCheckBox(uiText("Updates.OnStart", "Check when OBS starts"), p.page);
 	p.body->addWidget(onStart);
 	addNote(p.body, uiText("Updates.OnStart.Note",
@@ -847,9 +856,25 @@ void SettingsDialog::buildUpdates()
 		app.config().general.checkUpdatesOnStart = on;
 		commit();
 	});
+	const auto refreshPending = [pending, &install] {
+		const bool waiting = install.state() == UpdateInstall::State::Waiting;
+		if (waiting) {
+			pending->setMessage("ok", uiTextF("UpdateNow.Pending", "RelayDock {0} installs when you close OBS Studio.",
+							  versionOfTag(install.release().tag)));
+			pending->setAction(uiText("UpdateNow.CancelUpdate", "Cancel update"));
+		}
+		pending->setVisible(waiting);
+	};
+	connect(&install, &UpdateInstall::changed, this, [=] {
+		refreshPending();
+		if (refreshUninstall)
+			refreshUninstall();
+	});
+	connect(pending, &Banner::actionClicked, this, [&install] { install.cancel(); });
 
 	addPage("updates", uiText("Settings.Updates", "Updates"), "download", p.page, [=, &app] {
 		onStart->setChecked(app.config().general.checkUpdatesOnStart);
+		refreshPending();
 		if (refreshUninstall)
 			refreshUninstall();
 	});
@@ -886,14 +911,26 @@ std::function<void()> SettingsDialog::addUninstallSection(PageBuilder &p)
 	state->hide();
 	p.body->addWidget(state);
 
+	// Whether the banner below says that an update is in the way.
+	auto saysUpdating = std::make_shared<bool>(false);
 	const auto refresh = [=, &app] {
 		const bool waiting = app.uninstallRequest().pending();
-		uninstall->setEnabled(!waiting);
-		removeData->setEnabled(!waiting);
+		// One thing waits for OBS to close at a time, and the update was asked for first.
+		const bool updating = app.updateInstall().busy();
+		uninstall->setEnabled(!waiting && !updating);
+		removeData->setEnabled(!waiting && !updating);
 		if (waiting) {
 			state->setMessage("warning", uiText("Uninstall.Pending", "RelayDock is removed when you close OBS Studio."));
 			state->setAction(uiText("Uninstall.Keep", "Keep RelayDock"));
 			state->show();
+		} else if (updating) {
+			state->setMessage("neutral", uiText("Uninstall.Updating", "An update is under way. To uninstall instead, cancel the update first."));
+			state->setAction(QString());
+			state->show();
+			*saysUpdating = true;
+		} else if (*saysUpdating) {
+			*saysUpdating = false;
+			state->hide();
 		}
 	};
 

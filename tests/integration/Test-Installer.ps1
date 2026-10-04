@@ -74,7 +74,15 @@ $userKey = $uninstallKeys[0]
 $realFolder = Join-Path $env:ProgramData 'obs-studio\plugins\relaydock'
 $settingsFolder = Join-Path $env:APPDATA 'obs-studio\plugin_config\relaydock'
 
-if (Get-Process obs64 -ErrorAction SilentlyContinue) { throw 'Close OBS Studio first. Setup refuses to run while it is open.' }
+if ($TestBuild) {
+    # A test build of Setup counts only an OBS Studio that was started with --portable, which is
+    # what this test starts. The OBS Studio of the PC's owner may stay open.
+    if (@(Get-CimInstance Win32_Process -Filter "Name = 'obs64.exe'" | Where-Object { $_.CommandLine -like '*--portable*' }).Count -gt 0) {
+        throw 'A portable OBS Studio is running, probably from another test. Close it first.'
+    }
+} elseif (Get-Process obs64 -ErrorAction SilentlyContinue) {
+    throw 'Close OBS Studio first. Setup refuses to run while it is open.'
+}
 
 # An earlier run of this test that broke off can leave its scratch install registered. Remove
 # that one, and only that one: its folder lies inside this test's output folder.
@@ -192,6 +200,58 @@ try {
     $stopped = Stop-ObsTest -Session $session
 }
 $report.Check('obs-running: OBS itself was not disturbed and closed cleanly', $stopped.Clean, "exit code $($stopped.ExitCode)")
+
+# ---- The update RelayDock starts itself ----------------------------------------------------------
+# RelayDock downloads a newer Setup and starts it with /WAITFOROBS=1 and a request file. Setup then
+# waits, without a window, until OBS has closed. Deleting the file is how the user changes their
+# mind. The test stands in for RelayDock: it makes the file and starts Setup the same way.
+Write-Host ''
+Write-Host 'update-wait: the Setup that RelayDock starts waits for OBS to close'
+$updateRequest = Join-Path $OutDir 'update.request'
+# A file of the install that the test takes away. It is back once Setup has installed.
+$marker = Join-Path $target 'LICENSE.txt'
+function Start-WaitingSetup([string]$LogName) {
+    $log = Join-Path $OutDir $LogName
+    Set-Content -LiteralPath $updateRequest -Value 'made by Test-Installer.ps1'
+    Start-Process -FilePath $SetupPath -ArgumentList ($installArguments + @('/SILENT', '/NORESTART', '/WAITFOROBS=1',
+            "/REQUESTFILE=`"$updateRequest`"", '/SUPPRESSMSGBOXES', "/LOG=`"$log`""))
+}
+# Setup hands over to a copy of itself in the temp folder, which carries the same command line.
+function Get-WaitingSetup {
+    return @(Get-CimInstance Win32_Process | Where-Object {
+            $_.CommandLine -and $_.CommandLine.Contains('/WAITFOROBS=1') -and $_.CommandLine.Contains($updateRequest) })
+}
+function Get-SetupLog([string]$LogName) {
+    $log = Join-Path $OutDir $LogName
+    if (Test-Path $log) { return (Get-Content -LiteralPath $log -Raw) }
+    return ''
+}
+Remove-Item -LiteralPath $marker -Force
+$session = Start-ObsTest -ObsRoot $ObsRoot -NoPlugin
+try {
+    [void](Wait-ObsLogLine -Session $session -Pattern '==== Startup complete' -TimeoutSec 90)
+
+    # The user changes their mind while OBS still runs.
+    Start-WaitingSetup 'update-cancelled.log'
+    Start-Sleep -Seconds 4
+    $report.Check('update-wait: with OBS open, Setup waits and installs nothing', ((Get-WaitingSetup).Count -ge 1 -and -not (Test-Path $marker)))
+    Remove-Item -LiteralPath $updateRequest -Force
+    $ended = Wait-Until { (Get-WaitingSetup).Count -eq 0 } 20
+    $report.Check('update-wait: when RelayDock withdraws the request while OBS still runs, Setup ends and installs nothing',
+        ($ended -and -not (Test-Path $marker) -and (Get-SetupLog 'update-cancelled.log') -match 'cancelled from RelayDock'))
+
+    # The user goes through with it.
+    Start-WaitingSetup 'update-installed.log'
+    Start-Sleep -Seconds 4
+    $report.Check('update-wait: a new request waits again while OBS is open', ((Get-WaitingSetup).Count -ge 1 -and -not (Test-Path $marker)))
+} finally {
+    $stopped = Stop-ObsTest -Session $session
+}
+$installed = Wait-Until { (Test-Path $marker) -and (Get-WaitingSetup).Count -eq 0 } 60
+$report.Check('update-wait: once OBS has closed, Setup installs without another question, and the request file is gone',
+    ($installed -and -not (Test-Path $updateRequest) -and (Test-Path $dll) -and (Test-Path $userKey) -and
+     (Get-SetupLog 'update-installed.log') -match 'the update is done'))
+$report.Check('update-wait: OBS closed cleanly with Setup waiting on it', $stopped.Clean, "exit code $($stopped.ExitCode)")
 
 # ---- The uninstall RelayDock starts itself ------------------------------------------------------
 # RelayDock makes a request file and the uninstaller waits for OBS to close. Deleting the file is

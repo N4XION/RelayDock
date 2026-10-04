@@ -5,6 +5,8 @@
 #include "app/chat_hub.h"
 
 #include "app/performance_monitor.h"
+#include "app/update_install.h"
+#include "build_info.h"
 #include "legal/legal_documents.h"
 #include "outputs/output_manager.h"
 #include "outputs/vertical_canvas.h"
@@ -21,6 +23,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <format>
 
 namespace rd {
 
@@ -97,6 +100,23 @@ void AppContext::initialize()
 	connect(outputs_.get(), &OutputManager::activeChanged, this, &AppContext::setKeepAwake);
 	performance_ = std::make_unique<PerformanceMonitor>(*this);
 	chat_ = std::make_unique<ChatHub>(*this);
+
+	// Update now: which project an installer may come from, and where this RelayDock lives.
+	UpdateInstall::Setup update;
+	update.rules.repositoryUrl = repositoryUrl();
+	if (SemVer running; parseSemVer(buildInfo().version, running))
+		update.userAgent = std::format("RelayDock/{}.{}.{}", running.major, running.minor, running.patch);
+	if (const UninstallPlan installed = uninstallPlan(false); installed.kind == UninstallPlan::Kind::Installer)
+		update.installFolder = installed.folder;
+	update.downloadFolder = tempFolderUtf8();
+#ifdef RELAYDOCK_TEST_HOOKS
+	// A test serves a made-up release from this PC, and nobody is there to answer the
+	// messages of the installer.
+	update.rules.allowThisPc = true;
+	update.extraArguments = " /SUPPRESSMSGBOXES";
+#endif
+	updateInstall_ = std::make_unique<UpdateInstall>();
+	updateInstall_->configure(std::move(update));
 
 	obs_frontend_add_save_callback(onSceneCollectionSaveLoad, this);
 
@@ -195,6 +215,8 @@ void AppContext::shutdown()
 
 	if (chat_)
 		chat_->shutdown();
+	if (updateInstall_)
+		updateInstall_->shutdown();
 	if (performance_)
 		performance_->shutdown();
 	// Outputs first: they hold encoders that read the vertical canvas.

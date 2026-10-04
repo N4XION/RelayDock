@@ -25,6 +25,7 @@ set(
   unit/test_sleep_inhibitor.cpp
   unit/test_stream_url.cpp
   unit/test_uninstall.cpp
+  unit/test_update_download.cpp
   unit/test_utils.cpp
   unit/test_vertical_layout.cpp
   security/test_credentials.cpp
@@ -58,6 +59,13 @@ add_executable(
 target_link_libraries(rd-chat-fake PRIVATE relaydock-core bcrypt)
 target_include_directories(rd-chat-fake PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 set_target_properties(rd-chat-fake PROPERTIES FOLDER "RelayDock")
+
+# A stand-in for the release pages of the project on this PC, used by
+# tests/integration/Test-Update.ps1.
+add_executable(rd-release-fake tools/release-fake/release_fake.cpp support/fake_server.cpp support/fake_server.h)
+target_link_libraries(rd-release-fake PRIVATE relaydock-core bcrypt)
+target_include_directories(rd-release-fake PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+set_target_properties(rd-release-fake PROPERTIES FOLDER "RelayDock")
 
 # Local RTMP ingest used by the integration tests. See tests/integration/README.md.
 add_executable(rd-rtmp-sink tools/rtmp-sink/rtmp_sink.cpp)
