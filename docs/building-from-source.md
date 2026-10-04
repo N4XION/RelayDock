@@ -10,7 +10,7 @@ Everything you need is free.
 | Visual Studio | 2022 Community, or the Build Tools | With the "Desktop development with C++" workload. It includes the MSVC compiler, the Windows SDK and CMake. |
 | Git | Any recent version | The build number comes from the commit history. |
 | PowerShell | 5.1 or newer | Ships with Windows. Used by the test scripts. |
-| Inno Setup | 6 | Only to build the installer. |
+| Inno Setup | 6 | Only to build the installer. Its licence allows use at no cost. Its authors ask companies that use it commercially to buy a licence. |
 
 You do not install OBS Studio's sources, Qt or any library by hand. The build fetches them.
 

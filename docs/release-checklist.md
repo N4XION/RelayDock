@@ -112,3 +112,36 @@ RelayDock follows semantic versioning. See `CHANGELOG.md`.
 A document version in `src/legal/legal_documents.cpp` changes whenever a legal text changes in a way users must review. RelayDock then asks every user to review it again.
 
 RelayDock is built against the oldest supported OBS version. Raising `obs.minimumVersion` in `buildspec.json` is a MINOR change at least, and the release notes must say so.
+
+## Status of 1.0.0-rc.1
+
+Checked on 4 October 2026. "Open" means not done yet. Nothing on this list is assumed.
+
+The integration, performance and endurance tests ran on build `1.0.0-rc.1+9.54512d94d`. The commits after it changed documents, test scripts and result files, and no file under `src`. The release build checks ran on build `1.0.0-rc.1+10.378f8dc6e`.
+
+| Gate | Status | Evidence, or what is missing |
+| --- | --- | --- |
+| 1. Automated checks | Passed on the development PC. Open in CI. | The four scripts pass, and so do 302 unit and security test cases. GitHub Actions has not run, because the repository is not on GitHub yet. |
+| 1. Two builds give the same DLL | Passed on the development PC | `scripts/check-reproducible.ps1`: two builds in one folder matched byte for byte. Against the packaged DLL from another folder, all code and data matched, and 73 bytes of time stamp and debug file identifier differed. |
+| 2. Integration tests, OBS 32.0.4 | Passed | 462 checks. [test-results/integration-obs-32.0.4.md](test-results/integration-obs-32.0.4.md) |
+| 2. Integration tests, OBS 32.2.2 | Passed | 462 checks. [test-results/integration-obs-32.2.2.md](test-results/integration-obs-32.2.2.md) |
+| 2. Clipboard checks | Passed | Both ran: the key reached the clipboard and was gone 30 seconds later. |
+| 3. Performance | Measured | [performance-results.md](performance-results.md). There is no earlier release to compare with. |
+| 4. Endurance, 30 minutes | Passed | 28 of 28 checks. [test-results/endurance-30-min.md](test-results/endurance-30-min.md) |
+| 4. Endurance, 2 hours | Open | The run had not finished when this was written. |
+| 4. Endurance, 6 hours | Open | The run had not finished when this was written. |
+| 5. Platforms | Open | Nobody has streamed to Twitch, YouTube, Facebook or TikTok with this version. It needs a person with accounts. |
+| 5. Custom RTMPS against a real server | Open | Local tests use plain RTMP. |
+| 6. Installer | Open | `installer/relaydock.iss` is written. Nobody has compiled or run it: Inno Setup is not on the development PC, and CI has not run. |
+| 6. ZIP install in a portable OBS | Passed | `tests/integration/Test-ZipInstall.ps1`, 18 checks, OBS 32.2.2. |
+| 6. The release build loads and unloads | Passed | `tests/integration/Test-PluginLoad.ps1` with the release build, 13 checks, OBS 32.2.2. |
+| 7. Keys in the OBS log and the diagnostics report | Passed, automated | Every integration suite searches the OBS log for its test keys. The security tests plant a key in every field of the report. A person has not read a report after a real stream yet. |
+| 7. Copy Key and the clipboard history | Open | The automated checks cover the clipboard. Nobody has looked at Win+V after a copy yet. |
+| 7. Private vulnerability reporting | Open | It is a repository setting on GitHub. |
+| 7. The release DLL contains no path from the build PC | Passed | `scripts/package.ps1` checks it and refuses to package otherwise. |
+| 8. Platform limits | Checked 2026-10-04 | [research/platform-requirements.md](research/platform-requirements.md) |
+| 8. Screenshots | Made from the running plugin | `docs/screenshots`, by `tests/integration/Capture-Screenshots.ps1`, on build `54512d94d`. |
+| 8. Legal documents | Not reviewed by a lawyer | Each document says so in its first paragraph. |
+| 9. Publish | Open | No GitHub owner is chosen and nothing is pushed. `repository` in `buildspec.json` is empty, so this build has no update check. |
+
+Hardware that has not been tested: NVIDIA and Intel graphics, and Windows 10. See [testing.md](testing.md).

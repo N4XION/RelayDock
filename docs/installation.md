@@ -9,6 +9,8 @@ RelayDock is free. It needs no account.
 
 ## Install with the installer
 
+For release candidate 1.0.0-rc.1: nobody has built or run the installer yet. The steps below describe what its script does. The ZIP install is tested. [release-checklist.md](release-checklist.md) shows the current state.
+
 1. Close OBS Studio.
 2. Download `RelayDock-<version>-windows-x64-Setup.exe` from the Releases page of this repository.
 3. Check the file. See "Check your download" below.
