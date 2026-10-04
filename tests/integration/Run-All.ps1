@@ -39,7 +39,8 @@ $suites = @(
     @{ Name = 'Several destinations'; Script = 'Test-MultiDestination.ps1'; Arguments = @('-ObsRoot', $ObsRoot, '-BuildDir', $BuildDir, '-OutDir', (Join-Path $OutDir 'multi-destination')) },
     @{ Name = 'Vertical canvas'; Script = 'Test-Vertical.ps1'; Arguments = @('-ObsRoot', $ObsRoot, '-BuildDir', $BuildDir, '-OutDir', (Join-Path $OutDir 'vertical')) },
     @{ Name = 'Automatic optimisation'; Script = 'Test-Optimizer.ps1'; Arguments = @('-ObsRoot', $ObsRoot, '-BuildDir', $BuildDir, '-OutDir', (Join-Path $OutDir 'optimizer')) },
-    @{ Name = 'Interface'; Script = 'Test-Ui.ps1'; Arguments = @('-ObsRoot', $ObsRoot, '-BuildDir', $BuildDir, '-OutDir', (Join-Path $OutDir 'ui')) }
+    @{ Name = 'Interface'; Script = 'Test-Ui.ps1'; Arguments = @('-ObsRoot', $ObsRoot, '-BuildDir', $BuildDir, '-OutDir', (Join-Path $OutDir 'ui')) },
+    @{ Name = 'Live chat'; Script = 'Test-Chat.ps1'; Arguments = @('-ObsRoot', $ObsRoot, '-BuildDir', $BuildDir, '-OutDir', (Join-Path $OutDir 'chat')) }
 )
 
 $rows = New-Object System.Collections.Generic.List[object]

@@ -46,6 +46,19 @@ set_target_properties(relaydock-tests PROPERTIES FOLDER "RelayDock")
 add_test(NAME unit COMMAND relaydock-tests --test-suite-exclude=security*)
 add_test(NAME security COMMAND relaydock-tests --test-suite=security*)
 
+# Stand-ins for Twitch and YouTube on this PC, used by tests/integration/Test-Chat.ps1.
+add_executable(
+  rd-chat-fake
+  tools/chat-fake/chat_fake.cpp
+  support/fake_platforms.cpp
+  support/fake_platforms.h
+  support/fake_server.cpp
+  support/fake_server.h
+)
+target_link_libraries(rd-chat-fake PRIVATE relaydock-core bcrypt)
+target_include_directories(rd-chat-fake PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+set_target_properties(rd-chat-fake PROPERTIES FOLDER "RelayDock")
+
 # Local RTMP ingest used by the integration tests. See tests/integration/README.md.
 add_executable(rd-rtmp-sink tools/rtmp-sink/rtmp_sink.cpp)
 target_link_libraries(rd-rtmp-sink PRIVATE relaydock-options ws2_32)

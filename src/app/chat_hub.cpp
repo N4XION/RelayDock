@@ -5,6 +5,7 @@
 #include "app/app_context.h"
 #include "build_info.h"
 #include "chat/chat_accounts.h"
+#include "legal/legal_documents.h"
 #include "utils/i18n.h"
 #include "utils/log.h"
 #include "utils/strings.h"
@@ -13,7 +14,17 @@
 
 namespace rd {
 
-ChatHub::ChatHub(AppContext &app, QObject *parent) : QObject(parent), app_(app) {}
+ChatHub::ChatHub(AppContext &app, QObject *parent) : QObject(parent), app_(app)
+{
+	// The review can be finished, or a new document can ask for it again, at any time.
+	connect(&app_, &AppContext::configChanged, this, [this] {
+		const bool reviewed = legalComplete(app_.config().legal);
+		if (reviewed != reviewed_) {
+			reviewed_ = reviewed;
+			apply();
+		}
+	});
+}
 
 ChatHub::~ChatHub()
 {
@@ -117,8 +128,11 @@ void ChatHub::apply()
 	if (shutDown_)
 		return;
 	const ChatConfig &chat = app_.config().chat;
+	// RelayDock talks to a platform only after the user has reviewed the documents that say so.
+	reviewed_ = legalComplete(app_.config().legal);
+	const bool reviewed = reviewed_;
 
-	const bool wantTwitch = chat.twitchEnabled && twitchSignedIn() && twitch::validClientId(twitchClientId());
+	const bool wantTwitch = reviewed && chat.twitchEnabled && twitchSignedIn() && twitch::validClientId(twitchClientId());
 	if (wantTwitch) {
 		if (!twitch_)
 			startTwitch();
@@ -128,7 +142,7 @@ void ChatHub::apply()
 	}
 
 	std::string videoId;
-	const bool wantYouTube = chat.youtubeEnabled && youtubeKeySaved() && youtube::parseVideoId(chat.youtubeVideo, videoId);
+	const bool wantYouTube = reviewed && chat.youtubeEnabled && youtubeKeySaved() && youtube::parseVideoId(chat.youtubeVideo, videoId);
 	if (wantYouTube) {
 		if (!youtube_)
 			startYouTube();

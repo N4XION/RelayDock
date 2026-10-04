@@ -3,6 +3,8 @@
 #include "testing/scenario_runner.h"
 
 #include "app/app_context.h"
+#include "app/chat_hub.h"
+#include "chat/chat_accounts.h"
 #include "app/diagnostics_service.h"
 #include "app/performance_monitor.h"
 #include "build_info.h"
@@ -707,6 +709,66 @@ ScenarioRunner::StepResult ScenarioRunner::beginStep(const json &step, std::stri
 		return StepResult::Done;
 	}
 
+	if (op == "chat_setup") {
+		// Points chat at stand-ins for the platforms on this PC and shortens its waits.
+		ChatHub::TestSetup setup;
+		setup.twitch.auth = text(step, "twitch_auth", setup.twitch.auth);
+		setup.twitch.api = text(step, "twitch_api", setup.twitch.api);
+		setup.twitch.eventSub = text(step, "twitch_eventsub", setup.twitch.eventSub);
+		setup.youtube.api = text(step, "youtube_api", setup.youtube.api);
+		setup.retryFirstMs = static_cast<long long>(number(step, "retry_first_ms", 0));
+		setup.retryMaxMs = static_cast<long long>(number(step, "retry_max_ms", 0));
+		setup.signInPollMs = static_cast<long long>(number(step, "sign_in_poll_ms", 0));
+		setup.keepaliveGraceMs = static_cast<long long>(number(step, "keepalive_grace_ms", 0));
+		setup.youtubeMinPollMs = static_cast<long long>(number(step, "youtube_min_poll_ms", 0));
+		setup.youtubeNotLiveRetryMs = static_cast<long long>(number(step, "youtube_not_live_retry_ms", 0));
+		app_.chat().setTestSetup(setup);
+		app_.chat().clearTimeline();
+		return StepResult::Done;
+	}
+
+	if (op == "chat_twitch_saved") {
+		// A Twitch sign-in that was made earlier: the saved token and the application id.
+		app_.vault().set(twitchChatCredential(), SecretString(text(step, "refresh_token")));
+		app_.config().chat.twitchClientId = text(step, "client_id");
+		app_.config().chat.twitchLogin = text(step, "login");
+		app_.config().chat.twitchEnabled = flag(step, "enabled", true);
+		app_.notifyConfigChanged();
+		app_.chat().apply();
+		return StepResult::Done;
+	}
+
+	if (op == "chat_twitch_client") {
+		app_.config().chat.twitchClientId = text(step, "client_id");
+		app_.notifyConfigChanged();
+		app_.chat().apply();
+		return StepResult::Done;
+	}
+
+	if (op == "chat_youtube_key") {
+		app_.chat().setYouTubeKey(SecretString(text(step, "key")));
+		return StepResult::Done;
+	}
+
+	if (op == "chat_youtube_connect") {
+		UserMessage problem;
+		if (!app_.chat().connectYouTube(text(step, "video"), problem)) {
+			detail = problem.text();
+			return flag(step, "expect_refused", false) ? StepResult::Done : StepResult::Failed;
+		}
+		return StepResult::Done;
+	}
+
+	if (op == "chat_youtube_disconnect") {
+		app_.chat().disconnectYouTube();
+		return StepResult::Done;
+	}
+
+	if (op == "chat_clear") {
+		app_.chat().clearTimeline();
+		return StepResult::Done;
+	}
+
 	if (op == "accept_legal") {
 		// For tests that are not about the first-run review itself.
 		for (const LegalDocument &document : legalDocuments())
@@ -772,7 +834,7 @@ ScenarioRunner::StepResult ScenarioRunner::beginStep(const json &step, std::stri
 	}
 
 	if (op == "wait" || op == "wait_phase" || op == "wait_reconnects" || op == "wait_idle" || op == "wait_suggestion" ||
-	    op == "wait_adjustment")
+	    op == "wait_adjustment" || op == "chat_wait" || op == "chat_wait_events")
 		return pollStep(step, detail);
 
 	StepResult uiResult = StepResult::Done;
@@ -796,6 +858,35 @@ ScenarioRunner::StepResult ScenarioRunner::pollStep(const json &step, std::strin
 		return elapsedSec >= number(step, "seconds", 1.0) ? StepResult::Done : StepResult::Waiting;
 
 	const double timeoutSec = number(step, "timeout_sec", 30.0);
+
+	if (op == "chat_wait") {
+		// Waits until a platform's chat reader is in a state: off, not_set_up, connecting,
+		// connected, waiting or stopped.
+		const ChatPlatform platform = text(step, "platform") == "youtube" ? ChatPlatform::YouTube : ChatPlatform::Twitch;
+		const std::string wanted = text(step, "state", "connected");
+		const ChatStatus status = app_.chat().status(platform);
+		if (chatStateId(status.state) == wanted) {
+			detail = "reached after " + std::to_string(static_cast<int>(elapsedSec * 1000)) + " ms";
+			return StepResult::Done;
+		}
+		if (elapsedSec >= timeoutSec) {
+			detail = std::string("Still '") + chatStateId(status.state) + "' at the timeout, wanted '" + wanted + "'. " +
+				 status.message.text();
+			return StepResult::Failed;
+		}
+		return StepResult::Waiting;
+	}
+
+	if (op == "chat_wait_events") {
+		const auto wanted = static_cast<uint64_t>(number(step, "count", 1));
+		if (app_.chat().timeline().total() >= wanted)
+			return StepResult::Done;
+		if (elapsedSec >= timeoutSec) {
+			detail = std::to_string(app_.chat().timeline().total()) + " event(s) at the timeout, wanted " + std::to_string(wanted) + ".";
+			return StepResult::Failed;
+		}
+		return StepResult::Waiting;
+	}
 
 	if (op == "wait_idle") {
 		// Every destination has stopped, whatever the reason.
@@ -989,6 +1080,37 @@ json ScenarioRunner::snapshot()
 	out["optimizer_history"] = std::move(history);
 
 	out["keeps_awake"] = app_.keepsAwake();
+
+	{
+		// Chat: what each reader is doing, and the newest events. A test puts made-up comments
+		// in, so they may be reported. A real chat is never written anywhere.
+		ChatHub &chat = app_.chat();
+		json platforms = json::object();
+		for (const ChatPlatform platform : {ChatPlatform::Twitch, ChatPlatform::YouTube}) {
+			const ChatStatus status = chat.status(platform);
+			platforms[chatPlatformId(platform)] = {{"state", chatStateId(status.state)},
+							       {"account", status.account},
+							       {"message", status.message.text()}};
+		}
+		json events = json::array();
+		const auto &all = chat.timeline().events();
+		const size_t first = all.size() > 50 ? all.size() - 50 : 0;
+		for (size_t i = first; i < all.size(); ++i) {
+			const ChatEvent &event = all[i];
+			events.push_back({{"platform", chatPlatformId(event.platform)},
+					  {"kind", chatEventKindId(event.kind)},
+					  {"id", event.id},
+					  {"author", event.author},
+					  {"text", event.text},
+					  {"headline", event.headline}});
+		}
+		out["chat"] = {{"platforms", platforms},
+			       {"events", events},
+			       {"total", chat.timeline().total()},
+			       {"twitch_signed_in", chat.twitchSignedIn()},
+			       {"youtube_key_saved", chat.youtubeKeySaved()},
+			       {"youtube_requests", chat.youtubeRequests()}};
+	}
 
 	{
 		const UninstallPlan plan = app_.uninstallPlan(false);

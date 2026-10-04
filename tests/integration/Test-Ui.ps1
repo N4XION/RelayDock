@@ -315,7 +315,7 @@ if (Test-Selected 'destination') {
 if (Test-Selected 'settings') {
     Write-Host ''
     Write-Host 'settings: every page opens and its controls apply'
-    $pages = @('general', 'platforms', 'streaming', 'video', 'audio', 'encoder', 'vertical', 'optimization', 'performance',
+    $pages = @('general', 'platforms', 'chat', 'streaming', 'video', 'audio', 'encoder', 'vertical', 'optimization', 'performance',
         'network', 'appearance', 'layout', 'security', 'diagnostics', 'updates', 'advanced', 'about')
     $keys = @{ a = 'ok-ui-settings-a-1d6f'; b = 'ok-ui-settings-b-93ce' }
     $steps = New-Object System.Collections.Generic.List[object]
@@ -386,9 +386,9 @@ if (Test-Selected 'settings') {
     if ($run.Result -and $run.Result.ui.dock_expanded) {
         $ui = $run.Result.ui
         $opened = @($pages | Where-Object { $null -ne $ui."page_$_" -and @($ui."page_$_".labels).Count -gt 0 }).Count
-        $report.Check('settings: all 17 pages open and show content', ($opened -eq 17), "$opened pages")
+        $report.Check('settings: all 18 pages open and show content', ($opened -eq 18), "$opened pages")
         $nav = @($ui.page_general.lists | Where-Object { $_.name -eq 'Settings pages' })[0]
-        $report.Check('settings: the page list names all 17 pages', (@($nav.rows).Count -eq 17), (@($nav.rows) -join ', '))
+        $report.Check('settings: the page list names all 18 pages', (@($nav.rows).Count -eq 18), (@($nav.rows) -join ', '))
         $report.Check('settings: Platforms lists every platform with its limits',
             ((Test-Label $ui.page_platforms '^Twitch$') -and (Test-Label $ui.page_platforms '^TikTok$') -and (Test-Label $ui.page_platforms '^YouTube$') -and
              (Test-Label $ui.page_platforms '^Facebook$') -and (Test-Label $ui.page_platforms 'Video up to 6000 Kbps')))

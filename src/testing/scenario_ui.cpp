@@ -9,6 +9,7 @@
 #include "testing/scenario_runner.h"
 
 #include "app/app_context.h"
+#include "ui/chat_dock.h"
 #include "ui/dock_widget.h"
 #include "utils/log.h"
 #include "utils/paths.h"
@@ -37,7 +38,9 @@
 #include <QRadioButton>
 #include <QScrollBar>
 #include <QSpinBox>
+#include <QTextBlock>
 #include <QTextBrowser>
+#include <QTextDocument>
 #include <QTimer>
 
 #include <algorithm>
@@ -83,10 +86,29 @@ RelayDockWidget *findDock()
 	return nullptr;
 }
 
+ChatDockWidget *findChatDock()
+{
+	for (QWidget *widget : QApplication::allWidgets()) {
+		if (auto *dock = qobject_cast<ChatDockWidget *>(widget))
+			return dock;
+	}
+	return nullptr;
+}
+
 QWidget *findTarget(const std::string &name)
 {
 	if (name == "dock")
 		return findDock();
+	if (name == "chat")
+		return findChatDock();
+	if (name == "chatwindow") {
+		ChatDockWidget *dock = findChatDock();
+		for (QWidget *parent = dock ? dock->parentWidget() : nullptr; parent; parent = parent->parentWidget()) {
+			if (qobject_cast<QDockWidget *>(parent))
+				return parent;
+		}
+		return nullptr;
+	}
 	if (name == "dockwindow") {
 		RelayDockWidget *dock = findDock();
 		for (QWidget *parent = dock ? dock->parentWidget() : nullptr; parent; parent = parent->parentWidget()) {
@@ -288,6 +310,23 @@ json describe(QWidget *root)
 	}
 	out["lists"] = lists;
 
+	// What a text view shows, line by line. The chat dock is one.
+	json texts = json::array();
+	for (QTextEdit *view : root->findChildren<QTextEdit *>()) {
+		if (!view->isVisibleTo(root))
+			continue;
+		json lines = json::array();
+		for (QTextBlock block = view->document()->begin(); block.isValid(); block = block.next()) {
+			// A line break inside one entry is a separator character of its own.
+			QString line = block.text();
+			line.replace(QChar(0x2028), QStringLiteral(" / "));
+			line.remove(QChar(0xFFFC)); // The place of a picture
+			lines.push_back(line.trimmed().toStdString());
+		}
+		texts.push_back({{"name", view->accessibleName().toStdString()}, {"lines", lines}});
+	}
+	out["texts"] = texts;
+
 	json badges = json::array();
 	for (ProviderBadge *badge : root->findChildren<ProviderBadge *>()) {
 		if (badge->isVisibleTo(root))
@@ -385,7 +424,8 @@ bool ScenarioRunner::uiStep(const std::string &op, const json &step, StepResult 
 	}
 
 	if (op == "ui_show_dock") {
-		QWidget *window = findTarget("dockwindow");
+		// "dock": "chat" shows the chat dock instead of the main one.
+		QWidget *window = findTarget(textOf(step, "dock", "main") == "chat" ? "chatwindow" : "dockwindow");
 		auto *dockWindow = qobject_cast<QDockWidget *>(window);
 		auto *main = qobject_cast<QMainWindow *>(findTarget("main"));
 		if (!dockWindow || !main) {

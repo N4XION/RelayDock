@@ -116,6 +116,7 @@ private:
 	ChatStatus twitchStatus_;
 	ChatStatus youtubeStatus_;
 	unsigned long long youtubeRequestsBefore_ = 0; // Sent by readers that are gone
+	bool reviewed_ = false;                       // The legal documents were reviewed when last looked
 	bool shutDown_ = false;
 
 	twitch::Endpoints twitchEndpoints_;

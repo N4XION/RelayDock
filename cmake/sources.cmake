@@ -153,6 +153,10 @@ set(
   src/outputs/video_guard.cpp
   src/outputs/video_guard.h
   src/plugin-main.cpp
+  src/ui/chat_dock.cpp
+  src/ui/chat_dock.h
+  src/ui/chat_signin_dialog.cpp
+  src/ui/chat_signin_dialog.h
   src/ui/destination_card.cpp
   src/ui/destination_card.h
   src/ui/destination_dialog.cpp
@@ -167,6 +171,7 @@ set(
   src/ui/legal_dialog.h
   src/ui/preflight_dialog.cpp
   src/ui/preflight_dialog.h
+  src/ui/settings_chat_page.cpp
   src/ui/settings_dialog.cpp
   src/ui/settings_dialog.h
   src/ui/settings_pages.cpp

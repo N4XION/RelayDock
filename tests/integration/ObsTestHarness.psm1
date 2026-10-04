@@ -339,6 +339,7 @@ function Get-BuildPaths {
         PluginRunDir = Join-Path (Join-Path $BuildDir 'rundir') $Configuration
         Sink         = Join-Path (Join-Path (Join-Path $BuildDir 'tests') $Configuration) 'rd-rtmp-sink.exe'
         UnitTests    = Join-Path (Join-Path (Join-Path $BuildDir 'tests') $Configuration) 'relaydock-tests.exe'
+        ChatFake     = Join-Path (Join-Path (Join-Path $BuildDir 'tests') $Configuration) 'rd-chat-fake.exe'
     }
     if (-not (Test-Path (Join-Path (Join-Path $paths.PluginRunDir 'bin') 'relaydock.dll'))) {
         throw "No plugin in '$($paths.PluginRunDir)'. Build the preset first."

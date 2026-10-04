@@ -32,7 +32,7 @@ class SettingsDialog : public QDialog {
 public:
 	SettingsDialog(UiHost &host, QWidget *parent = nullptr);
 
-	// Page ids: general, platforms, streaming, video, audio, encoder, vertical, optimization,
+	// Page ids: general, platforms, chat, streaming, video, audio, encoder, vertical, optimization,
 	// performance, network, appearance, layout, security, diagnostics, updates, advanced, about.
 	void showPage(const std::string &id);
 
@@ -49,6 +49,8 @@ private:
 	PageBuilder beginPage(const QString &title, const QString &intro);
 	void addPage(const char *id, const QString &title, const char *icon, QWidget *page, std::function<void()> refresh);
 	void refreshCurrent();
+	// The id of the page that is shown.
+	std::string currentPageId() const;
 	// Saves the settings and tells the rest of RelayDock. Ignored while a page refreshes.
 	void commit();
 	QLabel *addNote(QVBoxLayout *layout, const QString &text);
@@ -58,6 +60,7 @@ private:
 
 	void buildGeneral();
 	void buildPlatforms();
+	void buildChat();
 	void buildStreaming();
 	void buildVideo();
 	void buildAudio();

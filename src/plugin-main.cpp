@@ -27,6 +27,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "build_info.h"
 #include "outputs/program_mirror_source.h"
 #include "outputs/video_guard.h"
+#include "ui/chat_dock.h"
 #include "ui/dock_widget.h"
 #include "ui/exit_guard.h"
 #include "utils/i18n.h"
@@ -54,6 +55,7 @@ MODULE_EXPORT const char *obs_module_description(void)
 namespace {
 
 constexpr const char *kDockId = "relaydock";
+constexpr const char *kChatDockId = "relaydock_chat";
 
 // Module state. Created in obs_module_load, shut down on the frontend's exit event while
 // libobs is still fully alive, destroyed in obs_module_unload.
@@ -150,6 +152,13 @@ bool obs_module_load(void)
 		return false;
 	}
 	g_dock = dock;
+
+	// The chat dock. OBS owns it too. RelayDock works without it, so a refusal is not fatal.
+	auto *chatDock = new rd::ChatDockWidget(*dock);
+	if (!obs_frontend_add_dock_by_id(kChatDockId, rd::loc("Chat.Dock.Title", "RelayDock Chat").c_str(), chatDock)) {
+		rd::logWarning("OBS refused to add the RelayDock Chat dock. Another dock already uses the id '{}'.", kChatDockId);
+		delete chatDock;
+	}
 
 	// Asks before OBS closes with a destination active. A child of the dock, so OBS deletes
 	// it with the dock.

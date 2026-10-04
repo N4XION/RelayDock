@@ -68,7 +68,7 @@ QFrame *makePanel(QWidget *parent)
 
 const std::vector<std::string> &SettingsDialog::pageIds()
 {
-	static const std::vector<std::string> ids = {"general",     "platforms",    "streaming",   "video",   "audio",    "encoder",
+	static const std::vector<std::string> ids = {"general",     "platforms",    "chat",        "streaming", "video",  "audio",    "encoder",
 						     "vertical",    "optimization", "performance", "network", "appearance", "layout",
 						     "security",    "diagnostics",  "updates",     "advanced", "about"};
 	return ids;
@@ -91,6 +91,7 @@ SettingsDialog::SettingsDialog(UiHost &host, QWidget *parent) : QDialog(parent),
 
 	buildGeneral();
 	buildPlatforms();
+	buildChat();
 	buildStreaming();
 	buildVideo();
 	buildAudio();
@@ -173,6 +174,12 @@ void SettingsDialog::addPage(const char *id, const QString &title, const char *i
 	item->setData(Qt::UserRole, QByteArray(icon));
 	stack_->addWidget(page);
 	pages_.push_back({id, page, std::move(refresh)});
+}
+
+std::string SettingsDialog::currentPageId() const
+{
+	const int row = stack_->currentIndex();
+	return row >= 0 && row < static_cast<int>(pages_.size()) ? pages_[static_cast<size_t>(row)].id : std::string();
 }
 
 void SettingsDialog::refreshCurrent()
