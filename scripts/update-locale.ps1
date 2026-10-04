@@ -74,7 +74,8 @@ foreach ($key in ($strings.Keys | Sort-Object { $_ } -CaseSensitive)) {
 }
 $content = ($lines -join "`n") + "`n"
 
-$current = if (Test-Path $localeFile) { [System.IO.File]::ReadAllText($localeFile) } else { '' }
+# Git may check the file out with Windows line endings. Compare the text, not the line endings.
+$current = if (Test-Path $localeFile) { [System.IO.File]::ReadAllText($localeFile) -replace "`r`n", "`n" } else { '' }
 if ($Check) {
     if ($current -cne $content) {
         Write-Host 'data/locale/en-US.ini is out of date. Run scripts/update-locale.ps1.'

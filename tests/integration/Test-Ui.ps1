@@ -14,7 +14,11 @@ Drives the real RelayDock windows inside a real OBS and checks what they show an
                 checks that the clipboard is cleared after 30 seconds.
   settings      Opens every settings page, changes settings through the controls and checks
                 that they apply.
+  cards         The card menu: duplicate, move, test connection and remove, and the grid.
+  restart       A destination and its key survive an OBS restart and stream again.
   tools         The preflight window and the vertical layout editor.
+  shutdown      OBS closes while a RelayDock window is open: the settings window, the editor
+                with a connection test running, and the layout editor with its live preview.
 
 OBS opens visibly for these tests, because a hidden window has no layout to check.
 Each scenario saves pictures of the windows next to its results.
@@ -77,6 +81,15 @@ if (Test-Selected 'onboarding') {
     $steps.Add(@{ op = 'ui_state'; target = 'dock'; label = 'dock_first' })
     $steps.Add(@{ op = 'ui_grab'; target = 'dock'; file = 'dock-first-run.png' })
 
+    # Asking for the editor before the review opens the review instead.
+    $steps.Add(@{ op = 'ui_open'; what = 'add'; provider = 'twitch' })
+    $steps.Add(@{ op = 'ui_wait'; target = 'dialog' })
+    $steps.Add(@{ op = 'wait'; seconds = 0.6 })
+    $steps.Add(@{ op = 'ui_state'; label = 'gate_add' })
+    $steps.Add(@{ op = 'ui_click'; text = 'Not now' })
+    $steps.Add(@{ op = 'ui_wait'; target = 'dialog'; present = $false })
+    $steps.Add(@{ op = 'wait'; seconds = 0.6 })
+
     # Quit half-way: accept the first document, then close. Nothing may be recorded.
     $steps.Add(@{ op = 'ui_click'; target = 'dock'; text = 'Review now' })
     $steps.Add(@{ op = 'ui_wait'; target = 'dialog' })
@@ -129,6 +142,8 @@ if (Test-Selected 'onboarding') {
         $report.Check('onboarding: a new install shows the review panel in the dock', (Test-Label $ui.dock_first 'Before your first stream'))
         $report.Check('onboarding: adding and starting are locked until the review is done',
             (-not (Get-Button $ui.dock_first '+ Add Platform').enabled -and -not (Get-Button $ui.dock_first 'Start All Enabled').enabled))
+        $report.Check('onboarding: the editor cannot be reached before the review, it opens the review instead',
+            ($ui.gate_add.title -match 'before your first stream' -and (Test-Label $ui.gate_add 'Document 1 of 6')))
         $report.Check('onboarding: the review opens on the first of six documents',
             ((Test-Label $ui.legal_open 'Document 1 of 6') -and (Test-Label $ui.legal_open '^Terms of Use$')))
         $box = Get-Check $ui.legal_open 'I have reviewed'
@@ -380,6 +395,145 @@ if (Test-Selected 'settings') {
 }
 
 # ---------------------------------------------------------------------------------------------
+if (Test-Selected 'cards') {
+    Write-Host ''
+    Write-Host 'cards: the card menu and the card arrangement'
+    $keys = @{ a = 'ok-ui-cards-a-81f3'; b = 'ok-ui-cards-b-c720' }
+    $outcome = Invoke-Ui 'cards' @{ steps = @(
+            @{ op = 'clear' }, $video, @{ op = 'accept_legal' },
+            @{ op = 'add_destination'; ref = 'a'; provider = 'custom_rtmp'; stream_key = $keys.a; config = @{ name = 'First'; server_url = $server } },
+            @{ op = 'add_destination'; ref = 'b'; provider = 'custom_rtmp'; stream_key = $keys.b; config = @{ name = 'Second'; server_url = $server } },
+            @{ op = 'ui_show_dock'; width = 400; height = 760 },
+            @{ op = 'wait'; seconds = 1 },
+            @{ op = 'ui_menu'; target = 'dock'; button = 'More actions'; index = 0; label = 'menu_first' },
+            @{ op = 'ui_menu'; target = 'dock'; button = 'More actions'; index = 0; action = 'Duplicate' },
+            @{ op = 'wait'; seconds = 1 },
+            @{ op = 'ui_state'; target = 'dock'; label = 'duplicated' },
+            @{ op = 'ui_menu'; target = 'dock'; button = 'More actions'; index = 0; action = 'Move down' },
+            @{ op = 'wait'; seconds = 1 },
+            @{ op = 'ui_state'; target = 'dock'; label = 'moved' },
+            @{ op = 'ui_menu'; target = 'dock'; button = 'More actions'; index = 2; action = 'Test connection' },
+            @{ op = 'wait'; seconds = 3 },
+            @{ op = 'ui_state'; target = 'dock'; label = 'tested' },
+            @{ op = 'ui_grab'; target = 'dock'; file = 'dock-tested.png' },
+            @{ op = 'ui_menu'; target = 'dock'; button = 'More actions'; index = 1; action = 'Remove...' },
+            @{ op = 'ui_wait'; target = 'message' },
+            @{ op = 'ui_state'; target = 'message'; label = 'remove_question' },
+            @{ op = 'ui_click'; target = 'message'; text = 'Yes' },
+            @{ op = 'ui_wait'; target = 'message'; present = $false },
+            @{ op = 'wait'; seconds = 1 },
+            @{ op = 'ui_state'; target = 'dock'; label = 'removed' },
+            @{ op = 'ui_key'; target = 'dock'; name = 'card'; index = 0; key = 'Alt+Down' },
+            @{ op = 'wait'; seconds = 1 },
+            @{ op = 'ui_state'; target = 'dock'; label = 'keyboard_moved' },
+            @{ op = 'ui_key'; target = 'dock'; name = 'card'; index = 0; key = 'Return' },
+            @{ op = 'ui_wait'; target = 'dialog' },
+            @{ op = 'wait'; seconds = 0.5 },
+            @{ op = 'ui_state'; label = 'keyboard_editor' },
+            @{ op = 'ui_click'; text = 'Cancel' },
+            @{ op = 'ui_wait'; target = 'dialog'; present = $false },
+            @{ op = 'ui_open'; what = 'settings'; page = 'security' },
+            @{ op = 'ui_wait'; target = 'dialog' },
+            @{ op = 'wait'; seconds = 1 },
+            @{ op = 'ui_state'; label = 'security' },
+            @{ op = 'ui_close' },
+            @{ op = 'ui_wait'; target = 'dialog'; present = $false },
+            @{ op = 'ui_show_dock'; width = 900; height = 500 },
+            @{ op = 'ui_click'; target = 'dock'; text = 'Show cards side by side' },
+            @{ op = 'wait'; seconds = 1 },
+            @{ op = 'ui_grab'; target = 'dock'; file = 'dock-grid.png' },
+            @{ op = 'save_config' },
+            @{ op = 'quit' }) } 180 -WithSink
+    $run = $outcome.Run
+    Add-ObsRunChecks -Report $report -Run $run -Label 'cards' -Secrets $keys.Values
+
+    if ($run.Result -and $run.Result.ui.removed) {
+        $ui = $run.Result.ui
+        $titles = { param($state) @($state.labels | Where-Object { $_.role -eq 'rdTitle' } | ForEach-Object { $_.text }) }
+        $menu = @($ui.menu_first | ForEach-Object { $_.text })
+        $report.Check('cards: the menu offers edit, duplicate, test, reconnect, move and remove',
+            (@('Edit...', 'Duplicate', 'Test connection', 'Reconnect', 'Move up', 'Move down', 'Remove...') | Where-Object { $menu -notcontains $_ }).Count -eq 0,
+            ($menu -join ', '))
+        $report.Check('cards: the first card cannot move up, and an idle one cannot reconnect',
+            (-not @($ui.menu_first | Where-Object { $_.text -eq 'Move up' })[0].enabled -and
+             -not @($ui.menu_first | Where-Object { $_.text -eq 'Reconnect' })[0].enabled))
+        $after = & $titles $ui.duplicated
+        $report.Check('cards: Duplicate adds a copy right after the original', (($after -join '|') -eq 'First|First copy|Second'), ($after -join ', '))
+        $moved = & $titles $ui.moved
+        $report.Check('cards: Move down moves the card one place', (($moved -join '|') -eq 'First copy|First|Second'), ($moved -join ', '))
+        $report.Check('cards: Test connection reports that the test server answers and that the key is not checked',
+            ((Test-Label $ui.tested 'The server for Second answers') -and (Test-Label $ui.tested 'does not check your stream key')))
+        $report.Check('cards: Remove asks first and says what happens to the key',
+            ((Test-Label $ui.remove_question 'Remove First\?') -and (Test-Label $ui.remove_question 'Windows Credential Manager')))
+        $left = & $titles $ui.removed
+        $report.Check('cards: the confirmed card is gone and the others stay', (($left -join '|') -eq 'First copy|Second'), ($left -join ', '))
+        $byKeyboard = & $titles $ui.keyboard_moved
+        $report.Check('cards: Alt+Down moves the focused card with the keyboard', (($byKeyboard -join '|') -eq 'Second|First copy'), ($byKeyboard -join ', '))
+        $report.Check('cards: Enter opens the editor of the focused card', ($ui.keyboard_editor.title -eq 'Edit Second'), "$($ui.keyboard_editor.title)")
+        $saved = @(@($ui.security.lists | Where-Object { $_.name -eq 'Saved keys and passwords' })[0].rows)
+        $report.Check('cards: the copy has its own saved key, and the removed card took its key with it',
+            ($saved.Count -eq 2 -and $saved -contains 'First copy: stream key' -and $saved -contains 'Second: stream key'), ($saved -join ', '))
+        $configPath = Join-Path (Get-ObsConfigDir -ObsRoot $ObsRoot) 'plugin_config\relaydock\config.json'
+        $configText = if (Test-Path $configPath) { Get-Content $configPath -Raw } else { '' }
+        $report.Check('cards: the grid choice is saved', ($configText -match '"list_mode":\s*"grid"'))
+    }
+}
+
+# ---------------------------------------------------------------------------------------------
+if (Test-Selected 'restart') {
+    Write-Host ''
+    Write-Host 'restart: destinations and keys survive an OBS restart'
+    $key = 'ok-ui-restart-b4d19e'
+    $prefix = "RelayDockTest-$([guid]::NewGuid().ToString())"
+    $dir = Join-Path $OutDir 'restart'
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+
+    # First OBS session: create the destination and its key, then close OBS.
+    $first = Invoke-ObsScenario -ObsRoot $ObsRoot -PluginRunDir $paths.PluginRunDir -OutDir $dir -Name 'restart-first' -TimeoutSec 120 `
+        -Visible -ResetConfig -CredentialPrefix $prefix -Scenario @{ keep_credentials = $true; steps = @(
+            @{ op = 'clear' }, $video, @{ op = 'accept_legal' },
+            @{ op = 'add_destination'; ref = 'a'; provider = 'custom_rtmp'; stream_key = $key
+               config = @{ name = 'Kept'; server_url = $server; video = @{ bitrate_kbps = 2600 }; locks = @{ bitrate = $true } } },
+            @{ op = 'set'; performance_mode = 'potato'; upload_kbps = 12000 },
+            @{ op = 'save_config' },
+            @{ op = 'quit' }) }
+    Add-ObsRunChecks -Report $report -Run $first -Label 'restart, first session'
+
+    # Second OBS session: same settings folder, same credential prefix. Nothing is added.
+    $sink = Start-RtmpSink -SinkPath $paths.Sink -ReportPath (Join-Path $dir 'sink-report.json') -Port $Port
+    try {
+        $second = Invoke-ObsScenario -ObsRoot $ObsRoot -PluginRunDir $paths.PluginRunDir -OutDir $dir -Name 'restart-second' -TimeoutSec 150 `
+            -Visible -CredentialPrefix $prefix -Scenario @{ steps = @(
+                @{ op = 'ui_show_dock'; width = 400; height = 700 },
+                @{ op = 'wait'; seconds = 1 },
+                @{ op = 'ui_state'; target = 'dock'; label = 'dock' },
+                @{ op = 'ui_bind_ref'; ref = 'a'; name = 'Kept' },
+                @{ op = 'ui_click'; target = 'dock'; text = 'Start Kept' },
+                @{ op = 'wait_phase'; ref = 'a'; phase = 'live'; timeout_sec = 30 },
+                @{ op = 'wait'; seconds = 5 },
+                @{ op = 'snapshot'; label = 'live' },
+                @{ op = 'stop_all' },
+                @{ op = 'wait_idle'; timeout_sec = 40 },
+                @{ op = 'quit' }) }
+    } finally {
+        $sinkReport = Stop-RtmpSink -Sink $sink
+    }
+    Add-ObsRunChecks -Report $report -Run $second -Label 'restart, second session' -Secrets @($key)
+
+    if ($second.Result -and $second.Result.snapshots.live) {
+        $ui = $second.Result.ui
+        $live = $second.Result.snapshots.live
+        $report.Check('restart: the destination is back after the restart, ready to start',
+            ((Test-Label $ui.dock '^Kept$') -and (Test-Label $ui.dock '^READY$')))
+        $report.Check('restart: the first-run review is not asked again', (-not (Test-Label $ui.dock 'Before your first stream')))
+        $report.Check('restart: it streams with the key Windows kept', ($live.destinations.a.phase -eq 'live' -and $null -ne $sinkReport.streams.$key -and $sinkReport.streams.$key.video_bytes -gt 50000))
+        $report.Check('restart: its locked bitrate and the performance mode came back',
+            ($live.destinations.a.effective.bitrate_kbps -eq 2600 -and $live.destinations.a.locks.bitrate -eq $true -and $live.performance.tick_interval_ms -eq 2000),
+            "$($live.destinations.a.effective.bitrate_kbps) Kbps, tick $($live.performance.tick_interval_ms) ms")
+    }
+}
+
+# ---------------------------------------------------------------------------------------------
 if (Test-Selected 'tools') {
     Write-Host ''
     Write-Host 'tools: preflight window and vertical layout editor'
@@ -417,6 +571,9 @@ if (Test-Selected 'tools') {
             @{ op = 'ui_combo'; name = 'Preset'; value = 'Top half' },
             @{ op = 'wait'; seconds = 0.5 },
             @{ op = 'ui_state'; label = 'vertical_preset' },
+            @{ op = 'ui_drag'; name = 'Vertical canvas preview'; from_x = 0.5; from_y = 0.25; to_x = 0.5; to_y = 0.45 },
+            @{ op = 'wait'; seconds = 0.5 },
+            @{ op = 'ui_state'; label = 'vertical_dragged' },
             @{ op = 'ui_click'; text = 'Save' },
             @{ op = 'ui_wait'; target = 'dialog'; present = $false },
             @{ op = 'render_vertical'; label = 'after_save'; find = @{ blue = '#0000FF' } },
@@ -438,13 +595,74 @@ if (Test-Selected 'tools') {
             (@($ui.vertical_open.lists | Where-Object { $_.name -eq 'Layout items' })[0].rows -contains 'OBS picture (Program)'))
         $position = @($ui.vertical_preset.labels | Where-Object { $_.text -match 'The source is' }).Count
         $report.Check('tools: the editor reports the size of the selected source', ($position -eq 1))
+        $before = @($ui.vertical_preset.spins | Where-Object { $_.name -eq 'Left, top' })
+        $after = @($ui.vertical_dragged.spins | Where-Object { $_.name -eq 'Left, top' })
+        $report.Check('tools: the Top half preset puts the box at the top, 1080 by 960',
+            ($before.Count -eq 2 -and $before[0].value -eq 0 -and $before[1].value -eq 0 -and
+             @($ui.vertical_preset.spins | Where-Object { $_.name -eq 'Width, height' })[1].value -eq 960))
+        $report.Check('tools: dragging the item in the preview moves it down and not sideways',
+            ($after.Count -eq 2 -and $after[0].value -eq 0 -and $after[1].value -gt 250 -and $after[1].value -lt 600),
+            "left $($after[0].value), top $($after[1].value)")
         $box = $run.Result.renders.after_save.colors.blue
-        # Top half of 1080x1920 is 1080x960. A 16:9 picture filling it is cropped at the sides.
-        $report.Check('tools: the Top half preset is what the canvas renders after Save',
-            ($null -ne $box -and [math]::Abs($box.x) -le 4 -and [math]::Abs($box.y) -le 4 -and
+        # The box is 1080x960. A 16:9 picture filling it is cropped at the sides.
+        $report.Check('tools: after Save the canvas renders the item where the editor put it',
+            ($null -ne $box -and [math]::Abs($box.x) -le 4 -and [math]::Abs($box.y - $after[1].value) -le 4 -and
              [math]::Abs($box.width - 1080) -le 4 -and [math]::Abs($box.height - 960) -le 4),
             "x=$($box.x) y=$($box.y) $($box.width)x$($box.height)")
     }
+}
+
+# ---------------------------------------------------------------------------------------------
+if (Test-Selected 'shutdown') {
+    Write-Host ''
+    Write-Host 'shutdown: OBS closes while RelayDock windows are open'
+    $key = 'ok-ui-shutdown-6e02d7'
+
+    # The settings window, on the page that updates every second.
+    $outcome = Invoke-Ui 'shutdown-settings' @{ steps = @(
+            @{ op = 'clear' }, $video, @{ op = 'accept_legal' },
+            @{ op = 'add_destination'; ref = 'a'; provider = 'custom_rtmp'; stream_key = $key; config = @{ name = 'Sink a'; server_url = $server } },
+            @{ op = 'ui_show_dock'; width = 400; height = 700 },
+            @{ op = 'start'; ref = 'a' },
+            @{ op = 'wait_phase'; ref = 'a'; phase = 'live'; timeout_sec = 30 },
+            @{ op = 'ui_open'; what = 'settings'; page = 'performance' },
+            @{ op = 'ui_wait'; target = 'dialog' },
+            @{ op = 'wait'; seconds = 3 },
+            @{ op = 'quit' }) } 120 -WithSink
+    Add-ObsRunChecks -Report $report -Run $outcome.Run -Label 'shutdown with the settings window open' -Secrets @($key)
+
+    # The editor, a modal window, while its connection test waits for a server that never answers.
+    $outcome = Invoke-Ui 'shutdown-editor' @{ steps = @(
+            @{ op = 'clear' }, $video, @{ op = 'accept_legal' },
+            @{ op = 'add_destination'; ref = 'a'; provider = 'custom_rtmp'; stream_key = $key; config = @{ name = 'Nowhere'; server_url = 'rtmp://192.0.2.1/live' } },
+            @{ op = 'ui_show_dock'; width = 400; height = 700 },
+            @{ op = 'ui_open'; what = 'edit'; ref = 'a' },
+            @{ op = 'ui_wait'; target = 'dialog' },
+            @{ op = 'wait'; seconds = 1 },
+            @{ op = 'ui_click'; text = 'Test connection' },
+            @{ op = 'wait'; seconds = 1.5 },
+            @{ op = 'ui_state'; label = 'testing' },
+            @{ op = 'quit' }) } 120
+    Add-ObsRunChecks -Report $report -Run $outcome.Run -Label 'shutdown with the editor open and a connection test running'
+    if ($outcome.Run.Result -and $outcome.Run.Result.ui.testing) {
+        $report.Check('shutdown: the connection test was still running when OBS closed',
+            (Test-Label $outcome.Run.Result.ui.testing 'Testing the connection to 192\.0\.2\.1'))
+    }
+
+    # The layout editor, with its live preview, while a vertical destination streams.
+    $outcome = Invoke-Ui 'shutdown-vertical' @{ steps = @(
+            @{ op = 'clear' }, $video, @{ op = 'accept_legal' },
+            @{ op = 'add_color_source'; name = 'RD blue'; color = '#0000FF'; width = 1280; height = 720 },
+            @{ op = 'add_destination'; ref = 'tall'; provider = 'custom_rtmp'; stream_key = $key
+               config = @{ name = 'Tall'; server_url = $server; video = @{ orientation = 'vertical' } } },
+            @{ op = 'ui_show_dock'; width = 400; height = 700 },
+            @{ op = 'start'; ref = 'tall' },
+            @{ op = 'wait_phase'; ref = 'tall'; phase = 'live'; timeout_sec = 30 },
+            @{ op = 'ui_open'; what = 'vertical' },
+            @{ op = 'ui_wait'; target = 'dialog' },
+            @{ op = 'wait'; seconds = 3 },
+            @{ op = 'quit' }) } 120 -WithSink
+    Add-ObsRunChecks -Report $report -Run $outcome.Run -Label 'shutdown with the layout editor open while live' -Secrets @($key)
 }
 
 exit $report.Finish()

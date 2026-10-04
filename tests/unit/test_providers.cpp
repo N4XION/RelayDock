@@ -464,11 +464,11 @@ TEST_SUITE("providers.endpoint")
 		const IProvider &twitch = r.get("twitch");
 		CHECK(twitch.info().testSupport == TestSupport::PrivateStream);
 
-		const SecretString key("live_000000000_TESTONLYnotarealkey0001");
+		const SecretString key("live_000000000_TESTONLYnotarealkey0001"); // NOT-REAL
 		CHECK(twitch.publishKey(key, false).reveal() == key.reveal());
 		CHECK(twitch.publishKey(key, true).reveal() == key.reveal() + "?bandwidthtest=true");
 
-		const SecretString withQuery("live_000000000_TESTONLYnotarealkey0001?x=1");
+		const SecretString withQuery("live_000000000_TESTONLYnotarealkey0001?x=1"); // NOT-REAL
 		CHECK(twitch.publishKey(withQuery, true).reveal() == withQuery.reveal() + "&bandwidthtest=true");
 
 		CHECK(twitch.publishKey(SecretString(), true).empty());
@@ -530,7 +530,7 @@ TEST_SUITE("providers.errors")
 	TEST_CASE("secrets in the OBS error text never reach the message")
 	{
 		Registry r;
-		const std::string key = "live_000000000_TESTONLYnotarealkey0002";
+		const std::string key = "live_000000000_TESTONLYnotarealkey0002"; // NOT-REAL
 		globalRedactor().addSecret(key);
 		const UserMessage message = r.get("twitch").describeStop(
 			"Twitch", StopReason::ConnectFailed,

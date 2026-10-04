@@ -442,7 +442,7 @@ void SettingsDialog::buildLayout()
 	auto *orderRow = new QHBoxLayout();
 	auto *order = new QListWidget(p.page);
 	order->setAccessibleName(uiText("Layout.Order", "Order of the sections"));
-	order->setMaximumHeight(110);
+	order->setFixedHeight(142);
 	auto *orderButtons = new QVBoxLayout();
 	auto *up = new QPushButton(uiText("Layout.Order.Up", "Move up"), p.page);
 	auto *down = new QPushButton(uiText("Layout.Order.Down", "Move down"), p.page);

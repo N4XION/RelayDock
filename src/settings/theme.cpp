@@ -196,6 +196,8 @@ std::string buildStyleSheet(const ThemeColors &c, const ThemeMetrics &m)
 	// The root. With "Follow OBS" the OBS theme already paints the background and the standard
 	// controls, so RelayDock leaves them alone.
 	add(std::format("#rdRoot, #rdDialog {{ font-size: {}px; }}", m.fontPx));
+	// Room between a box or radio button and its text, whatever the theme sets.
+	add("QRadioButton, QCheckBox { spacing: 7px; }");
 	if (!c.followsObs) {
 		const std::string background = toHex(c.background);
 		const std::string input = toHex(c.input);

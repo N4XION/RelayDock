@@ -1,0 +1,82 @@
+name: Bug report
+description: Something in RelayDock does not work the way it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the report.
+
+        Never post a stream key, password or token. If your problem is a security problem, do not open an issue. Follow SECURITY.md instead.
+  - type: input
+    id: relaydock-version
+    attributes:
+      label: RelayDock version
+      description: Settings, About shows it. Include the build number.
+      placeholder: 1.0.0-rc.1+42.abc1234
+    validations:
+      required: true
+  - type: input
+    id: obs-version
+    attributes:
+      label: OBS Studio version
+      placeholder: 32.2.2
+    validations:
+      required: true
+  - type: input
+    id: windows-version
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Which destination does this concern?
+      multiple: true
+      options:
+        - Twitch
+        - YouTube
+        - Facebook
+        - TikTok
+        - Custom RTMP
+        - Custom RTMPS
+        - Not about a destination
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: What did you do?
+      description: The steps, one per line, so someone else can repeat them.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened?
+      description: Include the exact message RelayDock showed.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics report
+      description: Settings, Diagnostics, Save report. The report contains no stream key and no password. Read it before you paste it here.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: My report contains no stream key, password or token.
+          required: true
+        - label: I searched the existing issues.
+          required: true

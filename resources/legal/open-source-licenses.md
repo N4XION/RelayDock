@@ -16,25 +16,39 @@ You have the right to the source code of the version you run. It is published on
 
 ## Software that RelayDock runs with
 
-**OBS Studio.** Copyright (C) the OBS Project and its contributors. GNU General Public License, version 2 or later. RelayDock is a plugin for OBS Studio and links to its libobs and obs-frontend-api libraries. OBS Studio is installed separately and is not part of the RelayDock download.
+### OBS Studio
 
-**Qt 6.** Copyright (C) The Qt Company Ltd and other contributors. Available under the GNU Lesser General Public License version 3 and the GNU General Public License. RelayDock uses the Qt libraries that OBS Studio provides and does not ship its own copy.
+Copyright (C) the OBS Project and its contributors. GNU General Public License, version 2 or later. RelayDock is a plugin for OBS Studio and links to its libobs and obs-frontend-api libraries. OBS Studio is installed separately and is not part of the RelayDock download.
+
+### Qt 6
+
+Copyright (C) The Qt Company Ltd and other contributors. Available under the GNU Lesser General Public License version 3 and the GNU General Public License. RelayDock uses the Qt libraries that OBS Studio provides and does not ship its own copy.
 
 ## Software included in RelayDock
 
-**Lucide icons.** Copyright (c) Lucide Icons and Contributors. ISC License. Some icons derive from Feather, Copyright (c) Cole Bemis, MIT License.
+### Lucide icons
 
-**JSON for Modern C++ (nlohmann/json).** Copyright (c) Niels Lohmann. MIT License.
+Copyright (c) Lucide Icons and Contributors. ISC License. Some icons derive from Feather, Copyright (c) Cole Bemis, MIT License.
 
-**OBS plugin template build files.** Copyright (C) the OBS Project and its contributors. GNU General Public License, version 2 or later. RelayDock's CMake build files are adapted from them.
+### JSON for Modern C++ (nlohmann/json)
+
+Copyright (c) Niels Lohmann. MIT License.
+
+### OBS plugin template build files
+
+Copyright (C) the OBS Project and its contributors. GNU General Public License, version 2 or later. RelayDock's CMake build files are adapted from them.
 
 ## Software used to build and test RelayDock
 
 These tools are not part of the plugin you install.
 
-**doctest.** Copyright (c) Viktor Kirilov. MIT License. Used for automated tests.
+### doctest
 
-**Inno Setup.** Copyright (C) Jordan Russell and Martijn Laan. Inno Setup License. Used to build the Windows installer.
+Copyright (c) Viktor Kirilov. MIT License. Used for automated tests.
+
+### Inno Setup
+
+Copyright (C) Jordan Russell and Martijn Laan. Inno Setup License. Used to build the Windows installer.
 
 ## Trademarks
 

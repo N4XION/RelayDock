@@ -73,6 +73,10 @@ if(RELAYDOCK_BUILD_PLUGIN)
     PROPERTIES AUTOMOC ON AUTORCC ON AUTOUIC OFF FOLDER "RelayDock"
   )
   target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE QT_NO_CAST_TO_ASCII QT_NO_KEYWORDS)
+  # The linker writes the full path of the debug file into the DLL. That path names the folder
+  # of whoever built it. Store the file name only, so a release carries no personal path and
+  # two builds of the same commit produce the same file.
+  target_link_options(${CMAKE_PROJECT_NAME} PRIVATE /PDBALTPATH:${_name}.pdb)
 
   if(RELAYDOCK_TEST_HOOKS)
     target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${RELAYDOCK_TEST_HOOK_SOURCES})

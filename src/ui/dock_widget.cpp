@@ -20,9 +20,11 @@
 
 #include <obs-frontend-api.h>
 
+#include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDesktopServices>
+#include <QDialog>
 #include <QDragEnterEvent>
 #include <QFileInfo>
 #include <QGridLayout>
@@ -247,6 +249,35 @@ void RelayDockWidget::shutdownUi()
 	// OBS is closing. Close every RelayDock window now, while OBS is still intact.
 	closed_ = true;
 	clipboard_.clearIfOurs();
+
+	// Dialogs that are open right now, including a message box or a file chooser one of them
+	// opened. Innermost first, so each nested event loop can end.
+	std::vector<QDialog *> open;
+	for (QWidget *widget : QApplication::topLevelWidgets()) {
+		auto *dialog = qobject_cast<QDialog *>(widget);
+		if (!dialog || !dialog->isVisible())
+			continue;
+		for (QWidget *owner = dialog; owner; owner = owner->parentWidget()) {
+			if (owner->objectName() == QLatin1String("rdDialog")) {
+				open.push_back(dialog);
+				break;
+			}
+		}
+	}
+	std::sort(open.begin(), open.end(), [](QDialog *a, QDialog *b) {
+		auto depth = [](QWidget *widget) {
+			int levels = 0;
+			for (; widget; widget = widget->parentWidget())
+				++levels;
+			return levels;
+		};
+		return depth(a) > depth(b);
+	});
+	for (QDialog *dialog : open) {
+		if (dialog != settings_.data())
+			dialog->reject();
+	}
+
 	if (settings_)
 		settings_->close();
 	delete settings_.data();
@@ -897,6 +928,11 @@ void RelayDockWidget::editDestination(const std::string &id)
 {
 	if (closed_)
 		return;
+	// Credentials stay locked until the first-run review is done, whichever window asks.
+	if (!legalComplete(app_.config().legal)) {
+		showLegal({});
+		return;
+	}
 	const DestinationConfig *config = app_.config().findDestination(id);
 	if (!config)
 		return;
@@ -908,6 +944,11 @@ void RelayDockWidget::addDestination(const std::string &providerId)
 {
 	if (closed_)
 		return;
+	if (!legalComplete(app_.config().legal)) {
+		showLegal({});
+		if (!legalComplete(app_.config().legal))
+			return;
+	}
 	const DestinationConfig draft = app_.draftDestination(providerId);
 	if (draft.id.empty())
 		return;

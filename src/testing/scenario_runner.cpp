@@ -199,6 +199,8 @@ bool ScenarioRunner::startFromEnvironment()
 	}
 
 	steps_ = root["steps"];
+	// A test that restarts OBS to check that keys survive asks the first run to leave them.
+	keepCredentials_ = flag(root, "keep_credentials", false);
 	results_ = {{"scenario", scenarioPath},
 		    {"completed", false},
 		    {"failure", nullptr},
@@ -512,6 +514,50 @@ ScenarioRunner::StepResult ScenarioRunner::beginStep(const json &step, std::stri
 		vec2_set(&position, static_cast<float>(number(step, "x", 0)), static_cast<float>(number(step, "y", 0)));
 		obs_sceneitem_set_pos(item, &position);
 		detail = obs_source_get_uuid(source);
+		return StepResult::Done;
+	}
+
+	if (op == "add_moving_picture") {
+		// A picture that scrolls across the whole canvas. Performance tests use it with an
+		// image of random noise, so the encoder has real work to do. A still picture costs an
+		// encoder almost nothing and would make every number look better than it is.
+		OBSSourceAutoRelease sceneSource = obs_frontend_get_current_scene();
+		obs_scene_t *scene = obs_scene_from_source(sceneSource);
+		if (!scene) {
+			detail = "OBS has no current scene.";
+			return StepResult::Failed;
+		}
+		OBSDataAutoRelease settings = obs_data_create();
+		obs_data_set_string(settings, "file", text(step, "file").c_str());
+		const std::string name = text(step, "name", "RelayDock test picture");
+		OBSSourceAutoRelease source = obs_source_create("image_source", name.c_str(), settings, nullptr);
+		if (!source || obs_source_get_width(source) == 0) {
+			detail = "OBS could not load the picture " + text(step, "file");
+			return StepResult::Failed;
+		}
+
+		OBSDataAutoRelease scroll = obs_data_create();
+		obs_data_set_double(scroll, "speed_x", number(step, "speed_x", 240.0));
+		obs_data_set_double(scroll, "speed_y", number(step, "speed_y", 135.0));
+		OBSSourceAutoRelease filter = obs_source_create("scroll_filter", "RelayDock test scroll", scroll, nullptr);
+		if (!filter) {
+			detail = "OBS has no scroll filter.";
+			return StepResult::Failed;
+		}
+		obs_source_filter_add(source, filter);
+
+		obs_sceneitem_t *item = obs_scene_add(scene, source);
+		if (!item) {
+			detail = "OBS could not add the picture to the scene.";
+			return StepResult::Failed;
+		}
+		obs_video_info video{};
+		obs_get_video_info(&video);
+		vec2 bounds;
+		vec2_set(&bounds, static_cast<float>(video.base_width), static_cast<float>(video.base_height));
+		obs_sceneitem_set_bounds_type(item, OBS_BOUNDS_STRETCH);
+		obs_sceneitem_set_bounds(item, &bounds);
+		detail = std::to_string(obs_source_get_width(source)) + "x" + std::to_string(obs_source_get_height(source));
 		return StepResult::Done;
 	}
 
@@ -900,7 +946,7 @@ void ScenarioRunner::finish(bool ok, const std::string &failure)
 	writeResults();
 
 	// Test runs use their own credential prefix. Leave nothing behind in it.
-	if (!env("RELAYDOCK_TEST_CREDENTIAL_PREFIX").empty())
+	if (!env("RELAYDOCK_TEST_CREDENTIAL_PREFIX").empty() && !keepCredentials_)
 		app_.vault().removeAll();
 
 	if (auto *window = static_cast<QMainWindow *>(obs_frontend_get_main_window()))

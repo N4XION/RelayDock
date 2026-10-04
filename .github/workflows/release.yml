@@ -1,0 +1,76 @@
+# Builds the release files for a version tag and attaches them to a draft release.
+#
+# A maintainer pushes a tag such as v1.0.0. This workflow builds, tests and packages that
+# commit, then creates a draft. A person reads the release checklist, checks the files and
+# publishes the draft. Nothing is published automatically.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # To create the draft release
+
+jobs:
+  release:
+    name: Build release files
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: The tag matches the version in buildspec.json
+        shell: pwsh
+        run: |
+          $spec = Get-Content buildspec.json -Raw | ConvertFrom-Json
+          $version = if ($spec.versionSuffix) { "$($spec.version)-$($spec.versionSuffix)" } else { $spec.version }
+          if ("v$version" -ne "${{ github.ref_name }}") {
+            throw "The tag ${{ github.ref_name }} does not match buildspec.json, which says $version."
+          }
+
+      - name: No secrets in the repository
+        shell: pwsh
+        run: ./scripts/scan-secrets.ps1
+
+      - name: Locale file matches the source
+        shell: pwsh
+        run: ./scripts/update-locale.ps1 -Check
+
+      - name: Configure
+        run: cmake --preset windows-ci-x64
+      - name: Build
+        run: cmake --build --preset windows-ci-x64
+      - name: Test
+        run: ctest --preset windows-ci-x64
+
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup --no-progress -y
+          }
+
+      - name: Package
+        shell: pwsh
+        run: ./scripts/package.ps1 -Preset windows-ci-x64 -SkipBuild -RequireInstaller
+
+      - name: Upload release files
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: relaydock-${{ github.ref_name }}
+          path: release/
+          if-no-files-found: error
+
+      - name: Create the draft release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $files = Get-ChildItem release -File | ForEach-Object { $_.FullName }
+          $prerelease = if ("${{ github.ref_name }}" -match '-') { '--prerelease' } else { $null }
+          $arguments = @('release', 'create', '${{ github.ref_name }}', '--draft', '--title', 'RelayDock ${{ github.ref_name }}',
+                         '--notes', 'Draft. Complete docs/release-checklist.md, then write the release notes from CHANGELOG.md.')
+          if ($prerelease) { $arguments += $prerelease }
+          gh @arguments @files

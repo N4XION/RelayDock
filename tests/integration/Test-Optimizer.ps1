@@ -13,6 +13,7 @@ frames, and RelayDock has to notice and react.
   suggest     Suggest mode changes nothing until the suggestion is accepted. Lock Setting
               restores the saved bitrate and ends the suggestions.
   recovery    The server stops being slow after 30 seconds. The bitrate comes back step by step.
+  x264        The same live bitrate change on the software encoder.
 
 The optimiser's timers are shortened for the test (seconds instead of minutes). The rules
 are the same ones a release build uses.
@@ -233,6 +234,48 @@ if (Test-Selected 'recovery') {
             ($s.recovered.destinations.a.window_drop_percent -ge 0 -and $s.recovered.destinations.a.window_drop_percent -lt 1.5 -and
              $s.recovered.destinations.a.stats.bitrate_kbps -gt 2500),
             "$($s.recovered.destinations.a.stats.bitrate_kbps) Kbps, $([math]::Round($s.recovered.destinations.a.window_drop_percent, 2)) percent dropped")
+    }
+}
+
+# ---------------------------------------------------------------------------------------------
+if (Test-Selected 'x264') {
+    Write-Host ''
+    Write-Host 'x264: the software encoder takes a new bitrate while live'
+    $key = 'slow2000-opt-x264-2d9b70'
+    $outcome = Invoke-WithSink 'x264' @{ steps = @(
+            @{ op = 'clear' }, $video,
+            @{ op = 'set'; performance_mode = 'custom'; optimizer = @{ mode = 'automatic' } },
+            @{ op = 'optimizer_tuning'; sustain_ms = 4000; cooldown_ms = 6000; recover_after_ms = 600000 },
+            (Add-Destination 'a' $key @{ video = @{ bitrate_kbps = 3000; encoder = 'obs_x264' }; locks = @{ encoder = $true } }),
+            @{ op = 'start'; ref = 'a' },
+            @{ op = 'wait_phase'; ref = 'a'; phase = 'live'; timeout_sec = 30 },
+            @{ op = 'wait'; seconds = 2 },
+            @{ op = 'snapshot'; label = 'before' },
+            @{ op = 'wait_adjustment'; ref = 'a'; state = 'reduced'; timeout_sec = 90 },
+            @{ op = 'wait'; seconds = 45 },
+            @{ op = 'snapshot'; label = 'settled' },
+            @{ op = 'wait'; seconds = 12 },
+            @{ op = 'snapshot'; label = 'calm' },
+            @{ op = 'stop_all' },
+            @{ op = 'wait_idle'; timeout_sec = 40 },
+            @{ op = 'quit' }) } 300
+    $run = $outcome.Run
+    Add-ObsRunChecks -Report $report -Run $run -Label 'x264' -Secrets @($key)
+
+    if ($run.Result -and $run.Result.snapshots.calm) {
+        $s = $run.Result.snapshots
+        $report.Check('x264: the destination streams with the software encoder', ($s.before.destinations.a.effective.encoder -eq 'obs_x264'))
+        $report.Check('x264: the bitrate came down on the running encoder',
+            ($s.settled.destinations.a.adjustment.bitrate_percent -le 70 -and
+             $s.settled.destinations.a.video_encoder -eq $s.before.destinations.a.video_encoder),
+            "$($s.settled.destinations.a.adjustment.bitrate_percent) percent on $($s.settled.destinations.a.video_encoder)")
+        $report.Check('x264: no reconnect', ($s.calm.destinations.a.reconnects -eq 0 -and $outcome.Sink.streams.$key.sessions -eq 1))
+        $report.Check('x264: the encoder really sends less',
+            ($s.calm.destinations.a.stats.bitrate_kbps -gt 800 -and $s.calm.destinations.a.stats.bitrate_kbps -lt 2300),
+            "$($s.calm.destinations.a.stats.bitrate_kbps) Kbps measured")
+        $report.Check('x264: frame drops stop once the bitrate fits',
+            ($s.calm.destinations.a.window_drop_percent -ge 0 -and $s.calm.destinations.a.window_drop_percent -lt 1.5),
+            "$([math]::Round($s.calm.destinations.a.window_drop_percent, 2)) percent")
     }
 }
 

@@ -24,17 +24,23 @@
 #include <QDockWidget>
 #include <QFormLayout>
 #include <QInputDialog>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMainWindow>
+#include <QMenu>
+#include <QPushButton>
+#include <QToolButton>
 #include <QMessageBox>
+#include <QMouseEvent>
 #include <QRadioButton>
 #include <QScrollBar>
 #include <QSpinBox>
 #include <QTextBrowser>
 #include <QTimer>
 
+#include <algorithm>
 #include <filesystem>
 
 #include <windows.h>
@@ -163,6 +169,17 @@ template <class T> T *findNamed(QWidget *root, const QString &name)
 	return nullptr;
 }
 
+// Widgets from top to bottom, then left to right, the way a person reads the window.
+template <class T> QList<T *> inReadingOrder(QWidget *root, QList<T *> widgets)
+{
+	std::stable_sort(widgets.begin(), widgets.end(), [root](T *a, T *b) {
+		const QPoint pa = a->mapTo(root, QPoint(0, 0));
+		const QPoint pb = b->mapTo(root, QPoint(0, 0));
+		return pa.y() != pb.y() ? pa.y() < pb.y() : pa.x() < pb.x();
+	});
+	return widgets;
+}
+
 QAbstractButton *findButton(QWidget *root, const QString &label)
 {
 	for (QAbstractButton *button : root->findChildren<QAbstractButton *>()) {
@@ -201,7 +218,7 @@ json describe(QWidget *root)
 	out["checks"] = checks;
 
 	json labels = json::array();
-	for (QLabel *label : root->findChildren<QLabel *>()) {
+	for (QLabel *label : inReadingOrder(root, root->findChildren<QLabel *>())) {
 		if (!label->isVisibleTo(root))
 			continue;
 		// Labels that shorten their text keep the full text as their accessible name.
@@ -243,6 +260,22 @@ json describe(QWidget *root)
 		combos.push_back({{"name", name.toStdString()}, {"current", combo->currentText().toStdString()}, {"options", options}});
 	}
 	out["combos"] = combos;
+
+	json spins = json::array();
+	for (QAbstractSpinBox *spin : inReadingOrder(root, root->findChildren<QAbstractSpinBox *>())) {
+		if (!spin->isVisibleTo(root))
+			continue;
+		QString name = spin->accessibleName();
+		if (name.isEmpty())
+			name = formLabel(spin);
+		json entry = {{"name", name.toStdString()}, {"text", spin->text().toStdString()}, {"enabled", spin->isEnabled()}};
+		if (auto *whole = qobject_cast<QSpinBox *>(spin))
+			entry["value"] = whole->value();
+		else if (auto *real = qobject_cast<QDoubleSpinBox *>(spin))
+			entry["value"] = real->value();
+		spins.push_back(entry);
+	}
+	out["spins"] = spins;
 
 	json lists = json::array();
 	for (QListWidget *list : root->findChildren<QListWidget *>()) {
@@ -484,6 +517,60 @@ bool ScenarioRunner::uiStep(const std::string &op, const json &step, StepResult 
 		return true;
 	}
 
+	if (op == "ui_menu") {
+		// Chooses an entry from the menu of a button, such as the three dots on a card.
+		const QString label = QString::fromStdString(textOf(step, "button"));
+		const QString wanted = QString::fromStdString(textOf(step, "action"));
+		const int index = static_cast<int>(numberOf(step, "index", 0));
+		int seen = 0;
+		// "index" counts matching buttons in reading order: 0 is the one on the first card.
+		for (QAbstractButton *button : inReadingOrder(target, target->findChildren<QAbstractButton *>())) {
+			if (!button->isVisibleTo(target))
+				continue;
+			if (plain(button->text()) != label && button->accessibleName() != label && button->toolTip() != label)
+				continue;
+			if (seen++ != index)
+				continue;
+			QMenu *menu = nullptr;
+			if (auto *tool = qobject_cast<QToolButton *>(button))
+				menu = tool->menu();
+			else if (auto *push = qobject_cast<QPushButton *>(button))
+				menu = push->menu();
+			if (!menu) {
+				detail = "The button has no menu.";
+				result = StepResult::Failed;
+				return true;
+			}
+			Q_EMIT menu->aboutToShow(); // Menus fill themselves when they open
+			json entries = json::array();
+			for (QAction *action : menu->actions()) {
+				if (action->isSeparator())
+					continue;
+				entries.push_back({{"text", plain(action->text()).toStdString()}, {"enabled", action->isEnabled()}});
+				if (plain(action->text()) != wanted)
+					continue;
+				if (!action->isEnabled()) {
+					detail = "The menu entry '" + wanted.toStdString() + "' is disabled.";
+					result = flagOf(step, "allow_disabled", false) ? StepResult::Done : StepResult::Failed;
+					return true;
+				}
+				QMetaObject::invokeMethod(action, "trigger", Qt::QueuedConnection);
+				return true;
+			}
+			// No entry wanted: just record what the menu offers.
+			if (wanted.isEmpty()) {
+				results_["ui"][textOf(step, "label", "menu-" + std::to_string(index_))] = entries;
+				return true;
+			}
+			detail = "The menu has no entry '" + wanted.toStdString() + "'.";
+			result = StepResult::Failed;
+			return true;
+		}
+		detail = "No button '" + label.toStdString() + "' number " + std::to_string(index) + ".";
+		result = StepResult::Failed;
+		return true;
+	}
+
 	if (op == "ui_check") {
 		const QString label = QString::fromStdString(textOf(step, "text"));
 		const bool wanted = flagOf(step, "checked", true);
@@ -568,6 +655,89 @@ bool ScenarioRunner::uiStep(const std::string &op, const json &step, StepResult 
 		}
 		detail = "No list row with '" + value.toStdString() + "'.";
 		result = StepResult::Failed;
+		return true;
+	}
+
+	if (op == "ui_drag") {
+		// Presses, moves and releases the left mouse button on a widget. Positions are shares
+		// of the widget's width and height, so a test does not depend on the window size.
+		const QString name = QString::fromStdString(textOf(step, "name"));
+		QWidget *widget = findNamed<QWidget>(target, name);
+		if (!widget) {
+			detail = "No widget '" + name.toStdString() + "'.";
+			result = StepResult::Failed;
+			return true;
+		}
+		const QPointF from(widget->width() * numberOf(step, "from_x", 0.5), widget->height() * numberOf(step, "from_y", 0.5));
+		const QPointF to(widget->width() * numberOf(step, "to_x", 0.5), widget->height() * numberOf(step, "to_y", 0.5));
+		auto send = [widget](QEvent::Type type, const QPointF &position, Qt::MouseButton button, Qt::MouseButtons buttons) {
+			QMouseEvent event(type, position, widget->mapToGlobal(position), button, buttons, Qt::NoModifier);
+			QApplication::sendEvent(widget, &event);
+		};
+		send(QEvent::MouseButtonPress, from, Qt::LeftButton, Qt::LeftButton);
+		const int stepsCount = 12;
+		for (int i = 1; i <= stepsCount; ++i)
+			send(QEvent::MouseMove, from + (to - from) * (static_cast<double>(i) / stepsCount), Qt::NoButton, Qt::LeftButton);
+		send(QEvent::MouseButtonRelease, to, Qt::LeftButton, Qt::NoButton);
+		return true;
+	}
+
+	if (op == "ui_key") {
+		// Presses a key on a widget, the way a keyboard user would after tabbing to it.
+		// "name": "card" picks a destination card by its place in the dock.
+		const QString name = QString::fromStdString(textOf(step, "name"));
+		QWidget *widget = nullptr;
+		if (name == QLatin1String("card")) {
+			int seen = 0;
+			const int index = static_cast<int>(numberOf(step, "index", 0));
+			for (QFrame *card : inReadingOrder(target, target->findChildren<QFrame *>(QStringLiteral("rdCard")))) {
+				if (card->isVisibleTo(target) && seen++ == index)
+					widget = card;
+			}
+		} else {
+			widget = findNamed<QWidget>(target, name);
+		}
+		if (!widget) {
+			detail = "No widget '" + name.toStdString() + "'.";
+			result = StepResult::Failed;
+			return true;
+		}
+
+		const std::string keyText = textOf(step, "key");
+		Qt::KeyboardModifiers modifiers = Qt::NoModifier;
+		std::string keyName = keyText;
+		if (keyName.rfind("Alt+", 0) == 0) {
+			modifiers |= Qt::AltModifier;
+			keyName = keyName.substr(4);
+		}
+		if (keyName.rfind("Shift+", 0) == 0) {
+			modifiers |= Qt::ShiftModifier;
+			keyName = keyName.substr(6);
+		}
+		int key = 0;
+		if (keyName == "Up")
+			key = Qt::Key_Up;
+		else if (keyName == "Down")
+			key = Qt::Key_Down;
+		else if (keyName == "Left")
+			key = Qt::Key_Left;
+		else if (keyName == "Right")
+			key = Qt::Key_Right;
+		else if (keyName == "Return")
+			key = Qt::Key_Return;
+		if (key == 0) {
+			detail = "Unknown key '" + keyText + "'.";
+			result = StepResult::Failed;
+			return true;
+		}
+		widget->setFocus(Qt::TabFocusReason);
+		// Queued, because a key can open a modal window.
+		QTimer::singleShot(0, widget, [widget, key, modifiers] {
+			QKeyEvent press(QEvent::KeyPress, key, modifiers);
+			QApplication::sendEvent(widget, &press);
+			QKeyEvent release(QEvent::KeyRelease, key, modifiers);
+			QApplication::sendEvent(widget, &release);
+		});
 		return true;
 	}
 

@@ -1,0 +1,73 @@
+name: Platform test report
+description: Tell us that RelayDock works, or does not work, with a platform. Real reports fill the test matrix.
+labels: [platform]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The maintainers cannot test every platform with every kind of account. Your report helps.
+
+        Never post a stream key, password or token.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Twitch
+        - YouTube
+        - Facebook
+        - TikTok
+        - Other, through Custom RTMP
+        - Other, through Custom RTMPS
+    validations:
+      required: true
+  - type: input
+    id: other
+    attributes:
+      label: If other, which service or server software?
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - It streamed and the platform showed the stream
+        - It connected but the platform showed nothing
+        - The platform rejected the connection
+        - It could not connect
+    validations:
+      required: true
+  - type: input
+    id: relaydock-version
+    attributes:
+      label: RelayDock version
+    validations:
+      required: true
+  - type: input
+    id: obs-version
+    attributes:
+      label: OBS Studio version
+    validations:
+      required: true
+  - type: input
+    id: settings
+    attributes:
+      label: Resolution, frame rate, bitrate and encoder
+      placeholder: 1920x1080, 60 FPS, 6000 Kbps, NVENC H.264
+    validations:
+      required: true
+  - type: input
+    id: duration
+    attributes:
+      label: How long did you stream?
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Messages RelayDock showed, what the platform's dashboard reported, and anything in the platform's setup that differs from RelayDock's guide.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: My report contains no stream key, password or token.
+          required: true

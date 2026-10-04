@@ -56,7 +56,7 @@ template <class Store> void exerciseStore(Store &store)
 
 	SUBCASE("write then read returns the same bytes")
 	{
-		const SecretString secret("live_000000000_TESTONLYnotarealkey0001");
+		const SecretString secret("live_000000000_TESTONLYnotarealkey0001"); // NOT-REAL: made up for this test
 		REQUIRE(store.write(key, secret).ok());
 		CHECK(store.exists(key));
 

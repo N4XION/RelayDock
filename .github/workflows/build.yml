@@ -1,0 +1,85 @@
+# Builds RelayDock, runs its automated tests and produces the release files on every push and
+# pull request. Runs on GitHub's free runners for public repositories.
+#
+# Actions are pinned to a commit, so a changed tag cannot swap the code this workflow runs.
+name: Build and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Repository checks
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: No secrets in the repository
+        shell: pwsh
+        run: ./scripts/scan-secrets.ps1
+      - name: Locale file matches the source
+        shell: pwsh
+        run: ./scripts/update-locale.ps1 -Check
+      - name: Licence notice matches the vendored licences
+        shell: pwsh
+        run: ./scripts/update-third-party-licenses.ps1 -Check
+      - name: Documentation links and wording
+        shell: pwsh
+        run: ./scripts/check-docs.ps1
+
+  core:
+    name: Unit and security tests
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0 # The build number is the number of commits
+      - name: Configure
+        run: cmake --preset core-tests
+      - name: Build
+        run: cmake --build --preset core-tests
+      - name: Test
+        run: ctest --preset core-tests
+
+  plugin:
+    name: Plugin and release files
+    runs-on: windows-2022
+    needs: [checks, core]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Restore OBS sources and dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .deps
+          key: deps-${{ runner.os }}-${{ hashFiles('buildspec.json', 'cmake/**') }}
+      - name: Configure
+        run: cmake --preset windows-ci-x64
+      - name: Build
+        run: cmake --build --preset windows-ci-x64
+      - name: Test
+        run: ctest --preset windows-ci-x64
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup --no-progress -y
+          }
+      - name: Package
+        shell: pwsh
+        run: ./scripts/package.ps1 -Preset windows-ci-x64 -SkipBuild -RequireInstaller
+      - name: Upload release files
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: relaydock-${{ github.sha }}
+          path: release/
+          if-no-files-found: error

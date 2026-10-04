@@ -403,6 +403,25 @@ TEST_SUITE("legal.documents")
 		}
 	}
 
+	TEST_CASE("the privacy policy in the repository root is the one RelayDock shows")
+	{
+		std::string shown;
+		std::string published;
+		REQUIRE(readFileToString(pathFromUtf8(std::string(RD_SOURCE_DIR) + "/resources/legal/privacy-policy.md"), shown, 1024 * 1024));
+		REQUIRE(readFileToString(pathFromUtf8(std::string(RD_SOURCE_DIR) + "/PRIVACY.md"), published, 1024 * 1024));
+		CHECK(replaceAll(shown, "\r\n", "\n") == replaceAll(published, "\r\n", "\n"));
+	}
+
+	TEST_CASE("every document is compiled into the plugin")
+	{
+		std::string resources;
+		REQUIRE(readFileToString(pathFromUtf8(std::string(RD_SOURCE_DIR) + "/resources/relaydock.qrc"), resources, 1024 * 1024));
+		for (const LegalDocument &document : legalDocuments()) {
+			CAPTURE(document.file);
+			CHECK(resources.find("<file>legal/" + document.file + "</file>") != std::string::npos);
+		}
+	}
+
 	TEST_CASE("nothing is accepted on a first start")
 	{
 		const std::vector<LegalAcceptance> none;

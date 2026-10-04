@@ -117,12 +117,12 @@ TEST_SUITE("security.redactor")
 	TEST_CASE("platform key formats are removed without registration")
 	{
 		// Twitch format
-		CHECK_FALSE(contains(Redactor::redactPatterns("key is live_123456789_AbCdEfGhIjKlMnOpQrStUvWx end"),
+		CHECK_FALSE(contains(Redactor::redactPatterns("key is live_123456789_AbCdEfGhIjKlMnOpQrStUvWx end"), // NOT-REAL
 				     "AbCdEfGhIjKlMnOpQrStUvWx"));
 		// YouTube format
-		CHECK_FALSE(contains(Redactor::redactPatterns("using ab12-cd34-ef56-gh78-ij90 now"), "cd34-ef56"));
+		CHECK_FALSE(contains(Redactor::redactPatterns("using ab12-cd34-ef56-gh78-ij90 now"), "cd34-ef56")); // NOT-REAL
 		// Facebook format
-		CHECK_FALSE(contains(Redactor::redactPatterns("FB-1234567890123456-0-AbCdEfGhIjKlMnOp"),
+		CHECK_FALSE(contains(Redactor::redactPatterns("FB-1234567890123456-0-AbCdEfGhIjKlMnOp"), // NOT-REAL
 				     "AbCdEfGhIjKlMnOp"));
 	}
 

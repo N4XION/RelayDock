@@ -4,6 +4,7 @@
 
 #include "core/types.h"
 #include "utils/clock.h"
+#include "utils/i18n.h"
 #include "utils/strings.h"
 #include "utils/uuid.h"
 
@@ -114,6 +115,64 @@ TEST_SUITE("utils")
 		CHECK(stamp[4] == '-');
 		CHECK(stamp[10] == 'T');
 		CHECK(stamp[19] == 'Z');
+	}
+}
+
+namespace {
+
+// A stand-in for the OBS locale lookup.
+bool testTranslator(const char *key, const char **translation)
+{
+	const std::string name = key;
+	if (name == "Test.Hello") {
+		*translation = "Hallo";
+		return true;
+	}
+	if (name == "Test.Count") {
+		*translation = "{0} von {1}";
+		return true;
+	}
+	if (name == "Test.Broken") {
+		*translation = "{0} {1} {2} {";
+		return true;
+	}
+	return false;
+}
+
+struct TranslatorGuard {
+	TranslatorGuard() { rd::setTranslator(testTranslator); }
+	~TranslatorGuard() { rd::setTranslator(nullptr); }
+};
+
+} // namespace
+
+TEST_SUITE("utils.i18n")
+{
+	TEST_CASE("without a translator the English text is used")
+	{
+		CHECK(rd::loc("Test.Hello", "Hello") == "Hello");
+		CHECK(rd::locf("Test.Count", "{0} of {1}", 2, 5) == "2 of 5");
+	}
+
+	TEST_CASE("a translation replaces the English text")
+	{
+		const TranslatorGuard guard;
+		CHECK(rd::loc("Test.Hello", "Hello") == "Hallo");
+		CHECK(rd::locf("Test.Count", "{0} of {1}", 2, 5) == "2 von 5");
+		CHECK(rd::loc("Test.Unknown", "English stays") == "English stays");
+	}
+
+	TEST_CASE("a translation with broken placeholders falls back to English instead of failing")
+	{
+		const TranslatorGuard guard;
+		CHECK(rd::locf("Test.Broken", "{0} and {1}", 1, 2) == "1 and 2");
+	}
+
+	TEST_CASE("singular and plural wordings are picked by the count")
+	{
+		CHECK(rd::locn(1, "Test.One", "One point", "Test.Many", "{0} points", 1) == "One point");
+		CHECK(rd::locn(3, "Test.One", "One point", "Test.Many", "{0} points", 3) == "3 points");
+		CHECK(rd::locn(0, "Test.One", "One point", "Test.Many", "{0} points", 0) == "0 points");
 	}
 }
 

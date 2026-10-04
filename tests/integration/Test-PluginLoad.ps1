@@ -41,8 +41,8 @@ function Get-LeakCount([string]$Log) {
     return $null
 }
 
-$failures = New-Object System.Collections.Generic.List[string]
 $obsVersion = (Get-Item (Join-Path $ObsRoot 'bin\64bit\obs64.exe')).VersionInfo.ProductVersion
+$report = New-TestReport -Title "Plugin load and unload on OBS $obsVersion"
 
 # Baseline: OBS by itself.
 Initialize-ObsTestConfig -ObsRoot $ObsRoot -Reset:$ResetConfig | Out-Null
@@ -51,55 +51,32 @@ $baseline = Start-ObsTest -ObsRoot $ObsRoot -NoPlugin
 Start-Sleep -Seconds 3
 $baselineStop = Stop-ObsTest -Session $baseline
 $baselineLeaks = Get-LeakCount (Get-ObsLogText -Session $baseline)
-if (-not $baselineStop.Clean) {
-    $failures.Add("Baseline: OBS without RelayDock did not exit cleanly. Fix the OBS test install first.")
-}
-Write-Host "Baseline on OBS ${obsVersion}: clean exit = $($baselineStop.Clean), memory leaks reported = $baselineLeaks"
+$report.Check('baseline: OBS without RelayDock starts and exits cleanly', $baselineStop.Clean, "memory leaks reported = $baselineLeaks")
 
 for ($run = 1; $run -le $Repeat; $run++) {
     Initialize-ObsTestConfig -ObsRoot $ObsRoot | Out-Null
     $session = Start-ObsTest -ObsRoot $ObsRoot -PluginRunDir $PluginRunDir
 
     $loaded = Wait-ObsLogLine -Session $session -Pattern '\[RelayDock\] Loaded\.' -TimeoutSec 90
-    if (-not $loaded) { $failures.Add("Run ${run}: RelayDock did not log its load line within 90 seconds.") }
-
     # Give OBS a moment to finish start-up before asking it to close.
     Start-Sleep -Seconds 3
     $stop = Stop-ObsTest -Session $session
     $log = Get-ObsLogText -Session $session
-
-    if ($stop.Killed) { $failures.Add("Run ${run}: OBS did not exit after WM_CLOSE and was killed.") }
-    elseif (-not $stop.Clean) { $failures.Add("Run ${run}: OBS exited with code $($stop.ExitCode).") }
-
-    if ($log -notmatch '\[RelayDock\] Unloaded\.') { $failures.Add("Run ${run}: RelayDock did not log its unload line.") }
-    if ($log -match "Failed to load module file '[^']*relaydock|Module '[^']*relaydock[^']*' not loaded") {
-        $failures.Add("Run ${run}: OBS reported that the RelayDock module failed to load.")
-    }
-    if ($log -match "relaydock[^\r\n]*compiled with newer libobs") {
-        $failures.Add("Run ${run}: OBS rejected RelayDock as built for a newer OBS version.")
-    }
-
     $crashes = @(Get-ObsCrashFiles -Session $session)
-    if ($crashes.Count -gt 0) { $failures.Add("Run ${run}: OBS wrote $($crashes.Count) crash report(s).") }
-
     $leaks = Get-LeakCount $log
-    if ($null -eq $leaks) {
-        $failures.Add("Run ${run}: OBS did not report its memory leak count, so the shutdown did not finish.")
-    } elseif ($null -ne $baselineLeaks -and $leaks -gt $baselineLeaks) {
-        $failures.Add("Run ${run}: OBS reported $leaks memory leak(s) with RelayDock and $baselineLeaks without it.")
-    }
 
-    Write-Host "Run $run of $Repeat on OBS ${obsVersion}:"
-    @($log -split "`n" | Where-Object { $_ -match '\[RelayDock\]' }) | ForEach-Object { Write-Host "  $($_.Trim())" }
-    Write-Host "  Clean exit = $($stop.Clean), memory leaks reported = $leaks"
+    $label = "run $run"
+    $report.Check("${label}: RelayDock logs that it loaded", $loaded)
+    $report.Check("${label}: OBS did not reject the module",
+        ($log -notmatch "Failed to load module file '[^']*relaydock|Module '[^']*relaydock[^']*' not loaded" -and
+         $log -notmatch "relaydock[^\r\n]*compiled with newer libobs"))
+    $report.Check("${label}: OBS closed by itself and exited cleanly", $stop.Clean, "exit code $($stop.ExitCode)")
+    $report.Check("${label}: RelayDock logs that it unloaded", ($log -match '\[RelayDock\] Unloaded\.'))
+    $report.Check("${label}: OBS wrote no crash report", ($crashes.Count -eq 0))
+    $report.Check("${label}: RelayDock adds no memory leak to what OBS reports by itself",
+        ($null -ne $leaks -and $null -ne $baselineLeaks -and $leaks -le $baselineLeaks), "$leaks with RelayDock, $baselineLeaks without")
+
+    @($log -split "`n" | Where-Object { $_ -match '\[RelayDock\]' }) | ForEach-Object { Write-Host "    $($_.Trim())" }
 }
 
-Write-Host ''
-if ($failures.Count -gt 0) {
-    Write-Host "FAILED: plugin load test on OBS $obsVersion"
-    $failures | ForEach-Object { Write-Host "  $_" }
-    exit 1
-}
-
-Write-Host "PASSED: OBS $obsVersion loaded and unloaded RelayDock $Repeat time(s). No crash, no added memory leaks."
-exit 0
+exit $report.Finish()

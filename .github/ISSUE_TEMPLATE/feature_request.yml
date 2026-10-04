@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest something RelayDock should do.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        RelayDock is free, runs on your PC and uses no paid service and no server of its own. A feature that needs one of those does not fit the project.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem do you want to solve?
+      description: Describe the situation, not the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What should RelayDock do?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What do you do today instead?
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched the existing issues.
+          required: true
