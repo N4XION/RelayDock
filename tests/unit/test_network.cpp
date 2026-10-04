@@ -222,7 +222,9 @@ TEST_SUITE("network.http")
 		CHECK_FALSE(response.ok);
 		CHECK_FALSE(response.cancelled());
 		CHECK(contains(response.error, "did not answer in time"));
-		CHECK(msSince(started) >= 600);
+		// The request waited, and did not fail at once. Windows does not time this exactly: on
+		// a GitHub runner a timeout of 700 ms came after 594 ms.
+		CHECK(msSince(started) >= 350);
 		CHECK(msSince(started) < 6000);
 	}
 
