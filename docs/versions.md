@@ -6,6 +6,7 @@ Every RelayDock version, its files and what changed in it. The newest is at the 
 
 | Version | Released | Kind | Installer | ZIP for a portable OBS | More |
 | --- | --- | --- | --- | --- | --- |
+| 1.1.0 | 2026-10-05 | Release | [RelayDock-1.1.0-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.1.0/RelayDock-1.1.0-windows-x64-Setup.exe) | [RelayDock-1.1.0-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.1.0/RelayDock-1.1.0-windows-x64.zip) | [What changed](#version-110), [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.1.0) |
 | 1.0.0 | 2026-10-05 | Release | [RelayDock-1.0.0-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0/RelayDock-1.0.0-windows-x64-Setup.exe) | [RelayDock-1.0.0-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0/RelayDock-1.0.0-windows-x64.zip) | [What changed](#version-100), [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0) |
 | 1.0.0-rc.2 | 2026-10-04 | Release candidate | [RelayDock-1.0.0-rc.2-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.2/RelayDock-1.0.0-rc.2-windows-x64-Setup.exe) | [RelayDock-1.0.0-rc.2-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.2/RelayDock-1.0.0-rc.2-windows-x64.zip) | [What changed](#version-100-rc2), [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0-rc.2) |
 | 1.0.0-rc.1 | 2026-10-04 | Release candidate | [RelayDock-1.0.0-rc.1-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/RelayDock-1.0.0-rc.1-windows-x64-Setup.exe) | [RelayDock-1.0.0-rc.1-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.0.0-rc.1/RelayDock-1.0.0-rc.1-windows-x64.zip) | [What changed](#version-100-rc1), [release page](https://github.com/N4XION/RelayDock/releases/tag/v1.0.0-rc.1) |
@@ -22,7 +23,34 @@ The newest version needs Windows 10 or 11 (64-bit) and OBS Studio 32.0.0 or newe
 
 The installer replaces the old version. Your destinations, settings and stream keys stay. For a portable OBS, copy the files from the ZIP over the old ones, as [manual-installation.md](manual-installation.md) describes.
 
-RelayDock looks for a newer version each time OBS starts and tells you when there is one. Settings, Updates has a Check for updates button and the switch for the check at start-up. RelayDock never downloads or installs anything by itself.
+RelayDock looks for a newer version each time OBS starts and tells you when there is one. From version 1.1.0 on, its window offers Update now, which downloads the installer, checks it and installs it when you close OBS. Settings, Updates has a Check for updates button and the switch for the check at start-up. RelayDock never downloads or installs anything by itself.
+
+## Version 1.1.0
+
+Released 2026-10-05. Release.
+
+Files:
+
+- [RelayDock-1.1.0-windows-x64-Setup.exe](https://github.com/N4XION/RelayDock/releases/download/v1.1.0/RelayDock-1.1.0-windows-x64-Setup.exe)
+- [RelayDock-1.1.0-windows-x64.zip](https://github.com/N4XION/RelayDock/releases/download/v1.1.0/RelayDock-1.1.0-windows-x64.zip)
+- [SHA256SUMS.txt](https://github.com/N4XION/RelayDock/releases/download/v1.1.0/SHA256SUMS.txt)
+- [THIRD_PARTY_LICENSES.txt](https://github.com/N4XION/RelayDock/releases/download/v1.1.0/THIRD_PARTY_LICENSES.txt)
+
+RelayDock can update itself when you ask it to.
+
+### Added
+
+- Update now. The window that announces a newer version downloads the installer from the release page, checks it against the checksums of the release and installs it when you close OBS Studio. Until then you can cancel. Close OBS and install does both steps at once, and the installer offers to start OBS again. It works for a RelayDock that the installer put on your PC. A RelayDock that you copied by hand still gets the download in your browser.
+- Settings, Updates and the dock say when an update waits for OBS to close, and offer Cancel update.
+
+### Changed
+
+- An installer that RelayDock starts waits for OBS to close without a window. It asks Windows whether OBS still runs every two seconds, and no longer twice a second. The uninstall from inside RelayDock waits the same way.
+- Three documents have a new version, and RelayDock asks you to review them again: the Privacy Policy, the Security and Credentials Notice and the Third-Party Services Notice describe Update now.
+
+### Security
+
+- Update now keeps a downloaded installer only when it is the file the release holds: it comes from the release pages of the RelayDock project on github.com, it has the size GitHub lists, and its SHA-256 checksum is the one `SHA256SUMS.txt` of that release names. A file that does not match is deleted and never started. `docs/security.md` says what this check proves and what it does not: the release files carry no code signature.
 
 ## Version 1.0.0
 

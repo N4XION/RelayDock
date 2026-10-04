@@ -10,6 +10,24 @@ A version with a suffix, such as `1.0.0-rc.1`, is a pre-release.
 
 Each version has a heading with its release date. `scripts/update-versions.ps1` builds `docs/versions.md` from this file: the table of versions, their files and their changes.
 
+## 1.1.0 (2026-10-05)
+
+RelayDock can update itself when you ask it to.
+
+### Added
+
+- Update now. The window that announces a newer version downloads the installer from the release page, checks it against the checksums of the release and installs it when you close OBS Studio. Until then you can cancel. Close OBS and install does both steps at once, and the installer offers to start OBS again. It works for a RelayDock that the installer put on your PC. A RelayDock that you copied by hand still gets the download in your browser.
+- Settings, Updates and the dock say when an update waits for OBS to close, and offer Cancel update.
+
+### Changed
+
+- An installer that RelayDock starts waits for OBS to close without a window. It asks Windows whether OBS still runs every two seconds, and no longer twice a second. The uninstall from inside RelayDock waits the same way.
+- Three documents have a new version, and RelayDock asks you to review them again: the Privacy Policy, the Security and Credentials Notice and the Third-Party Services Notice describe Update now.
+
+### Security
+
+- Update now keeps a downloaded installer only when it is the file the release holds: it comes from the release pages of the RelayDock project on github.com, it has the size GitHub lists, and its SHA-256 checksum is the one `SHA256SUMS.txt` of that release names. A file that does not match is deleted and never started. `docs/security.md` says what this check proves and what it does not: the release files carry no code signature.
+
 ## 1.0.0 (2026-10-05)
 
 The first version without the release candidate label. It adds a chat dock for Twitch and YouTube, the logo of each platform, and an uninstall from inside RelayDock.

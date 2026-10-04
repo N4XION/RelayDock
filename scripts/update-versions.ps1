@@ -97,7 +97,7 @@ $lines.Add('3. Open the downloaded file and follow its steps.')
 $lines.Add('')
 $lines.Add('The installer replaces the old version. Your destinations, settings and stream keys stay. For a portable OBS, copy the files from the ZIP over the old ones, as [manual-installation.md](manual-installation.md) describes.')
 $lines.Add('')
-$lines.Add('RelayDock looks for a newer version each time OBS starts and tells you when there is one. Settings, Updates has a Check for updates button and the switch for the check at start-up. RelayDock never downloads or installs anything by itself.')
+$lines.Add('RelayDock looks for a newer version each time OBS starts and tells you when there is one. From version 1.1.0 on, its window offers Update now, which downloads the installer, checks it and installs it when you close OBS. Settings, Updates has a Check for updates button and the switch for the check at start-up. RelayDock never downloads or installs anything by itself.')
 
 foreach ($v in $versions) {
     $lines.Add('')
