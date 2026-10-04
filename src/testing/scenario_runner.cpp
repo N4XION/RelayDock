@@ -5,6 +5,9 @@
 #include "app/app_context.h"
 #include "app/diagnostics_service.h"
 #include "app/performance_monitor.h"
+#include "build_info.h"
+#include "legal/legal_documents.h"
+#include "utils/clock.h"
 #include "outputs/output_manager.h"
 #include "outputs/vertical_canvas.h"
 #include "settings/config_json.h"
@@ -589,6 +592,41 @@ ScenarioRunner::StepResult ScenarioRunner::beginStep(const json &step, std::stri
 		return StepResult::Done;
 	}
 
+	if (op == "accept_legal") {
+		// For tests that are not about the first-run review itself.
+		for (const LegalDocument &document : legalDocuments())
+			recordLegalAcceptance(app_.config().legal, document.id, utcTimestampIso8601(), buildInfo().version);
+		app_.notifyConfigChanged();
+		return StepResult::Done;
+	}
+
+	if (op == "config_patch") {
+		// Changes any saved setting, the way an edited config.json would.
+		json current = json::parse(serializeConfig(app_.config()), nullptr, false);
+		if (current.is_discarded() || !step.contains("patch")) {
+			detail = "No patch given.";
+			return StepResult::Failed;
+		}
+		current.merge_patch(step["patch"]);
+		ConfigParseResult parsed = parseConfig(current.dump());
+		if (!parsed.ok) {
+			detail = parsed.error;
+			return StepResult::Failed;
+		}
+		app_.config() = parsed.config;
+		app_.notifyConfigChanged();
+		return StepResult::Done;
+	}
+
+	if (op == "legal_state") {
+		json records = json::array();
+		for (const LegalAcceptance &record : app_.config().legal)
+			records.push_back({{"document", record.documentId}, {"version", record.version}, {"accepted_at", record.acceptedAtUtc}, {"app_version", record.appVersion}});
+		results_["legal"][text(step, "label", "legal-" + std::to_string(index_))] = {
+			{"complete", legalComplete(app_.config().legal)}, {"pending", pendingLegalDocuments(app_.config().legal)}, {"records", records}};
+		return StepResult::Done;
+	}
+
 	if (op == "save_config") {
 		if (!app_.saveConfig()) {
 			detail = "Saving failed.";
@@ -606,6 +644,10 @@ ScenarioRunner::StepResult ScenarioRunner::beginStep(const json &step, std::stri
 	    op == "wait_adjustment")
 		return pollStep(step, detail);
 
+	StepResult uiResult = StepResult::Done;
+	if (uiStep(op, step, uiResult, detail))
+		return uiResult;
+
 	detail = "Unknown op '" + op + "'.";
 	return StepResult::Failed;
 }
@@ -614,6 +656,10 @@ ScenarioRunner::StepResult ScenarioRunner::pollStep(const json &step, std::strin
 {
 	const std::string op = text(step, "op");
 	const double elapsedSec = (app_.clock().nowMs() - stepStartedMs_) / 1000.0;
+
+	StepResult uiResult = StepResult::Done;
+	if (uiStep(op, step, uiResult, detail))
+		return uiResult;
 
 	if (op == "wait")
 		return elapsedSec >= number(step, "seconds", 1.0) ? StepResult::Done : StepResult::Waiting;

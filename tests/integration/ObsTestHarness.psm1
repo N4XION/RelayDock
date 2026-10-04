@@ -375,7 +375,7 @@ function Get-RtmpSinkReport {
 
     for ($attempt = 0; $attempt -lt 20; $attempt++) {
         try {
-            return (Get-Content -LiteralPath $Sink.ReportPath -Raw -ErrorAction Stop | ConvertFrom-Json)
+            return (Get-Content -LiteralPath $Sink.ReportPath -Raw -Encoding UTF8 -ErrorAction Stop | ConvertFrom-Json)
         } catch {
             Start-Sleep -Milliseconds 100
         }
@@ -394,7 +394,7 @@ function Stop-RtmpSink {
         Set-Content -LiteralPath "$($Sink.ReportPath).stop" -Value 'stop'
         if (-not $Sink.Process.WaitForExit(10000)) { $Sink.Process.Kill() }
     }
-    return (Get-Content -LiteralPath $Sink.ReportPath -Raw | ConvertFrom-Json)
+    return (Get-Content -LiteralPath $Sink.ReportPath -Raw -Encoding UTF8 | ConvertFrom-Json)
 }
 
 
@@ -475,7 +475,7 @@ function Complete-ObsScenario {
 
     $result = $null
     if (Test-Path $Session.ResultPath) {
-        $result = Get-Content -LiteralPath $Session.ResultPath -Raw | ConvertFrom-Json
+        $result = Get-Content -LiteralPath $Session.ResultPath -Raw -Encoding UTF8 | ConvertFrom-Json
     }
 
     $log = Get-ObsLogText -Session $Session
@@ -558,6 +558,13 @@ function New-TestReport {
         Title    = $Title
         Checks   = New-Object System.Collections.Generic.List[object]
         Failures = 0
+        Skipped  = 0
+    }
+    # A check that cannot run here. It is reported, never counted as passed.
+    $report | Add-Member -MemberType ScriptMethod -Name Skip -Value {
+        param([string]$Description, [string]$Reason)
+        $this.Skipped++
+        Write-Host "  [SKIP] $Description ($Reason)"
     }
     $report | Add-Member -MemberType ScriptMethod -Name Check -Value {
         param([string]$Description, [bool]$Passed, [string]$Detail = '')
@@ -574,7 +581,8 @@ function New-TestReport {
             Write-Host "FAILED: $($this.Title). $($this.Failures) of $($this.Checks.Count) checks failed."
             return 1
         }
-        Write-Host "PASSED: $($this.Title). $($this.Checks.Count) checks."
+        $skipped = if ($this.Skipped -gt 0) { " $($this.Skipped) skipped." } else { '' }
+        Write-Host "PASSED: $($this.Title). $($this.Checks.Count) checks.$skipped"
         return 0
     }
     Write-Host $Title
@@ -582,7 +590,29 @@ function New-TestReport {
 }
 
 
-Export-ModuleMember -Function Get-RelayDockDevRoot, Get-ObsConfigDir, Initialize-ObsTestConfig, Start-ObsTest,
+function Test-ClipboardAvailable {
+    <#
+    .SYNOPSIS
+    True when this session may open the Windows clipboard. Sandboxed and service sessions may not.
+    Opens and closes the clipboard without reading or changing it.
+    #>
+    if (-not ('RelayDockTest.Clipboard' -as [type])) {
+        Add-Type -Namespace RelayDockTest -Name Clipboard -MemberDefinition @'
+[DllImport("user32.dll", SetLastError = true)] public static extern bool OpenClipboard(System.IntPtr owner);
+[DllImport("user32.dll")] public static extern bool CloseClipboard();
+'@
+    }
+    for ($i = 0; $i -lt 5; $i++) {
+        if ([RelayDockTest.Clipboard]::OpenClipboard([IntPtr]::Zero)) {
+            [RelayDockTest.Clipboard]::CloseClipboard() | Out-Null
+            return $true
+        }
+        Start-Sleep -Milliseconds 100
+    }
+    return $false
+}
+
+Export-ModuleMember -Function Test-ClipboardAvailable, Get-RelayDockDevRoot, Get-ObsConfigDir, Initialize-ObsTestConfig, Start-ObsTest,
     Get-ObsLogPath, Get-ObsLogText, Wait-ObsLogLine, Stop-ObsTest, Get-ObsCrashFiles, Get-ObsMainWindow,
     Get-BuildPaths, Start-RtmpSink, Get-RtmpSinkReport, Stop-RtmpSink, Stop-RtmpSinkAbruptly, Start-ObsScenario,
     Complete-ObsScenario, Invoke-ObsScenario, Add-ObsRunChecks, New-TestReport

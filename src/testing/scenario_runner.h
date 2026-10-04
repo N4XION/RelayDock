@@ -44,6 +44,8 @@ private:
 	void tick();
 	StepResult beginStep(const nlohmann::json &step, std::string &detail);
 	StepResult pollStep(const nlohmann::json &step, std::string &detail);
+	// Interface steps, in scenario_ui.cpp. Returns false when `op` is not one of them.
+	bool uiStep(const std::string &op, const nlohmann::json &step, StepResult &result, std::string &detail);
 	nlohmann::json snapshot();
 	void recordStep(const nlohmann::json &step, bool ok, const std::string &detail);
 	void writeResults();

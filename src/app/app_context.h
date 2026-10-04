@@ -73,6 +73,11 @@ public:
 
 	// ---- Destinations -----------------------------------------------------------------------
 	DestinationConfig *addDestination(const std::string &providerId);
+	// A new destination that is not part of the settings yet, for the editor. Has an id and a
+	// name no other destination uses.
+	DestinationConfig draftDestination(const std::string &providerId) const;
+	// Replaces the destination with the same id, or adds it at the end.
+	void upsertDestination(const DestinationConfig &destination);
 	DestinationConfig *duplicateDestination(const std::string &id);
 	// Stops the destination, deletes its saved secrets and removes it.
 	bool removeDestination(const std::string &id);
@@ -89,6 +94,9 @@ public:
 	// Effective settings of every enabled destination. `alsoId` adds one destination that is
 	// not enabled, for starting it by hand.
 	std::vector<EffectiveDestination> resolveEffective(const std::string &alsoId = {}) const;
+	// The same, with `candidate` standing in for the saved destination of that id, or added
+	// when the id is new. The editor uses it to show what unsaved settings would do.
+	std::vector<EffectiveDestination> resolveEffectiveWith(const DestinationConfig &candidate) const;
 
 	// Reductions the optimiser currently applies to a destination.
 	Adjustment adjustmentFor(const std::string &id) const;
@@ -103,6 +111,8 @@ public:
 Q_SIGNALS:
 	// Destinations or settings changed.
 	void configChanged();
+	// OBS is closing. Windows close and timers stop before anything is released.
+	void shuttingDown();
 
 private:
 	SteadyClock clock_;

@@ -40,4 +40,14 @@ template <class... Args> std::string locf(const char *key, const char *english, 
 	return detail::formatTranslated(key, english, std::make_format_args(args...));
 }
 
+// Picks between a singular and a plural wording by a count. "1 destination", "2 destinations".
+// Both wordings go through the translator under their own keys.
+template <class... Args>
+std::string locn(long long count, const char *keyOne, const char *englishOne, const char *keyMany, const char *englishMany,
+		 Args &&...args)
+{
+	return count == 1 ? locf(keyOne, englishOne, std::forward<Args>(args)...)
+			  : locf(keyMany, englishMany, std::forward<Args>(args)...);
+}
+
 } // namespace rd

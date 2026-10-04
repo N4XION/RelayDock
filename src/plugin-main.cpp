@@ -20,13 +20,12 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 
-#include <QLabel>
-#include <QVBoxLayout>
-#include <QWidget>
+#include <QPointer>
 
 #include "app/app_context.h"
 #include "build_info.h"
 #include "outputs/program_mirror_source.h"
+#include "ui/dock_widget.h"
 #include "utils/i18n.h"
 #include "utils/log.h"
 
@@ -56,6 +55,8 @@ constexpr const char *kDockId = "relaydock";
 // Module state. Created in obs_module_load, shut down on the frontend's exit event while
 // libobs is still fully alive, destroyed in obs_module_unload.
 std::unique_ptr<rd::AppContext> g_app;
+// OBS owns the dock widget and deletes it with its main window.
+QPointer<rd::RelayDockWidget> g_dock;
 #ifdef RELAYDOCK_TEST_HOOKS
 std::unique_ptr<rd::ScenarioRunner> g_scenario;
 #endif
@@ -87,6 +88,8 @@ void onFrontendEvent(enum obs_frontend_event event, void *)
 	case OBS_FRONTEND_EVENT_FINISHED_LOADING:
 		if (g_app) {
 			g_app->onObsFinishedLoading();
+			if (g_dock)
+				g_dock->onObsFinishedLoading();
 #ifdef RELAYDOCK_TEST_HOOKS
 			g_scenario = std::make_unique<rd::ScenarioRunner>(*g_app);
 			if (!g_scenario->startFromEnvironment())
@@ -102,6 +105,10 @@ void onFrontendEvent(enum obs_frontend_event event, void *)
 #endif
 		if (g_app)
 			g_app->shutdown();
+		break;
+	case OBS_FRONTEND_EVENT_THEME_CHANGED:
+		if (g_dock)
+			g_dock->onObsThemeChanged();
 		break;
 	default:
 		if (g_app)
@@ -131,20 +138,22 @@ bool obs_module_load(void)
 	g_app->initialize();
 
 	// OBS owns the dock and deletes the widget when it shuts down.
-	auto *root = new QWidget();
-	auto *layout = new QVBoxLayout(root);
-	auto *label = new QLabel(QString::fromUtf8("%1 %2").arg(QString::fromUtf8(info.displayName),
-								 QString::fromUtf8(info.version)),
-				 root);
-	layout->addWidget(label);
-	layout->addStretch(1);
-
-	if (!obs_frontend_add_dock_by_id(kDockId, info.displayName, root)) {
+	auto *dock = new rd::RelayDockWidget(*g_app);
+	if (!obs_frontend_add_dock_by_id(kDockId, info.displayName, dock)) {
 		rd::logError("OBS refused to add the RelayDock dock. Another dock already uses the id '{}'.", kDockId);
-		delete root;
+		delete dock;
 		g_app.reset();
 		return false;
 	}
+	g_dock = dock;
+
+	obs_frontend_add_tools_menu_item(
+		rd::loc("Tools.Settings", "RelayDock Settings").c_str(),
+		[](void *) {
+			if (g_dock)
+				g_dock->openSettings({});
+		},
+		nullptr);
 
 	obs_frontend_add_event_callback(onFrontendEvent, nullptr);
 

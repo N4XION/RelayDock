@@ -3,6 +3,7 @@
 #include "app/app_context.h"
 
 #include "app/performance_monitor.h"
+#include "legal/legal_documents.h"
 #include "outputs/output_manager.h"
 #include "outputs/vertical_canvas.h"
 #include "security/redactor.h"
@@ -146,7 +147,8 @@ void AppContext::onFrontendEvent(int event)
 		vertical_->rebind();
 		break;
 	case OBS_FRONTEND_EVENT_STREAMING_STARTING:
-		if (config_.general.followObsStreaming)
+		// Never before the first-run review is done.
+		if (config_.general.followObsStreaming && legalComplete(config_.legal))
 			outputs_->startAllEnabled();
 		break;
 	case OBS_FRONTEND_EVENT_STREAMING_STOPPING:
@@ -163,6 +165,7 @@ void AppContext::shutdown()
 	if (shutDown_)
 		return;
 	shutDown_ = true;
+	Q_EMIT shuttingDown();
 
 	obs_frontend_remove_save_callback(onSceneCollectionSaveLoad, this);
 	sourceCreateSignal_.Disconnect();
@@ -200,11 +203,11 @@ void AppContext::notifyConfigChanged()
 
 // ---- Destinations --------------------------------------------------------------------------------
 
-DestinationConfig *AppContext::addDestination(const std::string &providerId)
+DestinationConfig AppContext::draftDestination(const std::string &providerId) const
 {
 	const IProvider *provider = providers_.find(providerId);
 	if (!provider)
-		return nullptr;
+		return {};
 
 	DestinationConfig destination = provider->newDestination();
 	destination.id = generateUuid();
@@ -218,9 +221,24 @@ DestinationConfig *AppContext::addDestination(const std::string &providerId)
 	};
 	while (nameTaken(destination.name))
 		destination.name = baseName + " " + std::to_string(suffix++);
+	return destination;
+}
 
+DestinationConfig *AppContext::addDestination(const std::string &providerId)
+{
+	DestinationConfig destination = draftDestination(providerId);
+	if (destination.id.empty())
+		return nullptr;
 	config_.destinations.push_back(std::move(destination));
 	return &config_.destinations.back();
+}
+
+void AppContext::upsertDestination(const DestinationConfig &destination)
+{
+	if (DestinationConfig *existing = config_.findDestination(destination.id))
+		*existing = destination;
+	else
+		config_.destinations.push_back(destination);
 }
 
 DestinationConfig *AppContext::duplicateDestination(const std::string &id)
@@ -323,6 +341,31 @@ std::vector<EffectiveDestination> AppContext::resolveEffective(const std::string
 		input.adjustment = adjustmentFor(destination.id);
 		inputs.push_back(std::move(input));
 	}
+	return resolveEffectiveSettings(inputs, streamContext(), config_.performanceMode);
+}
+
+std::vector<EffectiveDestination> AppContext::resolveEffectiveWith(const DestinationConfig &candidate) const
+{
+	std::vector<ResolveInput> inputs;
+	bool placed = false;
+	auto add = [&](const DestinationConfig &destination) {
+		ResolveInput input;
+		input.config = destination;
+		input.config.verticalLayoutId = vertical_->resolveLayoutId(destination.verticalLayoutId);
+		input.provider = providers_.find(destination.provider);
+		input.adjustment = adjustmentFor(destination.id);
+		inputs.push_back(std::move(input));
+	};
+	for (const DestinationConfig &destination : config_.destinations) {
+		if (destination.id == candidate.id) {
+			add(candidate);
+			placed = true;
+		} else if (destination.enabled) {
+			add(destination);
+		}
+	}
+	if (!placed)
+		add(candidate);
 	return resolveEffectiveSettings(inputs, streamContext(), config_.performanceMode);
 }
 

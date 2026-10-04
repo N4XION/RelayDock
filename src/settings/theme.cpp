@@ -227,6 +227,44 @@ std::string buildStyleSheet(const ThemeColors &c, const ThemeMetrics &m)
 		add(std::format("QMenu {{ background-color: {}; color: {}; border: 1px solid {}; }}", input, text, border));
 		add(std::format("QMenu::item:selected {{ background-color: {}; color: {}; }}", accent, accentText));
 		add(std::format("QMenu::item:disabled {{ color: {}; }}", muted));
+		// OBS draws its arrows and check marks for its own theme. These themes bring their own,
+		// light on dark surfaces and dark on light ones.
+		const char *shade = c.dark ? "light" : "dark";
+		const char *onAccent = relativeLuminance(c.accentText) > 0.5 ? "light" : "dark";
+		add("QComboBox::drop-down { border: none; width: 24px; }");
+		add(std::format(
+			"QPushButton::menu-indicator {{ image: url(:/relaydock/icons/ui-chevron-down-{}.svg); subcontrol-origin: padding; subcontrol-position: right center; width: 12px; height: 12px; right: 8px; }}",
+			shade));
+		add(std::format("QComboBox::down-arrow {{ image: url(:/relaydock/icons/ui-chevron-down-{}.svg); width: 14px; height: 14px; }}",
+				shade));
+		add("QSpinBox::up-button, QDoubleSpinBox::up-button { subcontrol-origin: border; subcontrol-position: top right; border: none; width: 20px; }");
+		add("QSpinBox::down-button, QDoubleSpinBox::down-button { subcontrol-origin: border; subcontrol-position: bottom right; border: none; width: 20px; }");
+		add(std::format("QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{ image: url(:/relaydock/icons/ui-chevron-up-{}.svg); width: 11px; height: 11px; }}",
+				shade));
+		add(std::format("QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{ image: url(:/relaydock/icons/ui-chevron-down-{}.svg); width: 11px; height: 11px; }}",
+				shade));
+		add(std::format(
+			"QCheckBox::indicator, QRadioButton::indicator {{ width: 14px; height: 14px; border: 1px solid {}; background-color: {}; }}",
+			toHex(mixColors(c.cardBorder, c.text, 0.25)), input));
+		add(std::format("QCheckBox::indicator {{ border-radius: {}px; }}", std::min(m.radius, 3)));
+		add("QRadioButton::indicator { border-radius: 8px; }");
+		add(std::format(
+			"QCheckBox::indicator:checked {{ background-color: {}; border-color: {}; image: url(:/relaydock/icons/ui-check-{}.svg); }}",
+			accent, accent, onAccent));
+		add(std::format("QRadioButton::indicator:checked {{ background-color: {}; border: 4px solid {}; }}", accentText, accent));
+		add(std::format("QCheckBox::indicator:focus, QRadioButton::indicator:focus {{ border-color: {}; }}", accent));
+		add(std::format("QCheckBox::indicator:disabled, QRadioButton::indicator:disabled {{ border-color: {}; }}", border));
+		add(std::format("QCheckBox:disabled, QRadioButton:disabled {{ color: {}; }}", muted));
+		add(std::format("QTabWidget::pane {{ border: 1px solid {}; border-radius: {}px; top: -1px; }}", border, m.radius));
+		add(std::format(
+			"QTabBar::tab {{ background: transparent; color: {}; border: 1px solid transparent; border-bottom: none; padding: 5px 12px; border-top-left-radius: {}px; border-top-right-radius: {}px; }}",
+			muted, m.radius, m.radius));
+		add(std::format("QTabBar::tab:selected {{ color: {}; background-color: {}; border-color: {}; }}", text, toHex(c.card), border));
+		add(std::format("QTabBar::tab:hover:!selected {{ color: {}; }}", text));
+		add(std::format("QScrollBar:vertical {{ background: transparent; width: 10px; margin: 0; }}"));
+		add(std::format("QScrollBar::handle:vertical {{ background: {}; border-radius: 4px; min-height: 24px; margin: 1px; }}", border));
+		add("QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }");
+		add("QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }");
 		add(std::format("QSlider::groove:horizontal {{ height: 4px; background: {}; border-radius: 2px; }}", border));
 		add(std::format(
 			"QSlider::handle:horizontal {{ width: 14px; margin: -6px 0; border-radius: 7px; background: {}; }}",
@@ -252,9 +290,15 @@ std::string buildStyleSheet(const ThemeColors &c, const ThemeMetrics &m)
 	add(std::format("QLabel#rdMuted {{ color: {}; }}", muted));
 	add(std::format("QLabel#rdSmall {{ color: {}; font-size: {}px; }}", muted, m.smallFontPx));
 	add(std::format("QLabel#rdValue {{ color: {}; font-weight: 600; }}", text));
-	add(std::format("QLabel[rdTone=\"ok\"] {{ color: {}; }}", toHex(c.ok)));
-	add(std::format("QLabel[rdTone=\"warning\"] {{ color: {}; }}", toHex(c.warning)));
-	add(std::format("QLabel[rdTone=\"error\"] {{ color: {}; }}", toHex(c.error)));
+	// The object name is part of each selector, so these win over the plain role colours above.
+	auto tone = [&](const char *name, Rgb color) {
+		add(std::format(
+			"QLabel[rdTone=\"{0}\"], QLabel#rdValue[rdTone=\"{0}\"], QLabel#rdSmall[rdTone=\"{0}\"], QLabel#rdMuted[rdTone=\"{0}\"] {{ color: {1}; }}",
+			name, toHex(color)));
+	};
+	tone("ok", c.ok);
+	tone("warning", c.warning);
+	tone("error", c.error);
 
 	// Status pills: a tinted background with readable text in the status colour.
 	auto pill = [&](const char *tone, Rgb color) {
@@ -310,7 +354,7 @@ std::string buildStyleSheet(const ThemeColors &c, const ThemeMetrics &m)
 
 	// Settings navigation
 	add(std::format("QListWidget#rdNav {{ border: none; background: transparent; outline: none; }}"));
-	add(std::format("QListWidget#rdNav::item {{ padding: {}px 10px; border-radius: {}px; color: {}; }}", m.spacing / 2 + 3,
+	add(std::format("QListWidget#rdNav::item {{ padding: {}px 10px; border-radius: {}px; color: {}; }}", m.spacing / 2 + 2,
 			m.radius, text));
 	add(std::format("QListWidget#rdNav::item:selected {{ background-color: {}; color: {}; }}", accent, accentText));
 	add(std::format("QListWidget#rdNav::item:hover:!selected {{ background-color: {}; }}", hover));

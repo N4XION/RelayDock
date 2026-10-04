@@ -105,8 +105,11 @@ set(
 
 set(
   RELAYDOCK_PLUGIN_SOURCES
+  resources/relaydock.qrc
   src/app/app_context.cpp
   src/app/app_context.h
+  src/app/background_tasks.cpp
+  src/app/background_tasks.h
   src/app/diagnostics_service.cpp
   src/app/diagnostics_service.h
   src/app/performance_monitor.cpp
@@ -122,6 +125,30 @@ set(
   src/outputs/vertical_canvas.cpp
   src/outputs/vertical_canvas.h
   src/plugin-main.cpp
+  src/ui/destination_card.cpp
+  src/ui/destination_card.h
+  src/ui/destination_dialog.cpp
+  src/ui/destination_dialog.h
+  src/ui/dock_widget.cpp
+  src/ui/dock_widget.h
+  src/ui/key_clipboard.cpp
+  src/ui/key_clipboard.h
+  src/ui/legal_dialog.cpp
+  src/ui/legal_dialog.h
+  src/ui/preflight_dialog.cpp
+  src/ui/preflight_dialog.h
+  src/ui/settings_dialog.cpp
+  src/ui/settings_dialog.h
+  src/ui/settings_pages.cpp
+  src/ui/ui_common.cpp
+  src/ui/ui_common.h
+  src/ui/vertical_editor.cpp
+  src/ui/vertical_editor.h
 )
 
-set(RELAYDOCK_TEST_HOOK_SOURCES src/testing/scenario_runner.cpp src/testing/scenario_runner.h)
+set(
+  RELAYDOCK_TEST_HOOK_SOURCES
+  src/testing/scenario_runner.cpp
+  src/testing/scenario_runner.h
+  src/testing/scenario_ui.cpp
+)

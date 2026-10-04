@@ -182,7 +182,7 @@ PreflightReport runPreflight(const PreflightInput &input)
 
 		if (destination.verticalMissingItems > 0) {
 			add(report, "destination.vertical_missing", PreflightStatus::Warning, name,
-			    {locf("Preflight.Vertical.Missing", "The vertical layout for {0} refers to {1} source(s) OBS does not have.",
+			    {locf("Preflight.Vertical.Missing", "The vertical layout for {0} refers to sources OBS does not have. Missing: {1}.",
 				  name, destination.verticalMissingItems),
 			     loc("Preflight.Vertical.Missing.Detail", "Those parts of the layout stay empty."),
 			     loc("Preflight.Vertical.Missing.Action", "Open the vertical layout editor and pick the sources again.")},
@@ -259,10 +259,8 @@ PreflightReport runPreflight(const PreflightInput &input)
 				 "Use Balanced or Potato mode so destinations share an encoder, or pick a hardware encoder.")});
 		} else {
 			addOk(report, "performance.encoders", performanceTitle,
-			      encoders == 1 ? locf("Preflight.Encoders.One", "{0} destination(s) use 1 video encoder.",
-						   input.plan.destinationCount())
-					    : locf("Preflight.Encoders.Many", "{0} destination(s) use {1} video encoders.",
-						   input.plan.destinationCount(), encoders));
+			      locf("Preflight.Encoders", "Destinations to start: {0}. Video encoders they need: {1}.",
+				   input.plan.destinationCount(), encoders));
 		}
 	}
 
